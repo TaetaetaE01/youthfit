@@ -24,14 +24,14 @@ public class AuthService {
 
     @Transactional
     public TokenResult loginWithKakao(KakaoLoginCommand command) {
-        KakaoUserInfo kakaoUserInfo = kakaoOAuthClient.fetchUserInfo(command.getAuthorizationCode());
+        KakaoUserInfo kakaoUserInfo = kakaoOAuthClient.fetchUserInfo(command.authorizationCode());
 
         User user = userRepository.findByAuthProviderAndProviderId(
                         AuthProvider.KAKAO, kakaoUserInfo.getProviderId())
                 .orElseGet(() -> registerNewUser(kakaoUserInfo));
 
         TokenResult tokenResult = issueTokens(user);
-        user.updateRefreshToken(tokenResult.getRefreshToken());
+        user.updateRefreshToken(tokenResult.refreshToken());
 
         return tokenResult;
     }
@@ -51,7 +51,7 @@ public class AuthService {
         }
 
         TokenResult tokenResult = issueTokens(user);
-        user.updateRefreshToken(tokenResult.getRefreshToken());
+        user.updateRefreshToken(tokenResult.refreshToken());
 
         return tokenResult;
     }
@@ -80,9 +80,6 @@ public class AuthService {
         String refreshToken = jwtProvider.createRefreshToken(
                 user.getId(), user.getEmail(), user.getRole().name());
 
-        return TokenResult.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+        return new TokenResult(accessToken, refreshToken);
     }
 }
