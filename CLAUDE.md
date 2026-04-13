@@ -74,6 +74,7 @@
 - Controller, DTO, Service, Entity를 추가하기 전에는 `docs/CONVENTIONS.md`를 읽는다.
 - 적합도 로직이나 사용자에게 보이는 해석 방식을 바꾸기 전에는 `docs/PRODUCT.md`와 `docs/ARCHITECTURE.md`를 읽는다.
 - 크롤링, 배포, 시크릿 관련 설정을 바꾸기 전에는 `docs/OPS.md`를 읽는다.
+- 기능을 구현하기 전에는 `docs/prd/` 하위의 해당 도메인 PRD 문서를 읽는다. 문서 목록은 `docs/prd/README.md`를 참조한다.
 
 ## Claude Code 기능 관련 메모
 - **Plan Mode** 는 큰 리팩토링이나 위험한 변경 전에 읽기 중심으로 범위를 파악하고 계획을 세울 때 유용하다.
