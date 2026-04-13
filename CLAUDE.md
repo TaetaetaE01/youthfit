@@ -63,7 +63,6 @@
 - 여러 모듈에 걸치는 변경이면 먼저 아키텍처 문서를 갱신한다.
 - 요구사항이 불명확하면 가정을 명시한다.
 - **각 작업(태스크)이 완료되면 반드시 컴파일 확인 후 커밋한다.** 커밋 메시지는 Conventional Commits 형식(`feat:`, `fix:`, `refactor:`, `chore:`, `docs:` 등)을 따른다.
-- **DTO(Command, Result, Request, Response)는 반드시 Java `record`로 생성한다.** 클래스 기반 DTO를 사용하지 않는다.
 
 ## 문서 맵
 - `docs/PRODUCT.md`: 제품 목표, 타겟 사용자, MVP 범위, 정책 해석 원칙
