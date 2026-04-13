@@ -1,18 +1,17 @@
 package com.youthfit.policy.domain.model;
 
+import com.youthfit.common.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "policy_source")
-public class PolicySource {
+public class PolicySource extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,12 +37,6 @@ public class PolicySource {
     @Column(name = "source_hash", nullable = false, length = 64)
     private String sourceHash;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     @Builder
     private PolicySource(Policy policy, SourceType sourceType, String externalId,
                          String sourceUrl, String rawJson, String sourceHash) {
@@ -53,17 +46,6 @@ public class PolicySource {
         this.sourceUrl = sourceUrl;
         this.rawJson = rawJson;
         this.sourceHash = sourceHash;
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     // ── 비즈니스 메서드 ──

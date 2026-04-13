@@ -1,5 +1,6 @@
 package com.youthfit.user.domain.model;
 
+import com.youthfit.common.domain.BaseTimeEntity;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import jakarta.persistence.*;
@@ -8,13 +9,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "users")
-public class User {
+public class User extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,11 +42,26 @@ public class User {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // ── 적합도 판정용 프로필 필드 ──
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Integer age;
+
+    @Column(length = 20)
+    private String region;
+
+    @Column(name = "annual_income")
+    private Long annualIncome;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employment_status", length = 20)
+    private EmploymentStatus employmentStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "education_level", length = 20)
+    private EducationLevel educationLevel;
+
+    @Column(name = "household_size")
+    private Integer householdSize;
 
     @Builder
     private User(String email, String nickname, String profileImageUrl,
@@ -58,17 +72,6 @@ public class User {
         this.authProvider = authProvider;
         this.providerId = providerId;
         this.role = Role.USER;
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     // ── 비즈니스 메서드 ──
@@ -87,5 +90,17 @@ public class User {
 
     public void clearRefreshToken() {
         this.refreshToken = null;
+    }
+
+    public void updateEligibilityProfile(Integer age, String region, Long annualIncome,
+                                         EmploymentStatus employmentStatus,
+                                         EducationLevel educationLevel,
+                                         Integer householdSize) {
+        this.age = age;
+        this.region = region;
+        this.annualIncome = annualIncome;
+        this.employmentStatus = employmentStatus;
+        this.educationLevel = educationLevel;
+        this.householdSize = householdSize;
     }
 }
