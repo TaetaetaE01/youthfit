@@ -21,6 +21,8 @@
 - `list()`
 
 ## DTO 규칙
+- **DTO(Command, Result, Request, Response)는 반드시 Java `record`로 생성한다.** 클래스 기반 DTO를 사용하지 않는다.
+
 ### Presentation Layer
 - Request DTO 이름은 `Request` 로 끝난다.
 - Response DTO 이름은 `Response` 로 끝난다.

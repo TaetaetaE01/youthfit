@@ -27,7 +27,7 @@ public class UserProfileService {
     public UserProfileResult updateMyProfile(Long userId, UpdateProfileCommand command) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-        user.updateProfile(command.getNickname(), command.getProfileImageUrl());
+        user.updateProfile(command.nickname(), command.profileImageUrl());
         return UserProfileResult.from(user);
     }
 }

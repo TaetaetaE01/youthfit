@@ -1,46 +1,36 @@
 package com.youthfit.policy.application.dto.result;
 
 import com.youthfit.policy.domain.model.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class PolicyDetailResult {
-
-    private Long id;
-    private String title;
-    private String summary;
-    private Category category;
-    private String regionCode;
-    private LocalDate applyStart;
-    private LocalDate applyEnd;
-    private PolicyStatus status;
-    private DetailLevel detailLevel;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
+public record PolicyDetailResult(
+        Long id,
+        String title,
+        String summary,
+        Category category,
+        String regionCode,
+        LocalDate applyStart,
+        LocalDate applyEnd,
+        PolicyStatus status,
+        DetailLevel detailLevel,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
+) {
     public static PolicyDetailResult from(Policy policy) {
-        return PolicyDetailResult.builder()
-                .id(policy.getId())
-                .title(policy.getTitle())
-                .summary(policy.getSummary())
-                .category(policy.getCategory())
-                .regionCode(policy.getRegionCode())
-                .applyStart(policy.getApplyStart())
-                .applyEnd(policy.getApplyEnd())
-                .status(policy.getStatus())
-                .detailLevel(policy.getDetailLevel())
-                .createdAt(policy.getCreatedAt())
-                .updatedAt(policy.getUpdatedAt())
-                .build();
+        return new PolicyDetailResult(
+                policy.getId(),
+                policy.getTitle(),
+                policy.getSummary(),
+                policy.getCategory(),
+                policy.getRegionCode(),
+                policy.getApplyStart(),
+                policy.getApplyEnd(),
+                policy.getStatus(),
+                policy.getDetailLevel(),
+                policy.getCreatedAt(),
+                policy.getUpdatedAt()
+        );
     }
 }

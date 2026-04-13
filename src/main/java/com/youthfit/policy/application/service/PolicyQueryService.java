@@ -32,14 +32,14 @@ public class PolicyQueryService {
 
         Page<Policy> policyPage = policyRepository.findAllByFilters(regionCode, category, status, pageable);
 
-        return PolicyPageResult.builder()
-                .policies(policyPage.getContent().stream().map(PolicySummaryResult::from).toList())
-                .totalCount(policyPage.getTotalElements())
-                .page(policyPage.getNumber())
-                .size(policyPage.getSize())
-                .totalPages(policyPage.getTotalPages())
-                .hasNext(policyPage.hasNext())
-                .build();
+        return new PolicyPageResult(
+                policyPage.getContent().stream().map(PolicySummaryResult::from).toList(),
+                policyPage.getTotalElements(),
+                policyPage.getNumber(),
+                policyPage.getSize(),
+                policyPage.getTotalPages(),
+                policyPage.hasNext()
+        );
     }
 
     public PolicyDetailResult findPolicyById(Long policyId) {
@@ -53,13 +53,13 @@ public class PolicyQueryService {
 
         Page<Policy> policyPage = policyRepository.searchByKeyword(keyword, pageable);
 
-        return PolicyPageResult.builder()
-                .policies(policyPage.getContent().stream().map(PolicySummaryResult::from).toList())
-                .totalCount(policyPage.getTotalElements())
-                .page(policyPage.getNumber())
-                .size(policyPage.getSize())
-                .totalPages(policyPage.getTotalPages())
-                .hasNext(policyPage.hasNext())
-                .build();
+        return new PolicyPageResult(
+                policyPage.getContent().stream().map(PolicySummaryResult::from).toList(),
+                policyPage.getTotalElements(),
+                policyPage.getNumber(),
+                policyPage.getSize(),
+                policyPage.getTotalPages(),
+                policyPage.hasNext()
+        );
     }
 }

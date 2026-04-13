@@ -1,5 +1,6 @@
 package com.youthfit.policy.domain.model;
 
+import com.youthfit.common.domain.BaseTimeEntity;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import jakarta.persistence.*;
@@ -9,13 +10,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "policy")
-public class Policy {
+public class Policy extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,12 +48,6 @@ public class Policy {
     @Column(name = "detail_level", nullable = false, length = 10)
     private DetailLevel detailLevel;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     @Builder
     private Policy(String title, String summary, Category category,
                    String regionCode, LocalDate applyStart, LocalDate applyEnd) {
@@ -65,17 +59,6 @@ public class Policy {
         this.applyEnd = applyEnd;
         this.status = PolicyStatus.UPCOMING;
         this.detailLevel = DetailLevel.LITE;
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     // ── 비즈니스 메서드 ──
