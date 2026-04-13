@@ -25,6 +25,17 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-for-local-dev-minimum-32-bytes!!}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:1800000}   # 30분
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:1209600000} # 14일
+
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5173/auth/kakao/callback}
+
 ---
 spring:
   config:

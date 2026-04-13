@@ -41,24 +41,28 @@ chore/docker-compose-redis
 
 ## PR 템플릿
 
+## PR 템플릿
+
 ```markdown
-## 작업 목적
-## 아키텍처 및 설계 결정 (Trade-off)
-## 핵심 변경 사항
+## ✔️ 작업 목적
+## ✔️ 아키텍처 및 설계 결정 (Trade-off)
+
+## ✔️ 핵심 변경 사항
 - `클래스명`: [어떤 역할을 하도록 추가/수정됨]
 - `클래스명`: [어떤 역할을 하도록 추가/수정됨]
 
-## 리뷰 포인트
+## ✔️ 리뷰 포인트
 - [ex: PDF 파싱 정규식이 완벽하지 않을 수 있으니 `PdfExtractService`를 확인해 주세요.]
 
-## YouthFit 가드레일 자가 점검
+## ✔️ YouthFit 가드레일 자가 점검
 - [ ] 레이어 격리: Domain 패키지에 Spring/JPA/OpenAI SDK 등 외부 의존성 침투 없음
 - [ ] 단방향 의존: Controller → Service → Repository 흐름 엄수 (순환 참조 없음)
 - [ ] 비용 방어: LLM·임베딩 호출 전 `source_hash` 멱등성 검증 로직 포함
 - [ ] 보안: `.env` 값이나 API Key가 코드에 하드코딩되지 않음
 
-## 테스트 전략
-## 스크린샷 (선택)
+## ✔️ 테스트 전략
+
+## ✔️ 스크린샷 (선택)
 ```
 
 
