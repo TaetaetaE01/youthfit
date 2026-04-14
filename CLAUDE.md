@@ -58,7 +58,7 @@
 - 요약이나 인용으로 충분한 경우 원문 전체를 그대로 노출하지 않는다.
 
 ## 작업 방식
-- **Controller 엔드포인트를 추가하거나 변경할 때 Swagger 어노테이션(`@Tag`, `@Operation`, `@Parameter`)을 반드시 함께 작성한다.** 규칙 상세는 `docs/CONVENTIONS.md`의 "Swagger (OpenAPI) 규칙" 섹션을 따른다.
+- **Controller를 추가하거나 엔드포인트를 변경할 때 `{도메인}Api` 인터페이스에 Swagger 어노테이션(`@Tag`, `@Operation`, `@Parameter`)을 반드시 함께 작성한다.** Controller에는 Swagger 어노테이션을 두지 않고 인터페이스를 구현만 한다. 규칙 상세는 `docs/CONVENTIONS.md`의 "Swagger (OpenAPI) 규칙" 섹션을 따른다.
 - 작고 되돌리기 쉬운 변경을 선호한다.
 - 한 번에 하나의 기능 슬라이스 또는 하나의 모듈 경계만 수정한다.
 - 여러 모듈에 걸치는 변경이면 먼저 아키텍처 문서를 갱신한다.
