@@ -41,6 +41,8 @@ services:
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=changeme
       - WEBHOOK_URL=http://localhost:5678/
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-changeme}
+      - BACKEND_URL=http://backend:8080
     ports:
       - "5678:5678"
     volumes:
@@ -48,6 +50,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      backend:
+        condition: service_started
 
   # ── Backend (Spring Boot) ──
   backend:

@@ -1,0 +1,297 @@
+{
+  "name": "YouthFit - 청년몽땅정보통 크롤링",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "매일 새벽 3시 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 초기 페이지 설정\nreturn [{ json: { pageIndex: 1 } }];"
+      },
+      "id": "init-page",
+      "name": "페이지 초기화",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "=https://youth.seoul.go.kr/infoData/plcyInfo/ctList.do?key=2309150002&tabKind=002&pageIndex={{ $json.pageIndex }}&orderBy=regYmd+desc&blueWorksYn=N&sw=",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            }
+          ]
+        }
+      },
+      "id": "fetch-list",
+      "name": "목록 페이지 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst pageIndex = $('페이지 초기화').first().json.pageIndex \n  || $('다음 페이지 이동').first().json.pageIndex\n  || 1;\n\n// goView('V202600006') 패턴에서 plcyBizId 추출\nconst regex = /goView\\('([A-Z]\\d+)'\\)/g;\nconst ids = [];\nlet match;\nwhile ((match = regex.exec(html)) !== null) {\n  ids.push(match[1]);\n}\n\n// 마지막 페이지 번호 추출: fn_egov_link_page(67) 에서 최대값\nconst pageRegex = /fn_egov_link_page\\((\\d+)\\)/g;\nlet maxPage = 1;\nlet pageMatch;\nwhile ((pageMatch = pageRegex.exec(html)) !== null) {\n  const p = parseInt(pageMatch[1]);\n  if (p > maxPage) maxPage = p;\n}\n\n// 총 건수 추출: (총 <strong class=\"fc-blue\">332</strong>건)\nconst totalMatch = html.match(/총\\s*<strong[^>]*>(\\d+)<\\/strong>\\s*건/);\nconst totalCount = totalMatch ? parseInt(totalMatch[1]) : 0;\n\nconst items = ids.map(id => ({\n  json: {\n    plcyBizId: id,\n    currentPage: pageIndex,\n    lastPage: maxPage,\n    totalCount: totalCount\n  }\n}));\n\nif (items.length === 0) {\n  return [{ json: { empty: true, currentPage: pageIndex, lastPage: maxPage } }];\n}\n\nreturn items;"
+      },
+      "id": "extract-ids",
+      "name": "plcyBizId 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-policies",
+      "name": "정책별 순차 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-wait",
+      "name": "3초 대기 (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "url": "=https://youth.seoul.go.kr/infoData/plcyInfo/view.do?plcyBizId={{ $json.plcyBizId }}&tab=001&key=2309150002&tabKind=002",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            }
+          ]
+        }
+      },
+      "id": "fetch-detail",
+      "name": "상세 페이지 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst plcyBizId = $('정책별 순차 처리').first().json.plcyBizId;\n\n// Helper: th 텍스트로 인접 td 내용 추출\nfunction extractByTh(thText) {\n  // <th ...>thText</th> 다음에 오는 <td ...>내용</td> 추출\n  const escapedTh = thText.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const regex = new RegExp(\n    '<th[^>]*>' + escapedTh + '</th>\\\\s*<td[^>]*>([\\\\s\\\\S]*?)</td>',\n    'i'\n  );\n  const match = html.match(regex);\n  if (!match) return '';\n  // HTML 태그 제거, 공백 정리\n  return match[1]\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/\\t/g, '')\n    .replace(/\\n\\s*\\n/g, '\\n')\n    .trim();\n}\n\n// 제목 추출: <strong class=\"title\">...</strong>\nconst titleMatch = html.match(/<strong\\s+class=\"title\">([^<]+)<\\/strong>/);\nconst title = titleMatch ? titleMatch[1].trim() : '';\n\n// 정책 유형 (카테고리)\nconst category = extractByTh('정책 유형');\n\n// 주관 기관\nconst organization = extractByTh('주관 기관');\n\n// 정책 소개\nconst introduction = extractByTh('정책 소개');\n\n// 지원 내용\nconst supportContent = extractByTh('지원 내용');\n\n// 신청기간 파싱\nconst periodText = extractByTh('사업신청기간');\nlet applyStart = null;\nlet applyEnd = null;\n\nif (periodText) {\n  // \"2026.4.1.(수) 10:00 ~ 2026.4.14.(화) 18:00\" 패턴\n  const dateRegex = /(\\d{4})\\.(\\d{1,2})\\.(\\d{1,2})/g;\n  const dates = [];\n  let dm;\n  while ((dm = dateRegex.exec(periodText)) !== null) {\n    const y = dm[1];\n    const m = dm[2].padStart(2, '0');\n    const d = dm[3].padStart(2, '0');\n    dates.push(`${y}-${m}-${d}`);\n  }\n  if (dates.length >= 1) applyStart = dates[0];\n  if (dates.length >= 2) applyEnd = dates[1];\n}\n\n// 연령/자격\nconst ageInfo = extractByTh('연령');\n\n// 신청절차\nconst procedure = extractByTh('신청절차');\n\n// 제출서류\nconst documents = extractByTh('제출서류');\n\n// 본문 조합\nconst bodyParts = [];\nif (introduction) bodyParts.push('사업개요: ' + introduction);\nif (ageInfo) bodyParts.push('지원대상: ' + ageInfo);\nif (supportContent) bodyParts.push('지원내용: ' + supportContent);\nif (procedure) bodyParts.push('신청방법: ' + procedure);\nif (documents) bodyParts.push('제출서류: ' + documents);\n\nconst body = bodyParts.join('\\n');\n\n// 카테고리 매핑 (한글 → 백엔드가 기대하는 한글 그대로 전달)\nconst sourceUrl = `https://youth.seoul.go.kr/infoData/plcyInfo/view.do?plcyBizId=${plcyBizId}&tab=001&key=2309150002&tabKind=002`;\n\nconst result = {\n  source: {\n    url: sourceUrl,\n    type: 'YOUTH_SEOUL',\n    fetchedAt: new Date().toISOString().replace('Z', '')\n  },\n  rawData: {\n    title: title,\n    body: body,\n    category: category || '복지',\n    region: '서울',\n    applyStart: applyStart,\n    applyEnd: applyEnd\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "parse-detail",
+      "name": "상세 데이터 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-to-backend",
+      "name": "백엔드 API 전송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 현재 배치의 정책 정보에서 페이지 정보 가져오기\nconst items = $('plcyBizId 추출').all();\nconst firstItem = items[0]?.json || {};\nconst currentPage = firstItem.currentPage || 1;\nconst lastPage = firstItem.lastPage || 1;\n\nif (currentPage < lastPage) {\n  // 다음 페이지로 이동\n  return [{ json: { pageIndex: currentPage + 1, hasNext: true } }];\n} else {\n  // 모든 페이지 처리 완료\n  return [{ json: { pageIndex: currentPage, hasNext: false } }];\n}"
+      },
+      "id": "check-next-page",
+      "name": "다음 페이지 확인",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-next",
+              "leftValue": "={{ $json.hasNext }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-next",
+      "name": "다음 페이지 존재?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pageIndex = $input.first().json.pageIndex;\nreturn [{ json: { pageIndex: pageIndex } }];"
+      },
+      "id": "next-page",
+      "name": "다음 페이지 이동",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('plcyBizId 추출').all();\nconst firstItem = items[0]?.json || {};\nconst totalCount = firstItem.totalCount || 0;\nconst lastPage = firstItem.lastPage || 0;\n\nreturn [{\n  json: {\n    message: '크롤링 완료',\n    totalPolicies: totalCount,\n    totalPages: lastPage,\n    completedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "complete",
+      "name": "크롤링 완료",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -100]
+    }
+  ],
+  "connections": {
+    "매일 새벽 3시 실행": {
+      "main": [
+        [{ "node": "페이지 초기화", "type": "main", "index": 0 }]
+      ]
+    },
+    "페이지 초기화": {
+      "main": [
+        [{ "node": "목록 페이지 요청", "type": "main", "index": 0 }]
+      ]
+    },
+    "목록 페이지 요청": {
+      "main": [
+        [{ "node": "plcyBizId 추출", "type": "main", "index": 0 }]
+      ]
+    },
+    "plcyBizId 추출": {
+      "main": [
+        [{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]
+      ]
+    },
+    "정책별 순차 처리": {
+      "main": [
+        [{ "node": "다음 페이지 확인", "type": "main", "index": 0 }],
+        [{ "node": "3초 대기 (Rate Limit)", "type": "main", "index": 0 }]
+      ]
+    },
+    "3초 대기 (Rate Limit)": {
+      "main": [
+        [{ "node": "상세 페이지 요청", "type": "main", "index": 0 }]
+      ]
+    },
+    "상세 페이지 요청": {
+      "main": [
+        [{ "node": "상세 데이터 파싱", "type": "main", "index": 0 }]
+      ]
+    },
+    "상세 데이터 파싱": {
+      "main": [
+        [{ "node": "백엔드 API 전송", "type": "main", "index": 0 }]
+      ]
+    },
+    "백엔드 API 전송": {
+      "main": [
+        [{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]
+      ]
+    },
+    "다음 페이지 확인": {
+      "main": [
+        [{ "node": "다음 페이지 존재?", "type": "main", "index": 0 }]
+      ]
+    },
+    "다음 페이지 존재?": {
+      "main": [
+        [{ "node": "다음 페이지 이동", "type": "main", "index": 0 }],
+        [{ "node": "크롤링 완료", "type": "main", "index": 0 }]
+      ]
+    },
+    "다음 페이지 이동": {
+      "main": [
+        [{ "node": "목록 페이지 요청", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "crawling"
+    },
+    {
+      "name": "youth-policy"
+    }
+  ],
+  "meta": {
+    "instanceId": "youthfit"
+  }
+}
