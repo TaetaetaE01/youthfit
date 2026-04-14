@@ -91,4 +91,14 @@ public class Policy extends BaseTimeEntity {
     public boolean isExpired() {
         return this.applyEnd != null && this.applyEnd.isBefore(LocalDate.now());
     }
+
+    public void updateInfo(String title, String summary, Category category,
+                           String regionCode, LocalDate applyStart, LocalDate applyEnd) {
+        this.title = title;
+        this.summary = summary;
+        this.category = category;
+        this.regionCode = regionCode;
+        this.applyStart = applyStart;
+        this.applyEnd = applyEnd;
+    }
 }

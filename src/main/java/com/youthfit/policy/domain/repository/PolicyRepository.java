@@ -15,4 +15,6 @@ public interface PolicyRepository {
     Page<Policy> findAllByFilters(String regionCode, Category category, PolicyStatus status, Pageable pageable);
 
     Page<Policy> searchByKeyword(String keyword, Pageable pageable);
+
+    Policy save(Policy policy);
 }
