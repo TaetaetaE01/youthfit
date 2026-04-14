@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -33,6 +34,11 @@ public class BookmarkRepositoryImpl implements BookmarkRepository {
     @Override
     public Page<Bookmark> findAllByUserId(Long userId, Pageable pageable) {
         return jpaRepository.findAllByUserId(userId, pageable);
+    }
+
+    @Override
+    public List<Bookmark> findAllByUserId(Long userId) {
+        return jpaRepository.findAllByUserId(userId);
     }
 
     @Override
