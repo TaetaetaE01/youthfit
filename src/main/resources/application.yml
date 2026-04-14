@@ -41,6 +41,10 @@ openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
     dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
+  chat:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+    max-tokens: ${OPENAI_CHAT_MAX_TOKENS:2048}
 
 youthfit:
   internal:
