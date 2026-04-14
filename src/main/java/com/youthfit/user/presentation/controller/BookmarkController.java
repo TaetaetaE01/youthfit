@@ -20,11 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/bookmarks")
 @RequiredArgsConstructor
-public class BookmarkController {
+public class BookmarkController implements BookmarkApi {
 
     private final BookmarkService bookmarkService;
 
     @PostMapping
+    @Override
     public ResponseEntity<ApiResponse<BookmarkResponse>> createBookmark(
             Authentication authentication,
             @Valid @RequestBody CreateBookmarkRequest request) {
@@ -35,6 +36,7 @@ public class BookmarkController {
     }
 
     @DeleteMapping("/{bookmarkId}")
+    @Override
     public ResponseEntity<ApiResponse<Void>> deleteBookmark(
             Authentication authentication,
             @PathVariable Long bookmarkId) {
@@ -44,6 +46,7 @@ public class BookmarkController {
     }
 
     @GetMapping
+    @Override
     public ResponseEntity<ApiResponse<BookmarkPageResponse>> findMyBookmarks(
             Authentication authentication,
             @PageableDefault(size = 20) Pageable pageable) {

@@ -32,6 +32,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // Swagger UI
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 비로그인 허용
                         .requestMatchers(HttpMethod.GET, "/api/v1/policies/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()

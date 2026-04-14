@@ -14,11 +14,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/policies")
 @RequiredArgsConstructor
-public class PolicyController {
+public class PolicyController implements PolicyApi {
 
     private final PolicyQueryService policyQueryService;
 
     @GetMapping
+    @Override
     public ResponseEntity<PolicyPageResponse> findPolicies(
             @RequestParam(required = false) String regionCode,
             @RequestParam(required = false) Category category,
@@ -34,12 +35,14 @@ public class PolicyController {
     }
 
     @GetMapping("/{policyId}")
+    @Override
     public ResponseEntity<PolicyDetailResponse> getPolicyDetail(@PathVariable Long policyId) {
         PolicyDetailResult result = policyQueryService.findPolicyById(policyId);
         return ResponseEntity.ok(PolicyDetailResponse.from(result));
     }
 
     @GetMapping("/search")
+    @Override
     public ResponseEntity<PolicyPageResponse> searchPolicies(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,

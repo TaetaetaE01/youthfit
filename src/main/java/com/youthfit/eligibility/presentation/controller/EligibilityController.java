@@ -17,11 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/eligibility")
 @RequiredArgsConstructor
-public class EligibilityController {
+public class EligibilityController implements EligibilityApi {
 
     private final EligibilityService eligibilityService;
 
     @PostMapping("/judge")
+    @Override
     public ResponseEntity<ApiResponse<EligibilityJudgmentResponse>> judge(
             Authentication authentication,
             @Valid @RequestBody JudgeEligibilityRequest request) {

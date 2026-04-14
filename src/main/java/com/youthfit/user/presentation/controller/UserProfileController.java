@@ -14,11 +14,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-public class UserProfileController {
+public class UserProfileController implements UserProfileApi {
 
     private final UserProfileService userProfileService;
 
     @GetMapping("/me")
+    @Override
     public ResponseEntity<ApiResponse<UserProfileResponse>> findMyProfile(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         UserProfileResult result = userProfileService.findMyProfile(userId);
@@ -26,6 +27,7 @@ public class UserProfileController {
     }
 
     @PatchMapping("/me")
+    @Override
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
             Authentication authentication,
             @Valid @RequestBody UpdateProfileRequest request) {

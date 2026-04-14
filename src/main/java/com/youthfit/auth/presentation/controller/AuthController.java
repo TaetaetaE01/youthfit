@@ -18,11 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController implements AuthApi {
 
     private final AuthService authService;
 
     @PostMapping("/kakao")
+    @Override
     public ResponseEntity<ApiResponse<TokenResponse>> loginWithKakao(
             @Valid @RequestBody KakaoLoginRequest request) {
         TokenResult result = authService.loginWithKakao(request.toCommand());
@@ -30,6 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Override
     public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(
             @Valid @RequestBody TokenRefreshRequest request) {
         TokenResult result = authService.refreshAccessToken(request.refreshToken());
@@ -37,6 +39,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Override
     public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         authService.logout(userId);

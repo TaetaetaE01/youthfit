@@ -17,11 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/internal/ingestion")
 @RequiredArgsConstructor
-public class IngestionController {
+public class IngestionController implements IngestionApi {
 
     private final IngestionService ingestionService;
 
     @PostMapping("/policies")
+    @Override
     public ResponseEntity<ApiResponse<IngestPolicyResponse>> receivePolicy(
             @Valid @RequestBody IngestPolicyRequest request) {
 
