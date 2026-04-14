@@ -65,6 +65,14 @@
 - Controller 안에 비즈니스 규칙을 넣지 않는다.
 - Controller가 Repository에 직접 접근하지 않는다.
 
+## Swagger (OpenAPI) 규칙
+- 새로운 Controller를 추가하면 반드시 `@Tag`를 클래스에, `@Operation`을 각 엔드포인트 메서드에 붙인다.
+- `@Tag(name = "한글 그룹명", description = "한 줄 설명")`
+- `@Operation(summary = "동작 요약", description = "상세 설명")`
+- PathVariable, 필수 RequestParam에는 `@Parameter(description = "...")` 를 붙인다.
+- Request/Response DTO record 필드에는 `@Schema(description = "...")` 를 필요에 따라 붙인다.
+- 인증이 불필요한 엔드포인트에는 `@SecurityRequirements` (빈 값)를 붙여 Swagger UI에서 자물쇠를 제거한다.
+
 ## 코드 리뷰 체크 기준
 코드 마무리 전에 확인한다:
 - 이름이 충분히 명시적인가?
