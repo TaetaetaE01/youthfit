@@ -42,5 +42,14 @@ out/
 *.pem
 credentials/
 
+### Docs ###
+docs/
+
+### Claude Code ###
+.claude/
+
+### oh-my-claudecode ###
+.omc/
+
 ### OS ###
 .DS_Store
