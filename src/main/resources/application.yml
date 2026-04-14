@@ -45,6 +45,10 @@ openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
     max-tokens: ${OPENAI_CHAT_MAX_TOKENS:2048}
+  qna:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_QNA_MODEL:gpt-4o-mini}
+    max-tokens: ${OPENAI_QNA_MAX_TOKENS:1024}
 
 youthfit:
   internal:

@@ -1,0 +1,15 @@
+package com.youthfit.qna.infrastructure.external;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@Getter
+@RequiredArgsConstructor
+@ConfigurationProperties(prefix = "openai.qna")
+public class OpenAiQnaProperties {
+
+    private final String apiKey;
+    private final String model;
+    private final int maxTokens;
+}
