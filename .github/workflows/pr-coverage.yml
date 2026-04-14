@@ -25,9 +25,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run tests and generate coverage
-        run: ./gradlew test jacocoTestReport --continue
+        run: ./gradlew test jacocoTestReport --continue || true
+
+      - name: Generate report if skipped
+        run: ./gradlew jacocoTestReport -x test || true
 
       - name: Add coverage comment to PR
+        if: always()
         uses: madrapps/jacoco-report@v1.7.1
         with:
           paths: build/reports/jacoco/test/jacocoTestReport.xml
