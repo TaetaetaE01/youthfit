@@ -6,6 +6,9 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Array;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -29,11 +32,24 @@ public class PolicyDocument extends BaseTimeEntity {
     @Column(name = "source_hash", nullable = false, length = 64)
     private String sourceHash;
 
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 1536)
+    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    private float[] embedding;
+
     @Builder
     private PolicyDocument(Long policyId, int chunkIndex, String content, String sourceHash) {
         this.policyId = policyId;
         this.chunkIndex = chunkIndex;
         this.content = content;
         this.sourceHash = sourceHash;
+    }
+
+    public void updateEmbedding(float[] embedding) {
+        this.embedding = embedding;
+    }
+
+    public boolean hasEmbedding() {
+        return this.embedding != null && this.embedding.length > 0;
     }
 }

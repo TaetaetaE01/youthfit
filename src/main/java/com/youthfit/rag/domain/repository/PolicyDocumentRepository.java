@@ -15,4 +15,6 @@ public interface PolicyDocumentRepository {
     List<PolicyDocument> findByPolicyIdOrderByChunkIndex(Long policyId);
 
     void deleteByPolicyId(Long policyId);
+
+    List<PolicyDocument> findSimilarByEmbedding(Long policyId, float[] queryEmbedding, int limit);
 }
