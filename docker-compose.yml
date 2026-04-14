@@ -1,0 +1,97 @@
+services:
+
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:17-alpine
+    container_name: youthfit-postgres
+    environment:
+      POSTGRES_DB: youthfit
+      POSTGRES_USER: youthfit
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U youthfit"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Redis ──
+  redis:
+    image: redis:7-alpine
+    container_name: youthfit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── n8n ──
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: youthfit-n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+      - WEBHOOK_URL=http://localhost:5678/
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Backend (Spring Boot) ──
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: youthfit-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: youthfit
+      DB_USER: youthfit
+      DB_PASSWORD: changeme
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-key-minimum-32-bytes!!}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Frontend (별도 레포 — 볼륨 마운트로 연결) ──
+  # 프론트엔드 레포를 ../youthfit-frontend 에 클론한 뒤 아래 주석을 해제하세요.
+  # frontend:
+  #   image: node:22-alpine
+  #   container_name: youthfit-frontend
+  #   working_dir: /app
+  #   command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ../youthfit-frontend:/app
+  #   depends_on:
+  #     - backend
+
+volumes:
+  postgres-data:
+  redis-data:
+  n8n-data:
