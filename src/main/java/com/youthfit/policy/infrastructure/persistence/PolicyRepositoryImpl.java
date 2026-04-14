@@ -35,4 +35,9 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     public Page<Policy> searchByKeyword(String keyword, Pageable pageable) {
         return jpaRepository.searchByKeyword(keyword, pageable);
     }
+
+    @Override
+    public Policy save(Policy policy) {
+        return jpaRepository.save(policy);
+    }
 }
