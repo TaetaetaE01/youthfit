@@ -1,6 +1,7 @@
 package com.youthfit.common.config;
 
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationFilter;
+import com.youthfit.ingestion.infrastructure.config.InternalApiKeyFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final InternalApiKeyFilter internalApiKeyFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -34,11 +36,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/policies/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        // 내부 API
-                        .requestMatchers("/internal/**").permitAll() // 추후 API 키 필터로 교체
+                        // 내부 API (API 키 필터로 인증)
+                        .requestMatchers("/api/internal/**").permitAll()
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(internalApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
