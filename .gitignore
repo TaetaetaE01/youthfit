@@ -42,9 +42,6 @@ out/
 *.pem
 credentials/
 
-### Docs ###
-docs/
-
 ### Claude Code ###
 .claude/
 
