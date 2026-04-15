@@ -56,7 +56,7 @@ services:
   # ── Backend (Spring Boot) ──
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: youthfit-backend
     environment:
@@ -81,8 +81,7 @@ services:
       redis:
         condition: service_healthy
 
-  # ── Frontend (별도 레포 — 볼륨 마운트로 연결) ──
-  # 프론트엔드 레포를 ../youthfit-frontend 에 클론한 뒤 아래 주석을 해제하세요.
+  # ── Frontend (로컬 개발 시에는 npm run dev 직접 실행 권장) ──
   # frontend:
   #   image: node:22-alpine
   #   container_name: youthfit-frontend
@@ -91,7 +90,7 @@ services:
   #   ports:
   #     - "5173:5173"
   #   volumes:
-  #     - ../youthfit-frontend:/app
+  #     - ./frontend:/app
   #   depends_on:
   #     - backend
 
