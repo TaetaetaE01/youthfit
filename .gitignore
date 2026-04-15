@@ -1,3 +1,4 @@
+### Backend (Gradle/Java) ###
 HELP.md
 .gradle
 build/
@@ -36,6 +37,11 @@ out/
 ### VS Code ###
 .vscode/
 !/.idea/
+
+### Frontend (Node.js) ###
+node_modules/
+dist/
+.vite/
 
 ### Secrets ###
 .env

@@ -23,18 +23,24 @@
 - 이벤트 드리븐 아키텍처
 - 초기 크롤링 파이프라인을 제외한 외부 공개 API 연동
 
-## 절대 지켜야 할 아키텍처 규칙
-- **DDD + Clean Architecture**를 따른다.
-- 의존 방향은 반드시 **Presentation -> Application -> Domain** 을 유지한다.
-- Infrastructure는 포트를 구현할 수 있지만, 의존 방향을 역전시키면 안 된다.
-- 트랜잭션 경계는 오직 **Application Service** 에만 둔다.
-- Controller 응답에 Entity를 직접 노출하지 않는다.
-- `presentation` DTO를 `application` 또는 `domain` 에서 import하지 않는다.
-- `domain` 레이어에 Spring, JPA, OpenAI SDK 등 프레임워크 의존을 넣지 않는다.
-- 비즈니스 규칙을 표현하는 동작은 가능하면 도메인 모델 안에 둔다.
+## 프로젝트 구조
+```
+youthfit/
+├── CLAUDE.md              # 공통 규칙 (이 파일)
+├── backend/               # Spring Boot 백엔드
+│   ├── CLAUDE.md          # 백엔드 전용 규칙
+│   └── src/
+├── frontend/              # React 프론트엔드
+│   ├── CLAUDE.md          # 프론트엔드 전용 규칙
+│   └── src/
+├── docs/                  # 프로젝트 문서
+├── docker-compose.yml
+└── n8n/                   # 워크플로우 설정
+```
 
 ## 모듈 경계
-핵심 백엔드 모듈:
+
+### 백엔드 모듈
 - `ingestion`: n8n 및 외부 수집 파이프라인에서 원천 데이터를 수신
 - `policy`: 정책 도메인, 정규화, 중복 제거
 - `rag`: 임베딩, 청크 분할, 벡터 조회
@@ -44,6 +50,13 @@
 - `auth`: 소셜 로그인, JWT 발급·갱신·검증
 - `user`: 프로필, 북마크, 알림
 - `common`: 공통 유틸과 횡단 관심사
+
+### 프론트엔드 주요 영역
+- 정책 탐색 (목록, 상세, 검색)
+- 인증 (카카오 로그인, 토큰 관리)
+- 사용자 (프로필, 북마크, 알림 설정)
+- 적합도 판정 UI
+- Q&A 스트리밍 UI
 
 ## 연동 규칙
 - n8n은 여러 도메인 엔드포인트를 직접 호출하지 말고, 작은 내부 수신 표면만 통해 백엔드와 통신한다.
@@ -58,25 +71,28 @@
 - 요약이나 인용으로 충분한 경우 원문 전체를 그대로 노출하지 않는다.
 
 ## 작업 방식
-- **Controller를 추가하거나 엔드포인트를 변경할 때 `{도메인}Api` 인터페이스에 Swagger 어노테이션(`@Tag`, `@Operation`, `@Parameter`)을 반드시 함께 작성한다.** Controller에는 Swagger 어노테이션을 두지 않고 인터페이스를 구현만 한다. 규칙 상세는 `docs/CONVENTIONS.md`의 "Swagger (OpenAPI) 규칙" 섹션을 따른다.
 - 작고 되돌리기 쉬운 변경을 선호한다.
 - 한 번에 하나의 기능 슬라이스 또는 하나의 모듈 경계만 수정한다.
 - 여러 모듈에 걸치는 변경이면 먼저 아키텍처 문서를 갱신한다.
 - 요구사항이 불명확하면 가정을 명시한다.
-- **각 작업(태스크)이 완료되면 반드시 컴파일 확인 후 커밋한다.** 커밋 메시지는 Conventional Commits 형식(`feat:`, `fix:`, `refactor:`, `chore:`, `docs:` 등)을 따른다.
+- **각 작업(태스크)이 완료되면 반드시 빌드/타입체크 확인 후 커밋한다.** 커밋 메시지는 Conventional Commits 형식(`feat:`, `fix:`, `refactor:`, `chore:`, `docs:` 등)을 따른다.
 
 ## 문서 맵
 - `docs/PRODUCT.md`: 제품 목표, 타겟 사용자, MVP 범위, 정책 해석 원칙
 - `docs/ARCHITECTURE.md`: 모듈 경계, 레이어 규칙, 데이터 흐름, 인프라 설계
 - `docs/CONVENTIONS.md`: 네이밍, DTO 경계, 예외 처리, Lombok 및 코드 스타일 규칙
 - `docs/OPS.md`: 환경 변수, 배포 노트, 시크릿 관리, 운영 안전장치
+- `docs/PRD.md`: 상세 기능 요구사항
+- `backend/CLAUDE.md`: 백엔드 전용 아키텍처 및 코드 규칙
+- `frontend/CLAUDE.md`: 프론트엔드 전용 기술 스택 및 코드 규칙
 
 ## 수정 전에 읽기
 - 패키지 구조, 서비스 경계, 의존 방향을 바꾸기 전에는 `docs/ARCHITECTURE.md`를 읽는다.
-- Controller, DTO, Service, Entity를 추가하기 전에는 `docs/CONVENTIONS.md`를 읽는다.
+- Controller, DTO, Service, Entity를 추가하기 전에는 `docs/CONVENTIONS.md`와 `backend/CLAUDE.md`를 읽는다.
+- 프론트엔드 컴포넌트, 페이지, API 연동을 추가하기 전에는 `frontend/CLAUDE.md`를 읽는다.
 - 적합도 로직이나 사용자에게 보이는 해석 방식을 바꾸기 전에는 `docs/PRODUCT.md`와 `docs/ARCHITECTURE.md`를 읽는다.
 - 크롤링, 배포, 시크릿 관련 설정을 바꾸기 전에는 `docs/OPS.md`를 읽는다.
-- 기능을 구현하기 전에는 `docs/prd/` 하위의 해당 도메인 PRD 문서를 읽는다. 문서 목록은 `docs/prd/README.md`를 참조한다.
+- 기능을 구현하기 전에는 `docs/PRD.md`를 읽는다.
 
 ## Claude Code 기능 관련 메모
 - **Plan Mode** 는 큰 리팩토링이나 위험한 변경 전에 읽기 중심으로 범위를 파악하고 계획을 세울 때 유용하다.
