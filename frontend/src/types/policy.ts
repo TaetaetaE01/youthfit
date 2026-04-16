@@ -111,7 +111,7 @@ export interface BookmarkPage {
 
 export interface UserProfile {
   id: number;
-  email: string;
+  email: string | null;
   nickname: string;
   profileImageUrl: string | null;
   age: number | null;
@@ -123,6 +123,7 @@ export interface UserProfile {
 
 export interface UpdateProfileRequest {
   nickname?: string;
+  email?: string | null;
   age?: number | null;
   regionCode?: string | null;
   employmentStatus?: EmploymentStatus | null;

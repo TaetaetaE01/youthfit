@@ -417,14 +417,18 @@ Authorization: Bearer {accessToken}
 }
 ```
 
+> `email`은 카카오 OAuth 응답에 이메일이 포함되지 않은 경우 `null`로 반환된다. 이 경우 `PATCH /api/v1/users/me`에서 사용자가 직접 등록한다.
+
 #### 6.3.2 내 프로필 수정
 
-**설명**: 닉네임과 프로필 이미지를 수정한다.
+**설명**: 닉네임, 프로필 이미지, 이메일을 수정한다.
 
 **비즈니스 규칙**:
 - 인증 필수
 - 닉네임은 필수, 최대 50자
 - 프로필 이미지 URL은 선택
+- 이메일은 선택. 카카오는 기본적으로 이메일을 제공하지 않으므로 최초 가입 시 `null`로 저장될 수 있으며, 이메일 알림 기능을 사용하려면 본 API로 등록해야 한다.
+- 이메일은 시스템 내에서 유일해야 한다. 다른 사용자가 이미 사용 중이면 `409 DUPLICATE` 반환.
 
 **API 스펙**:
 
@@ -438,7 +442,8 @@ Content-Type: application/json
 ```json
 {
   "nickname": "민지_취준생",
-  "profileImageUrl": "https://..."
+  "profileImageUrl": "https://...",
+  "email": "minji@example.com"
 }
 ```
 
@@ -446,8 +451,13 @@ Content-Type: application/json
 |------|------|------|------|
 | nickname | String | Y | @NotBlank, @Size(max=50) |
 | profileImageUrl | String | N | - |
+| email | String | N | @Email, @Size(max=255), 시스템 내 유일 |
 
 **응답 (200 OK)**: 프로필 조회(6.3.1)와 동일한 구조
+
+**에러 응답**:
+- `400 INVALID_INPUT` (YF-001): 이메일 형식이 올바르지 않음
+- `409 DUPLICATE` (YF-005): 이미 사용 중인 이메일
 
 ---
 

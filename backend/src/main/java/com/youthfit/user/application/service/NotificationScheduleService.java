@@ -63,6 +63,10 @@ public class NotificationScheduleService {
                     continue;
                 }
 
+                if (user.getEmail() == null || user.getEmail().isBlank()) {
+                    continue;
+                }
+
                 emailSender.sendDeadlineNotification(user.getEmail(), policy);
                 notificationHistoryRepository.save(
                         new NotificationHistory(userId, policy.getId(), NOTIFICATION_TYPE_DEADLINE));
