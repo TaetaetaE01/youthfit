@@ -23,8 +23,8 @@ export interface Policy {
   summary: string;
   category: PolicyCategory;
   regionCode: string;
-  applyStart: string;
-  applyEnd: string;
+  applyStart: string | null;
+  applyEnd: string | null;
   status: PolicyStatus;
   detailLevel: DetailLevel;
 }
