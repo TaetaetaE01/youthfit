@@ -50,10 +50,22 @@ export default function LoginPage() {
   }, [showError, searchParams, setSearchParams]);
 
   const handleKakaoLogin = () => {
-    // TODO: Replace with actual Kakao OAuth URL when Client ID is available
-    // const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${encodeURIComponent(redirectTo)}`;
-    // window.location.href = kakaoAuthUrl;
-    alert('카카오 로그인은 준비 중입니다.');
+    const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+
+    if (!clientId || !redirectUri) {
+      setShowError(true);
+      console.error('Kakao OAuth env vars missing: VITE_KAKAO_CLIENT_ID, VITE_KAKAO_REDIRECT_URI');
+      return;
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      state: redirectTo,
+    });
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
   };
 
   return (
