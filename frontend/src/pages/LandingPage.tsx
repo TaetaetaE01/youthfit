@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 /* ──────────────────────────── Hooks ──────────────────────────── */
 
@@ -185,16 +186,16 @@ function Navbar() {
 
         {/* Nav links (desktop) */}
         <nav className="hidden items-center gap-8 md:flex">
-          <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</a>
-          <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</a>
-          <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</a>
+          <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</Link>
+          <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</Link>
+          <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</Link>
         </nav>
 
         {/* CTA + Mobile toggle */}
         <div className="flex items-center gap-3">
-          <button className="rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900">
+          <Link to="/login" className="rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900">
             시작하기
-          </button>
+          </Link>
           <button
             className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -213,9 +214,9 @@ function Navbar() {
       {mobileOpen && (
         <nav className="border-t border-gray-100 bg-white px-6 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</a>
-            <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</a>
-            <a href="#" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</a>
+            <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</Link>
+            <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</Link>
+            <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</Link>
           </div>
         </nav>
       )}
@@ -264,13 +265,13 @@ function HeroSection() {
         {/* CTA 버튼 */}
         <FadeInOnScroll delay={300}>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <a
-              href="#features"
+            <Link
+              to="/policies"
               className="inline-flex items-center gap-2 rounded-xl bg-brand-800 px-7 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-900 hover:gap-3"
             >
               정책 둘러보기
               <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-7 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-brand-800 hover:text-brand-800"
@@ -677,19 +678,19 @@ function CTASection() {
               회원가입 없이도 정책을 둘러볼 수 있어요.
             </p>
             <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-              <a
-                href="#"
+              <Link
+                to="/policies"
                 className="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-brand-800 shadow-lg transition-all hover:bg-gray-100 hover:shadow-xl animate-cta-glow"
               >
                 정책 둘러보기
                 <ArrowRightIcon className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/login"
                 className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
                 카카오로 시작하기
-              </a>
+              </Link>
             </div>
           </div>
         </FadeInOnScroll>

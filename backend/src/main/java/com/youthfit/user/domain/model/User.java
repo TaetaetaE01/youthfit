@@ -19,7 +19,7 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
     @Column(nullable = false, length = 50)
@@ -82,6 +82,13 @@ public class User extends BaseTimeEntity {
         }
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public void updateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new YouthFitException(ErrorCode.INVALID_INPUT, "이메일은 비어있을 수 없습니다");
+        }
+        this.email = email;
     }
 
     public void updateRefreshToken(String refreshToken) {

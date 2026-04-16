@@ -32,8 +32,11 @@ function StatusBadge({ status }: { status: PolicyStatus }) {
   );
 }
 
-function formatDateRange(start: string, end: string) {
+function formatDateRange(start: string | null, end: string | null) {
+  if (!start && !end) return '상시';
   const fmt = (d: string) => d.slice(0, 10).replace(/-/g, '.');
+  if (!start) return `~${fmt(end!)}`;
+  if (!end) return `${fmt(start)}~`;
   return `${fmt(start)}~${fmt(end)}`;
 }
 

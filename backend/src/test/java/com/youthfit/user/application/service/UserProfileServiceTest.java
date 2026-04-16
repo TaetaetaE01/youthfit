@@ -77,7 +77,7 @@ class UserProfileServiceTest {
             // given
             User user = createMockUser();
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            UpdateProfileCommand command = new UpdateProfileCommand("새닉네임", "https://img.example.com/new.jpg");
+            UpdateProfileCommand command = new UpdateProfileCommand("새닉네임", "https://img.example.com/new.jpg", null);
 
             // when
             UserProfileResult result = userProfileService.updateMyProfile(1L, command);
@@ -91,7 +91,7 @@ class UserProfileServiceTest {
         void userNotFound_throwsException() {
             // given
             given(userRepository.findById(999L)).willReturn(Optional.empty());
-            UpdateProfileCommand command = new UpdateProfileCommand("새닉네임", null);
+            UpdateProfileCommand command = new UpdateProfileCommand("새닉네임", null, null);
 
             // when & then
             assertThatThrownBy(() -> userProfileService.updateMyProfile(999L, command))

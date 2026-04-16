@@ -75,10 +75,11 @@ public class AuthService {
     }
 
     private TokenResult issueTokens(User user) {
+        String subject = user.getEmail() != null ? user.getEmail() : String.valueOf(user.getId());
         String accessToken = jwtProvider.createAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name());
+                user.getId(), subject, user.getRole().name());
         String refreshToken = jwtProvider.createRefreshToken(
-                user.getId(), user.getEmail(), user.getRole().name());
+                user.getId(), subject, user.getRole().name());
 
         return new TokenResult(accessToken, refreshToken);
     }

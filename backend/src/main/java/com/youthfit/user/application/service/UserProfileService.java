@@ -28,6 +28,17 @@ public class UserProfileService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.updateProfile(command.nickname(), command.profileImageUrl());
+
+        if (command.email() != null && !command.email().isBlank()
+                && !command.email().equals(user.getEmail())) {
+            userRepository.findByEmail(command.email()).ifPresent(existing -> {
+                if (!existing.getId().equals(userId)) {
+                    throw new YouthFitException(ErrorCode.DUPLICATE, "이미 사용 중인 이메일입니다");
+                }
+            });
+            user.updateEmail(command.email());
+        }
+
         return UserProfileResult.from(user);
     }
 }

@@ -139,6 +139,12 @@ export default function MyPage() {
   const [editNickname, setEditNickname] = useState('');
   const nicknameInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── Email edit state ── */
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editEmail, setEditEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState<TabKey>('bookmarks');
 
@@ -211,6 +217,48 @@ export default function MyPage() {
   };
 
   const handleCancelEdit = () => setIsEditing(false);
+
+  const handleStartEditEmail = () => {
+    setEditEmail(profile?.email ?? '');
+    setEmailError(null);
+    setIsEditingEmail(true);
+    setTimeout(() => emailInputRef.current?.focus(), 0);
+  };
+
+  const handleSaveEmail = () => {
+    const trimmed = editEmail.trim();
+    if (!trimmed) {
+      setEmailError('이메일을 입력해주세요');
+      return;
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmed)) {
+      setEmailError('올바른 이메일 형식이 아니에요');
+      return;
+    }
+    if (trimmed === profile?.email) {
+      setIsEditingEmail(false);
+      return;
+    }
+    updateProfileMutation.mutate(
+      { nickname: profile?.nickname ?? '', email: trimmed },
+      {
+        onSuccess: () => {
+          setIsEditingEmail(false);
+          setEmailError(null);
+        },
+        onError: (err: unknown) => {
+          const message = err instanceof Error ? err.message : '이메일 저장에 실패했어요';
+          setEmailError(message.includes('409') ? '이미 사용 중인 이메일이에요' : '이메일 저장에 실패했어요');
+        },
+      },
+    );
+  };
+
+  const handleCancelEditEmail = () => {
+    setIsEditingEmail(false);
+    setEmailError(null);
+  };
 
   const handleBookmarkRemove = (bookmarkId: number) => {
     setFadingId(bookmarkId);
@@ -337,7 +385,68 @@ export default function MyPage() {
                 ) : (
                   <h2 className="truncate text-2xl font-bold text-neutral-900">{profile.nickname}</h2>
                 )}
-                <p className="mt-0.5 truncate text-sm text-neutral-500">{profile.email}</p>
+                {isEditingEmail ? (
+                  <div className="mt-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={emailInputRef}
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEmail();
+                          if (e.key === 'Escape') handleCancelEditEmail();
+                        }}
+                        placeholder="example@email.com"
+                        className="h-9 w-full rounded-lg border border-neutral-200 px-2.5 text-sm text-neutral-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        aria-label="이메일 입력"
+                        aria-invalid={emailError != null}
+                        aria-describedby={emailError ? 'email-error' : undefined}
+                      />
+                    </div>
+                    {emailError && (
+                      <p id="email-error" className="mt-1 text-xs text-error-500">
+                        {emailError}
+                      </p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveEmail}
+                        disabled={updateProfileMutation.isPending}
+                        className="rounded-md bg-brand-800 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-900 disabled:opacity-50"
+                      >
+                        저장
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditEmail}
+                        className="rounded-md px-3 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : profile.email ? (
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <p className="truncate text-sm text-neutral-500">{profile.email}</p>
+                    <button
+                      type="button"
+                      onClick={handleStartEditEmail}
+                      className="shrink-0 text-xs font-medium text-indigo-600 hover:underline"
+                    >
+                      변경
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartEditEmail}
+                    className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    이메일 등록하기
+                  </button>
+                )}
               </div>
             </div>
 
