@@ -30,6 +30,7 @@ export interface Policy {
 }
 
 export interface PolicyDetail extends Policy {
+  sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -113,7 +114,19 @@ export interface UserProfile {
   email: string;
   nickname: string;
   profileImageUrl: string | null;
+  age: number | null;
+  regionCode: string | null;
+  employmentStatus: EmploymentStatus | null;
+  incomeLevel: number | null;
   createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  nickname?: string;
+  age?: number | null;
+  regionCode?: string | null;
+  employmentStatus?: EmploymentStatus | null;
+  incomeLevel?: number | null;
 }
 
 export interface NotificationSettings {

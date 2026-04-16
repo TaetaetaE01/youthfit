@@ -7,6 +7,8 @@ import {
   Bell,
   Loader2,
   AlertCircle,
+  Save,
+  ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/authStore';
@@ -16,8 +18,8 @@ import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings
 import { useUpdateProfile } from '@/hooks/mutations/useUpdateProfile';
 import { useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { useUpdateNotificationSettings } from '@/hooks/mutations/useUpdateNotificationSettings';
-import type { Bookmark } from '@/types/policy';
-import { STATUS_LABELS, CATEGORY_LABELS } from '@/types/policy';
+import type { Bookmark, EmploymentStatus, UpdateProfileRequest } from '@/types/policy';
+import { STATUS_LABELS, CATEGORY_LABELS, REGION_OPTIONS, EMPLOYMENT_STATUS_LABELS } from '@/types/policy';
 import type { PolicyCategory, PolicyStatus } from '@/types/policy';
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
@@ -157,6 +159,36 @@ export default function MyPage() {
       setDaysBeforeDeadline(notificationData.daysBeforeDeadline);
     }
   }, [notificationData]);
+
+  /* ── Profile extra info state ── */
+  const [editingExtra, setEditingExtra] = useState(false);
+  const [extraAge, setExtraAge] = useState<string>('');
+  const [extraRegion, setExtraRegion] = useState<string>('');
+  const [extraEmployment, setExtraEmployment] = useState<string>('');
+  const [extraIncome, setExtraIncome] = useState<string>('');
+
+  useEffect(() => {
+    if (profile) {
+      setExtraAge(profile.age != null ? String(profile.age) : '');
+      setExtraRegion(profile.regionCode ?? '');
+      setExtraEmployment(profile.employmentStatus ?? '');
+      setExtraIncome(profile.incomeLevel != null ? String(profile.incomeLevel) : '');
+    }
+  }, [profile]);
+
+  const handleSaveExtra = () => {
+    const data: UpdateProfileRequest = {
+      age: extraAge ? Number(extraAge) : null,
+      regionCode: extraRegion || null,
+      employmentStatus: (extraEmployment as EmploymentStatus) || null,
+      incomeLevel: extraIncome ? Number(extraIncome) : null,
+    };
+    updateProfileMutation.mutate(data, {
+      onSuccess: () => setEditingExtra(false),
+    });
+  };
+
+  const extraFilled = profile?.age != null && profile?.regionCode && profile?.employmentStatus;
 
   /* ── Logout dialog ── */
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -335,6 +367,158 @@ export default function MyPage() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Profile Extra Info */}
+          <div className="rounded-2xl bg-white p-6 shadow-card">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-brand-800" />
+                <h3 className="text-base font-semibold text-neutral-900">적합도 판정 정보</h3>
+              </div>
+              {!editingExtra && (
+                <button
+                  onClick={() => setEditingExtra(true)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-neutral-600 transition-colors hover:bg-neutral-100"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  수정
+                </button>
+              )}
+            </div>
+
+            {!extraFilled && !editingExtra && (
+              <div className="rounded-xl bg-brand-100/60 p-4 text-center">
+                <p className="text-sm text-neutral-600">
+                  정보를 입력하면 정책 적합도를 확인할 수 있어요
+                </p>
+                <button
+                  onClick={() => setEditingExtra(true)}
+                  className="mt-3 rounded-lg bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
+                >
+                  정보 입력하기
+                </button>
+              </div>
+            )}
+
+            {extraFilled && !editingExtra && (
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-neutral-500">나이</dt>
+                  <dd className="font-medium text-neutral-900">만 {profile.age}세</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-neutral-500">거주 지역</dt>
+                  <dd className="font-medium text-neutral-900">
+                    {REGION_OPTIONS.find((r) => r.value === profile.regionCode)?.label ?? profile.regionCode}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-neutral-500">고용 상태</dt>
+                  <dd className="font-medium text-neutral-900">
+                    {EMPLOYMENT_STATUS_LABELS[profile.employmentStatus as EmploymentStatus] ?? profile.employmentStatus}
+                  </dd>
+                </div>
+                {profile.incomeLevel != null && (
+                  <div className="flex justify-between">
+                    <dt className="text-neutral-500">소득 수준</dt>
+                    <dd className="font-medium text-neutral-900">중위소득 {profile.incomeLevel}%</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
+            {editingExtra && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="extra-age" className="mb-1.5 block text-sm font-medium text-neutral-700">나이</label>
+                  <input
+                    id="extra-age"
+                    type="number"
+                    min={15}
+                    max={50}
+                    value={extraAge}
+                    onChange={(e) => setExtraAge(e.target.value)}
+                    placeholder="만 나이"
+                    className="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="extra-region" className="mb-1.5 block text-sm font-medium text-neutral-700">거주 지역</label>
+                  <select
+                    id="extra-region"
+                    value={extraRegion}
+                    onChange={(e) => setExtraRegion(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">선택해주세요</option>
+                    {REGION_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="extra-employment" className="mb-1.5 block text-sm font-medium text-neutral-700">고용 상태</label>
+                  <select
+                    id="extra-employment"
+                    value={extraEmployment}
+                    onChange={(e) => setExtraEmployment(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">선택해주세요</option>
+                    {(Object.entries(EMPLOYMENT_STATUS_LABELS) as [EmploymentStatus, string][]).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="extra-income" className="mb-1.5 block text-sm font-medium text-neutral-700">
+                    소득 수준 <span className="text-neutral-400">(선택)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="extra-income"
+                      type="number"
+                      min={0}
+                      max={500}
+                      value={extraIncome}
+                      onChange={(e) => setExtraIncome(e.target.value)}
+                      placeholder="중위소득 대비 %"
+                      className="h-11 w-full rounded-xl border border-neutral-200 px-3 pr-10 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">%</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={handleSaveExtra}
+                    disabled={updateProfileMutation.isPending}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 disabled:opacity-50"
+                  >
+                    {updateProfileMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    저장
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingExtra(false);
+                      if (profile) {
+                        setExtraAge(profile.age != null ? String(profile.age) : '');
+                        setExtraRegion(profile.regionCode ?? '');
+                        setExtraEmployment(profile.employmentStatus ?? '');
+                        setExtraIncome(profile.incomeLevel != null ? String(profile.incomeLevel) : '');
+                      }
+                    }}
+                    className="rounded-lg px-4 py-2.5 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Logout - desktop */}

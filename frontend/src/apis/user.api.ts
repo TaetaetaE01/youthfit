@@ -1,12 +1,12 @@
 import api from './client';
-import type { ApiResponse, UserProfile, NotificationSettings } from '@/types/policy';
+import type { ApiResponse, UserProfile, UpdateProfileRequest, NotificationSettings } from '@/types/policy';
 
 export async function fetchProfile(): Promise<UserProfile> {
   const res = await api.get('v1/users/me').json<ApiResponse<UserProfile>>();
   return res.data;
 }
 
-export async function updateProfile(data: Partial<Pick<UserProfile, 'nickname'>>): Promise<UserProfile> {
+export async function updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
   const res = await api.patch('v1/users/me', { json: data }).json<ApiResponse<UserProfile>>();
   return res.data;
 }

@@ -11,9 +11,11 @@ import {
   Send,
   Sparkles,
   Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
+import LoginPromptModal from '@/components/auth/LoginPromptModal';
 import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
@@ -177,11 +179,15 @@ function EligibilityCard({
   eligibility,
   loading,
   onCheck,
+  onLoginPrompt,
+  sourceUrl,
 }: {
   isAuthenticated: boolean;
   eligibility: EligibilityResponse | null;
   loading: boolean;
   onCheck: () => void;
+  onLoginPrompt: () => void;
+  sourceUrl: string | null;
 }) {
   return (
     <section className="rounded-2xl border border-neutral-200 bg-white p-6">
@@ -190,17 +196,12 @@ function EligibilityCard({
       </h2>
 
       {!isAuthenticated && (
-        <div className="text-center">
-          <p className="mb-4 text-sm text-neutral-500">
-            로그인하면 적합도를 확인할 수 있어요
-          </p>
-          <Link
-            to="/login"
-            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#FEE500] text-sm font-semibold text-[#191919] transition-opacity hover:opacity-90"
-          >
-            카카오로 시작하기
-          </Link>
-        </div>
+        <button
+          onClick={onLoginPrompt}
+          className="flex h-11 w-full items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          내 적합도 확인하기
+        </button>
       )}
 
       {isAuthenticated && !eligibility && !loading && (
@@ -261,6 +262,17 @@ function EligibilityCard({
           <p className="mt-4 text-xs text-neutral-500">
             {eligibility.disclaimer}
           </p>
+          {sourceUrl && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-brand-800 px-4 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-100"
+            >
+              공식 신청 채널에서 확인
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
       )}
     </section>
@@ -274,9 +286,11 @@ function EligibilityCard({
 function QnaChatSection({
   isAuthenticated,
   policyId,
+  onLoginPrompt,
 }: {
   isAuthenticated: boolean;
   policyId: number;
+  onLoginPrompt: () => void;
 }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<QnaMessage[]>([]);
@@ -414,7 +428,8 @@ function QnaChatSection({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          disabled={!isAuthenticated}
+          onFocus={() => { if (!isAuthenticated) onLoginPrompt(); }}
+          readOnly={!isAuthenticated}
           placeholder={
             isAuthenticated
               ? '질문을 입력하세요...'
@@ -422,7 +437,7 @@ function QnaChatSection({
           }
           className={cn(
             'h-11 w-full rounded-xl bg-white/15 pl-4 pr-12 text-sm text-white placeholder-white/50 outline-none transition-colors focus:bg-white/25',
-            !isAuthenticated && 'cursor-not-allowed opacity-60',
+            !isAuthenticated && 'cursor-pointer opacity-60',
           )}
         />
         <button
@@ -461,7 +476,20 @@ export default function PolicyDetailPage() {
   const [eligibility, setEligibility] = useState<EligibilityResponse | null>(null);
   const judgeMutation = useJudgeEligibility();
 
+  // --- Login prompt modal ---
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginModalMessage, setLoginModalMessage] = useState('');
+
+  const openLoginPrompt = useCallback((message?: string) => {
+    setLoginModalMessage(message ?? '로그인하면 이 기능을 이용할 수 있어요');
+    setLoginModalOpen(true);
+  }, []);
+
   const handleBookmarkToggle = () => {
+    if (!isAuthenticated) {
+      openLoginPrompt('로그인하면 정책을 북마크할 수 있어요');
+      return;
+    }
     if (bookmarked && bookmarkId) {
       removeBookmarkMutation.mutate(bookmarkId, {
         onSuccess: () => {
@@ -539,10 +567,30 @@ export default function PolicyDetailPage() {
             <p className="text-sm leading-relaxed text-neutral-700">{policy.summary}</p>
           </section>
 
+          {/* Official Application Link */}
+          {policy.sourceUrl && (
+            <section className="mb-8 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-6">
+              <h2 className="mb-2 text-lg font-semibold text-neutral-900">공식 신청 채널</h2>
+              <p className="mb-4 text-sm text-neutral-600">
+                정책의 정확한 내용과 신청은 공식 채널에서 확인해주세요.
+              </p>
+              <a
+                href={policy.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
+              >
+                공식 신청 페이지로 이동
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </section>
+          )}
+
           {/* Q&A */}
           <QnaChatSection
             isAuthenticated={isAuthenticated}
             policyId={policyId}
+            onLoginPrompt={() => openLoginPrompt('로그인하면 정책에 대해 질문할 수 있어요')}
           />
         </main>
 
@@ -554,6 +602,8 @@ export default function PolicyDetailPage() {
               eligibility={eligibility}
               loading={judgeMutation.isPending}
               onCheck={handleEligibilityCheck}
+              onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
+              sourceUrl={policy.sourceUrl}
             />
           </div>
         </aside>
@@ -565,12 +615,21 @@ export default function PolicyDetailPage() {
             eligibility={eligibility}
             loading={judgeMutation.isPending}
             onCheck={handleEligibilityCheck}
+            onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
+            sourceUrl={policy.sourceUrl}
           />
         </div>
       </div>
 
       {/* Spacer for mobile */}
       <div className="h-4 md:hidden" />
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message={loginModalMessage}
+      />
     </div>
   );
 }
