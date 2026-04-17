@@ -13,8 +13,6 @@ export type DetailLevel = 'BASIC' | 'FULL';
 
 export type EligibilityResult = 'LIKELY_ELIGIBLE' | 'UNCERTAIN' | 'LIKELY_INELIGIBLE';
 
-export type EmploymentStatus = 'SEEKING' | 'EMPLOYED' | 'STUDENT' | 'OTHER';
-
 /* ── Policy ── */
 
 export interface Policy {
@@ -135,20 +133,12 @@ export interface UserProfile {
   email: string | null;
   nickname: string;
   profileImageUrl: string | null;
-  age: number | null;
-  regionCode: string | null;
-  employmentStatus: EmploymentStatus | null;
-  incomeLevel: number | null;
   createdAt: string;
 }
 
 export interface UpdateProfileRequest {
   nickname?: string;
   email?: string | null;
-  age?: number | null;
-  regionCode?: string | null;
-  employmentStatus?: EmploymentStatus | null;
-  incomeLevel?: number | null;
 }
 
 export interface NotificationSettings {
@@ -202,13 +192,6 @@ export const REGION_OPTIONS = [
   { value: 'GYEONGNAM', label: '경남' },
   { value: 'JEJU', label: '제주' },
 ] as const;
-
-export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
-  SEEKING: '구직중',
-  EMPLOYED: '재직중',
-  STUDENT: '재학중',
-  OTHER: '기타',
-};
 
 export function getRegionName(regionCode: string): string {
   return REGION_OPTIONS.find((r) => r.value === regionCode)?.label ?? regionCode;

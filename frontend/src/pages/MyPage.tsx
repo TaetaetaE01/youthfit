@@ -18,7 +18,8 @@ import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings
 import { useUpdateProfile } from '@/hooks/mutations/useUpdateProfile';
 import { useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { useUpdateNotificationSettings } from '@/hooks/mutations/useUpdateNotificationSettings';
-import { usePersonalInfoStore } from '@/stores/personalInfoStore';
+import { useEligibilityProfile } from '@/hooks/queries/useEligibilityProfile';
+import { useUpdateEligibilityProfile } from '@/hooks/mutations/useUpdateEligibilityProfile';
 import type { Bookmark } from '@/types/policy';
 import { STATUS_LABELS, CATEGORY_LABELS } from '@/types/policy';
 import type { PolicyCategory, PolicyStatus } from '@/types/policy';
@@ -131,11 +132,13 @@ export default function MyPage() {
 
   /* ── Data fetching ── */
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: eligibilityProfile } = useEligibilityProfile();
   const { data: bookmarkPage, isLoading: bookmarksLoading, refetch: refetchBookmarks } = useBookmarks();
   const { data: notificationData } = useNotificationSettings();
 
   /* ── Mutations ── */
   const updateProfileMutation = useUpdateProfile();
+  const updateEligibilityMutation = useUpdateEligibilityProfile();
   const removeBookmarkMutation = useRemoveBookmark();
   const updateNotificationMutation = useUpdateNotificationSettings();
 
@@ -187,9 +190,11 @@ export default function MyPage() {
     }
   }, [notificationData]);
 
-  /* ── Eligibility info completion (profile + local personal info) ── */
-  const piEmploymentKind = usePersonalInfoStore((s) => s.employmentKind);
-  const extraFilled = profile?.age != null && !!profile?.regionCode && piEmploymentKind != null;
+  /* ── Eligibility info completion ── */
+  const extraFilled =
+    eligibilityProfile?.age != null &&
+    !!eligibilityProfile?.legalDongCode &&
+    eligibilityProfile?.employmentKind != null;
 
   /* ── Logout dialog ── */
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -565,10 +570,13 @@ export default function MyPage() {
           </div>
 
           {/* Eligibility Info */}
-          <EligibilityInfoCard
-            profile={profile}
-            onUpdateProfile={(data) => updateProfileMutation.mutate(data)}
-          />
+          {eligibilityProfile && (
+            <EligibilityInfoCard
+              profile={eligibilityProfile}
+              onUpdate={(data) => updateEligibilityMutation.mutate(data)}
+              isUpdating={updateEligibilityMutation.isPending}
+            />
+          )}
 
           {/* Logout - desktop */}
           <div className="hidden lg:block">
