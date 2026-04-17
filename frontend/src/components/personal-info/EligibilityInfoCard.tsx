@@ -32,23 +32,32 @@ interface EligibilityInfoCardProps {
   onUpdateProfile: (data: UpdateProfileRequest) => void;
 }
 
-const MARITAL_LIST: MaritalStatus[] = ['ANY', 'MARRIED', 'SINGLE'];
+const MARITAL_LIST: MaritalStatus[] = ['MARRIED', 'SINGLE'];
 const EDUCATION_LIST: Education[] = [
-  'ANY', 'UNDER_HIGH', 'HIGH_SCHOOL_IN', 'HIGH_SCHOOL_EXPECTED', 'HIGH_SCHOOL_GRAD',
+  'UNDER_HIGH', 'HIGH_SCHOOL_IN', 'HIGH_SCHOOL_EXPECTED', 'HIGH_SCHOOL_GRAD',
   'COLLEGE_IN', 'COLLEGE_EXPECTED', 'COLLEGE_GRAD', 'GRADUATE', 'OTHER',
 ];
 const EMPLOYMENT_LIST: EmploymentKind[] = [
-  'ANY', 'EMPLOYEE', 'SELF_EMPLOYED', 'UNEMPLOYED', 'FREELANCER',
+  'EMPLOYEE', 'SELF_EMPLOYED', 'UNEMPLOYED', 'FREELANCER',
   'DAILY_WORKER', 'ENTREPRENEUR', 'PART_TIME', 'FARMER', 'OTHER',
 ];
 const MAJOR_LIST: MajorField[] = [
-  'ANY', 'HUMANITIES', 'SOCIAL', 'ECONOMICS', 'NATURAL',
+  'HUMANITIES', 'SOCIAL', 'ECONOMICS', 'NATURAL',
   'ENGINEERING', 'ARTS', 'AGRICULTURE', 'OTHER',
 ];
 const SPEC_LIST: SpecializationField[] = [
-  'ANY', 'SME', 'WOMAN', 'BASIC_LIVELIHOOD', 'SINGLE_PARENT',
+  'SME', 'WOMAN', 'BASIC_LIVELIHOOD', 'SINGLE_PARENT',
   'DISABLED', 'FARMER', 'MILITARY', 'LOCAL_TALENT', 'OTHER',
 ];
+const onlyDigits = (v: string) => v.replace(/[^0-9]/g, '');
+const formatWithCommas = (v: string) => {
+  const digits = onlyDigits(v);
+  return digits === '' ? '' : Number(digits).toLocaleString();
+};
+const parseNullableNumber = (v: string): number | null => {
+  const digits = onlyDigits(v);
+  return digits === '' ? null : Number(digits);
+};
 
 function ProgressRing({ value }: { value: number }) {
   const r = 26;
@@ -189,8 +198,8 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
     if (k === 'age') setAgeDraft(profile.age != null ? String(profile.age) : '');
     if (k === 'region') setDistrictDraft(pi.regionDistrict ?? '');
     if (k === 'income') {
-      setIncomeMinDraft(pi.incomeMin != null ? String(pi.incomeMin) : '');
-      setIncomeMaxDraft(pi.incomeMax != null ? String(pi.incomeMax) : '');
+      setIncomeMinDraft(pi.incomeMin != null ? pi.incomeMin.toLocaleString() : '');
+      setIncomeMaxDraft(pi.incomeMax != null ? pi.incomeMax.toLocaleString() : '');
     }
     setOpen(k);
   };
@@ -207,9 +216,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
   const incomeLabel = useMemo(() => {
     const { incomeMin: mn, incomeMax: mx } = pi;
     if (mn == null && mx == null) return '';
-    if (mn != null && mx != null) return `${mn.toLocaleString()}~${mx.toLocaleString()}만원`;
-    if (mn != null) return `${mn.toLocaleString()}만원 이상`;
-    return `${mx!.toLocaleString()}만원 이하`;
+    if (mn != null && mx != null) return `연 ${mn.toLocaleString()}~${mx.toLocaleString()}만원`;
+    if (mn != null) return `연 ${mn.toLocaleString()}만원 이상`;
+    return `연 ${mx!.toLocaleString()}만원 이하`;
   }, [pi.incomeMin, pi.incomeMax]);
   const employmentLabel = pi.employmentKind ? EMPLOYMENT_KIND_LABELS[pi.employmentKind] : '';
   const majorLabel = pi.majorField ? MAJOR_FIELD_LABELS[pi.majorField] : '';
@@ -243,11 +252,10 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
     setOpen(null);
   };
   const saveIncome = () => {
-    const mn = incomeMinDraft === '' ? null : Number(incomeMinDraft);
-    const mx = incomeMaxDraft === '' ? null : Number(incomeMaxDraft);
-    if (mn != null && Number.isNaN(mn)) return;
-    if (mx != null && Number.isNaN(mx)) return;
-    pi.setMany({ incomeMin: mn, incomeMax: mx });
+    pi.setMany({
+      incomeMin: parseNullableNumber(incomeMinDraft),
+      incomeMax: parseNullableNumber(incomeMaxDraft),
+    });
     setOpen(null);
   };
 
@@ -330,20 +338,22 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
           onToggle={() => handleToggle('age')}
         >
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={99}
-              value={ageDraft}
-              onChange={(e) => setAgeDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveAge();
-              }}
-              placeholder="만 나이"
-              className="h-10 w-28 rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-neutral-500">세</span>
+            <div className="flex h-10 w-32 items-center gap-1 rounded-lg border border-neutral-200 px-3 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
+              <span className="shrink-0 text-sm text-neutral-400">만</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={ageDraft}
+                onChange={(e) => setAgeDraft(onlyDigits(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveAge();
+                }}
+                placeholder="나이"
+                className="w-full border-0 bg-transparent text-sm outline-none"
+              />
+              <span className="shrink-0 text-sm text-neutral-500">세</span>
+            </div>
             <button
               type="button"
               onClick={saveAge}
@@ -410,21 +420,25 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
                 value={incomeMinDraft}
-                onChange={(e) => setIncomeMinDraft(e.target.value)}
+                onChange={(e) => setIncomeMinDraft(formatWithCommas(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveIncome();
+                }}
                 placeholder="최소"
                 className="h-10 w-full rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
               <span className="shrink-0 text-sm text-neutral-400">~</span>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
                 value={incomeMaxDraft}
-                onChange={(e) => setIncomeMaxDraft(e.target.value)}
+                onChange={(e) => setIncomeMaxDraft(formatWithCommas(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveIncome();
+                }}
                 placeholder="최대"
                 className="h-10 w-full rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />

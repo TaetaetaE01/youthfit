@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Ban,
   Briefcase,
   Store,
   UserX,
@@ -36,10 +35,9 @@ import {
 
 /* ─────────────────────────── Enums ─────────────────────────── */
 
-export type MaritalStatus = 'ANY' | 'MARRIED' | 'SINGLE';
+export type MaritalStatus = 'MARRIED' | 'SINGLE';
 
 export type Education =
-  | 'ANY'
   | 'UNDER_HIGH'
   | 'HIGH_SCHOOL_IN'
   | 'HIGH_SCHOOL_EXPECTED'
@@ -51,7 +49,6 @@ export type Education =
   | 'OTHER';
 
 export type EmploymentKind =
-  | 'ANY'
   | 'EMPLOYEE'
   | 'SELF_EMPLOYED'
   | 'UNEMPLOYED'
@@ -63,7 +60,6 @@ export type EmploymentKind =
   | 'OTHER';
 
 export type MajorField =
-  | 'ANY'
   | 'HUMANITIES'
   | 'SOCIAL'
   | 'ECONOMICS'
@@ -74,7 +70,6 @@ export type MajorField =
   | 'OTHER';
 
 export type SpecializationField =
-  | 'ANY'
   | 'SME'
   | 'WOMAN'
   | 'BASIC_LIVELIHOOD'
@@ -85,16 +80,15 @@ export type SpecializationField =
   | 'LOCAL_TALENT'
   | 'OTHER';
 
+
 /* ─────────────────────────── Labels ─────────────────────────── */
 
 export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
-  ANY: '제한없음',
   MARRIED: '기혼',
   SINGLE: '미혼',
 };
 
 export const EDUCATION_LABELS: Record<Education, string> = {
-  ANY: '제한없음',
   UNDER_HIGH: '고졸 미만',
   HIGH_SCHOOL_IN: '고교 재학',
   HIGH_SCHOOL_EXPECTED: '고졸 예정',
@@ -107,7 +101,6 @@ export const EDUCATION_LABELS: Record<Education, string> = {
 };
 
 export const EMPLOYMENT_KIND_LABELS: Record<EmploymentKind, string> = {
-  ANY: '제한없음',
   EMPLOYEE: '재직자',
   SELF_EMPLOYED: '자영업자',
   UNEMPLOYED: '미취업자',
@@ -120,7 +113,6 @@ export const EMPLOYMENT_KIND_LABELS: Record<EmploymentKind, string> = {
 };
 
 export const MAJOR_FIELD_LABELS: Record<MajorField, string> = {
-  ANY: '제한없음',
   HUMANITIES: '인문계열',
   SOCIAL: '사회계열',
   ECONOMICS: '상경계열',
@@ -132,7 +124,6 @@ export const MAJOR_FIELD_LABELS: Record<MajorField, string> = {
 };
 
 export const SPECIALIZATION_LABELS: Record<SpecializationField, string> = {
-  ANY: '제한없음',
   SME: '중소기업',
   WOMAN: '여성',
   BASIC_LIVELIHOOD: '기초생활수급자',
@@ -153,7 +144,6 @@ export interface IconOption<T extends string> {
 }
 
 export const EMPLOYMENT_KIND_OPTIONS: IconOption<EmploymentKind>[] = [
-  { value: 'ANY', label: '제한없음', icon: Ban },
   { value: 'EMPLOYEE', label: '재직자', icon: Briefcase },
   { value: 'SELF_EMPLOYED', label: '자영업자', icon: Store },
   { value: 'UNEMPLOYED', label: '미취업자', icon: UserX },
@@ -166,7 +156,6 @@ export const EMPLOYMENT_KIND_OPTIONS: IconOption<EmploymentKind>[] = [
 ];
 
 export const MAJOR_FIELD_OPTIONS: IconOption<MajorField>[] = [
-  { value: 'ANY', label: '제한없음', icon: Ban },
   { value: 'HUMANITIES', label: '인문계열', icon: BookOpen },
   { value: 'SOCIAL', label: '사회계열', icon: Users },
   { value: 'ECONOMICS', label: '상경계열', icon: Calculator },
@@ -178,7 +167,6 @@ export const MAJOR_FIELD_OPTIONS: IconOption<MajorField>[] = [
 ];
 
 export const SPECIALIZATION_OPTIONS: IconOption<SpecializationField>[] = [
-  { value: 'ANY', label: '제한없음', icon: Ban },
   { value: 'SME', label: '중소기업', icon: Building2 },
   { value: 'WOMAN', label: '여성', icon: UserRound },
   { value: 'BASIC_LIVELIHOOD', label: '기초생활수급자', icon: PiggyBank },
