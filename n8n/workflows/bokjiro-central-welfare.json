@@ -1,0 +1,295 @@
+{
+  "name": "YouthFit - 복지로 중앙부처 청년 정책 수집",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "매일 새벽 3시 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 초기 페이지 설정\nreturn [{ json: { pageNo: 1 } }];"
+      },
+      "id": "init-page",
+      "name": "페이지 초기화",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelfarelistV001",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "serviceKey", "value": "={{ $env.BOKJIRO_SERVICE_KEY }}" },
+            { "name": "callTp", "value": "L" },
+            { "name": "pageNo", "value": "={{ $json.pageNo }}" },
+            { "name": "numOfRows", "value": "100" },
+            { "name": "srchKeyCode", "value": "001" },
+            { "name": "lifeArray", "value": "004" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/xml"
+            }
+          ]
+        }
+      },
+      "id": "fetch-list",
+      "name": "목록 API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.data || '';\nconst pageNo = $('페이지 초기화').first()?.json?.pageNo\n  || $('다음 페이지 이동').first()?.json?.pageNo\n  || 1;\n\n// resultCode 확인\nconst codeMatch = xml.match(/<resultCode>([^<]+)<\\/resultCode>/);\nconst resultCode = codeMatch ? codeMatch[1].trim() : '';\nif (resultCode && resultCode !== '0') {\n  const msgMatch = xml.match(/<resultMessage>([^<]+)<\\/resultMessage>/);\n  const msg = msgMatch ? msgMatch[1].trim() : '';\n  throw new Error(`복지로 API error: ${resultCode} ${msg}`);\n}\n\nconst totalCount = parseInt((xml.match(/<totalCount>([^<]+)<\\/totalCount>/) || [,'0'])[1], 10) || 0;\nconst numOfRows = 100;\nconst lastPage = totalCount === 0 ? 1 : Math.ceil(totalCount / numOfRows);\n\n// servList 블록별로 servId 추출\nconst blockRegex = /<servList>([\\s\\S]*?)<\\/servList>/g;\nconst items = [];\nlet m;\nwhile ((m = blockRegex.exec(xml)) !== null) {\n  const idMatch = m[1].match(/<servId>([^<]+)<\\/servId>/);\n  if (idMatch) {\n    items.push({ json: { servId: idMatch[1].trim(), pageNo, lastPage, totalCount } });\n  }\n}\n\nif (items.length === 0) {\n  return [{ json: { empty: true, pageNo, lastPage, totalCount } }];\n}\nreturn items;"
+      },
+      "id": "extract-servids",
+      "name": "servId 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-policies",
+      "name": "정책별 순차 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-wait",
+      "name": "1초 대기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "url": "https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelfaredetailedV001",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "serviceKey", "value": "={{ $env.BOKJIRO_SERVICE_KEY }}" },
+            { "name": "callTp", "value": "D" },
+            { "name": "servId", "value": "={{ $json.servId }}" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/xml"
+            }
+          ]
+        }
+      },
+      "id": "fetch-detail",
+      "name": "상세 API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.data || '';\nconst servId = $('정책별 순차 처리').first().json.servId;\n\nfunction clean(s) {\n  if (!s) return '';\n  return s\n    .replace(/<br\\s*\\/?>(\\s|&nbsp;)*?/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&nbsp;/g, ' ')\n    .replace(/\\t/g, '').replace(/\\n\\s*\\n+/g, '\\n').trim();\n}\n\nfunction tag(name) {\n  const re = new RegExp(`<${name}>([\\\\s\\\\S]*?)</${name}>`);\n  const m = xml.match(re);\n  return m ? clean(m[1]) : '';\n}\n\nfunction blocks(name) {\n  const re = new RegExp(`<${name}>([\\\\s\\\\S]*?)</${name}>`, 'g');\n  const out = [];\n  let mm;\n  while ((mm = re.exec(xml)) !== null) out.push(mm[1]);\n  return out;\n}\n\nfunction splitTags(s) {\n  return s ? s.split(/[,、]/).map(x => x.trim()).filter(Boolean) : [];\n}\n\nconst servNm = tag('servNm');\nconst jurMnofNm = tag('jurMnofNm');\nconst rprsCtadr = tag('rprsCtadr');\nconst wlfareInfoOutlCn = tag('wlfareInfoOutlCn');\nconst tgtrDtlCn = tag('tgtrDtlCn');\nconst slctCritCn = tag('slctCritCn');\nconst alwServCn = tag('alwServCn');\n\nconst lifeTags = splitTags(tag('lifeArray'));\nconst targetTags = splitTags(tag('trgterIndvdlArray'));\nconst themeTags = splitTags(tag('intrsThemaArray'));\n\n// 관심주제 → YouthFit 카테고리 매핑 (첫 매치 우선)\nconst themeMap = {\n  '주거': '주거',\n  '일자리': '일자리',\n  '교육': '교육',\n  '서민금융': '금융',\n  '문화·여가': '문화', '문화 · 여가': '문화', '문화▪여가': '문화',\n  '생활지원': '복지'\n};\nlet category = '복지';\nfor (const t of themeTags) {\n  if (themeMap[t]) { category = themeMap[t]; break; }\n}\n\n// basfrmList (서비스구분 040=서식/자료) → 첨부파일\nconst attachments = [];\nfor (const block of blocks('basfrmList')) {\n  const link = (block.match(/<servSeDetailLink>([\\s\\S]*?)<\\/servSeDetailLink>/) || [])[1];\n  const nm = (block.match(/<servSeDetailNm>([\\s\\S]*?)<\\/servSeDetailNm>/) || [])[1];\n  if (link && nm) {\n    const url = link.replace(/&amp;/g, '&').trim();\n    const name = nm.trim();\n    const lower = name.toLowerCase();\n    const mediaType = lower.endsWith('.pdf') ? 'application/pdf'\n                    : lower.endsWith('.hwp') || lower.endsWith('.hwpx') ? 'application/x-hwp'\n                    : lower.endsWith('.xlsx') || lower.endsWith('.xls') ? 'application/vnd.ms-excel'\n                    : lower.endsWith('.docx') || lower.endsWith('.doc') ? 'application/msword'\n                    : null;\n    attachments.push({ name, url, mediaType });\n  }\n}\n\n// 본문 조합\nconst parts = [];\nif (wlfareInfoOutlCn) parts.push('[개요]\\n' + wlfareInfoOutlCn);\nif (tgtrDtlCn) parts.push('[지원대상]\\n' + tgtrDtlCn);\nif (slctCritCn) parts.push('[선정기준]\\n' + slctCritCn);\nif (alwServCn) parts.push('[지원내용]\\n' + alwServCn);\nconst body = parts.join('\\n\\n');\nconst summary = wlfareInfoOutlCn || servNm;\n\nconst sourceUrl = `https://www.bokjiro.go.kr/ssis-tbu/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=${servId}`;\n\nconst result = {\n  source: {\n    url: sourceUrl,\n    type: 'BOKJIRO_CENTRAL',\n    fetchedAt: new Date().toISOString().replace('Z', '')\n  },\n  rawData: {\n    externalId: servId,\n    title: servNm || `(서비스 ${servId})`,\n    summary,\n    body: body || summary,\n    category,\n    region: '전국',\n    applyStart: null,\n    applyEnd: null,\n    organization: jurMnofNm,\n    contact: rprsCtadr,\n    lifeTags,\n    themeTags,\n    targetTags,\n    attachments\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "parse-detail",
+      "name": "상세 XML 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Internal-Api-Key", "value": "={{ $env.INTERNAL_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-to-backend",
+      "name": "백엔드 API 전송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('servId 추출').all();\nconst firstItem = items[0]?.json || {};\nconst currentPage = firstItem.pageNo || 1;\nconst lastPage = firstItem.lastPage || 1;\n\nif (currentPage < lastPage) {\n  return [{ json: { pageNo: currentPage + 1, hasNext: true } }];\n}\nreturn [{ json: { pageNo: currentPage, hasNext: false } }];"
+      },
+      "id": "check-next-page",
+      "name": "다음 페이지 확인",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-next",
+              "leftValue": "={{ $json.hasNext }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-next",
+      "name": "다음 페이지 존재?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pageNo = $input.first().json.pageNo;\nreturn [{ json: { pageNo } }];"
+      },
+      "id": "next-page",
+      "name": "다음 페이지 이동",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('servId 추출').all();\nconst firstItem = items[0]?.json || {};\nconst totalCount = firstItem.totalCount || 0;\nconst lastPage = firstItem.lastPage || 0;\n\nreturn [{\n  json: {\n    message: '복지로 수집 완료',\n    totalPolicies: totalCount,\n    totalPages: lastPage,\n    completedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "complete",
+      "name": "수집 완료",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -100]
+    }
+  ],
+  "connections": {
+    "매일 새벽 3시 실행": {
+      "main": [[{ "node": "페이지 초기화", "type": "main", "index": 0 }]]
+    },
+    "페이지 초기화": {
+      "main": [[{ "node": "목록 API 호출", "type": "main", "index": 0 }]]
+    },
+    "목록 API 호출": {
+      "main": [[{ "node": "servId 추출", "type": "main", "index": 0 }]]
+    },
+    "servId 추출": {
+      "main": [[{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]]
+    },
+    "정책별 순차 처리": {
+      "main": [
+        [{ "node": "다음 페이지 확인", "type": "main", "index": 0 }],
+        [{ "node": "1초 대기", "type": "main", "index": 0 }]
+      ]
+    },
+    "1초 대기": {
+      "main": [[{ "node": "상세 API 호출", "type": "main", "index": 0 }]]
+    },
+    "상세 API 호출": {
+      "main": [[{ "node": "상세 XML 파싱", "type": "main", "index": 0 }]]
+    },
+    "상세 XML 파싱": {
+      "main": [[{ "node": "백엔드 API 전송", "type": "main", "index": 0 }]]
+    },
+    "백엔드 API 전송": {
+      "main": [[{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]]
+    },
+    "다음 페이지 확인": {
+      "main": [[{ "node": "다음 페이지 존재?", "type": "main", "index": 0 }]]
+    },
+    "다음 페이지 존재?": {
+      "main": [
+        [{ "node": "다음 페이지 이동", "type": "main", "index": 0 }],
+        [{ "node": "수집 완료", "type": "main", "index": 0 }]
+      ]
+    },
+    "다음 페이지 이동": {
+      "main": [[{ "node": "목록 API 호출", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "api-ingest" },
+    { "name": "bokjiro" },
+    { "name": "youth-policy" }
+  ],
+  "meta": {
+    "instanceId": "youthfit"
+  }
+}
