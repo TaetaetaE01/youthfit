@@ -7,7 +7,9 @@ import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,9 @@ class PolicyQueryServiceTest {
     @Mock
     private PolicyRepository policyRepository;
 
+    @Mock
+    private PolicySourceRepository policySourceRepository;
+
     @Nested
     @DisplayName("findPolicyById")
     class FindPolicyById {
@@ -48,6 +53,7 @@ class PolicyQueryServiceTest {
             // given
             Policy policy = createMockPolicy();
             given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
+            given(policySourceRepository.findFirstByPolicyId(1L)).willReturn(Optional.<PolicySource>empty());
 
             // when
             PolicyDetailResult result = policyQueryService.findPolicyById(1L);

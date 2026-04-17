@@ -29,7 +29,23 @@ export interface Policy {
   detailLevel: DetailLevel;
 }
 
+export interface PolicyAttachment {
+  name: string;
+  url: string;
+  mediaType: string | null;
+}
+
 export interface PolicyDetail extends Policy {
+  body: string | null;
+  supportTarget: string | null;
+  selectionCriteria: string | null;
+  supportContent: string | null;
+  organization: string | null;
+  contact: string | null;
+  lifeTags: string[];
+  themeTags: string[];
+  targetTags: string[];
+  attachments: PolicyAttachment[];
   sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;

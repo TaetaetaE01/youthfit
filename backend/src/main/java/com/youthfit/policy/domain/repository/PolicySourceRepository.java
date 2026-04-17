@@ -9,5 +9,7 @@ public interface PolicySourceRepository {
 
     Optional<PolicySource> findBySourceTypeAndExternalId(SourceType sourceType, String externalId);
 
+    Optional<PolicySource> findFirstByPolicyId(Long policyId);
+
     PolicySource save(PolicySource policySource);
 }

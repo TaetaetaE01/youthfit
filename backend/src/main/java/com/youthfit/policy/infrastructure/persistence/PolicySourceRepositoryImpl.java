@@ -22,6 +22,11 @@ public class PolicySourceRepositoryImpl implements PolicySourceRepository {
     }
 
     @Override
+    public Optional<PolicySource> findFirstByPolicyId(Long policyId) {
+        return jpaRepository.findFirstByPolicyIdOrderByIdAsc(policyId);
+    }
+
+    @Override
     public PolicySource save(PolicySource policySource) {
         return jpaRepository.save(policySource);
     }

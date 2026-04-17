@@ -1,6 +1,7 @@
 package com.youthfit.ingestion.application.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
@@ -34,7 +35,7 @@ class IngestionServiceTest {
     private PolicyIngestionService policyIngestionService;
 
     @Spy
-    private ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
 
     @Nested
     @DisplayName("receivePolicy")

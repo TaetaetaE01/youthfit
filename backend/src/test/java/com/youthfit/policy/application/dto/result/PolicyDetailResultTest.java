@@ -29,7 +29,7 @@ class PolicyDetailResultTest {
         ReflectionTestUtils.setField(policy, "id", 1L);
 
         // when
-        PolicyDetailResult result = PolicyDetailResult.from(policy);
+        PolicyDetailResult result = PolicyDetailResult.from(policy, "https://example.com/policy/1");
 
         // then
         SoftAssertions.assertSoftly(softly -> {
@@ -42,6 +42,7 @@ class PolicyDetailResultTest {
             softly.assertThat(result.applyEnd()).isEqualTo(LocalDate.of(2026, 12, 31));
             softly.assertThat(result.status()).isEqualTo(PolicyStatus.UPCOMING);
             softly.assertThat(result.detailLevel()).isEqualTo(DetailLevel.LITE);
+            softly.assertThat(result.sourceUrl()).isEqualTo("https://example.com/policy/1");
         });
     }
 }

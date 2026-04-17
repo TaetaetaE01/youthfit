@@ -1,7 +1,7 @@
 package com.youthfit.ingestion.application.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
@@ -14,12 +14,21 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class IngestionService {
+
+    private static final Pattern SECTION_PATTERN = Pattern.compile(
+            "\\[(개요|지원대상|선정기준|지원내용)]\\s*\\n([\\s\\S]*?)(?=\\n\\[(?:개요|지원대상|선정기준|지원내용)]|$)"
+    );
 
     private final PolicyIngestionService policyIngestionService;
     private final ObjectMapper objectMapper;
@@ -36,13 +45,25 @@ public class IngestionService {
                 ? command.summary()
                 : command.body();
 
+        Sections sections = parseSections(command.body());
+
         RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
                 command.title(),
                 summary,
+                command.body(),
+                sections.supportTarget(),
+                sections.selectionCriteria(),
+                sections.supportContent(),
+                command.organization(),
+                command.contact(),
                 category,
                 command.region(),
                 command.applyStart(),
                 command.applyEnd(),
+                toSet(command.lifeTags()),
+                toSet(command.themeTags()),
+                toSet(command.targetTags()),
+                mapAttachments(command.attachments()),
                 sourceType,
                 externalId,
                 command.sourceUrl(),
@@ -76,10 +97,41 @@ public class IngestionService {
         }
     }
 
+    private Sections parseSections(String body) {
+        if (body == null || body.isBlank()) return Sections.empty();
+        String supportTarget = null;
+        String selectionCriteria = null;
+        String supportContent = null;
+        Matcher matcher = SECTION_PATTERN.matcher(body);
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2).trim();
+            switch (key) {
+                case "지원대상" -> supportTarget = value;
+                case "선정기준" -> selectionCriteria = value;
+                case "지원내용" -> supportContent = value;
+                default -> { /* 개요는 summary에서 이미 다룸 */ }
+            }
+        }
+        return new Sections(supportTarget, selectionCriteria, supportContent);
+    }
+
+    private Set<String> toSet(List<String> list) {
+        if (list == null || list.isEmpty()) return Set.of();
+        return new HashSet<>(list);
+    }
+
+    private List<RegisterPolicyCommand.Attachment> mapAttachments(List<IngestPolicyCommand.Attachment> attachments) {
+        if (attachments == null || attachments.isEmpty()) return List.of();
+        return attachments.stream()
+                .map(a -> new RegisterPolicyCommand.Attachment(a.name(), a.url(), a.mediaType()))
+                .toList();
+    }
+
     private String serialize(IngestPolicyCommand command) {
         try {
             return objectMapper.writeValueAsString(command);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize ingest command", e);
         }
     }
@@ -91,6 +143,12 @@ public class IngestionService {
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private record Sections(String supportTarget, String selectionCriteria, String supportContent) {
+        static Sections empty() {
+            return new Sections(null, null, null);
         }
     }
 }

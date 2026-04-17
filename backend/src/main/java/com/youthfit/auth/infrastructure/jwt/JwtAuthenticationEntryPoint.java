@@ -1,6 +1,6 @@
 package com.youthfit.auth.infrastructure.jwt;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;

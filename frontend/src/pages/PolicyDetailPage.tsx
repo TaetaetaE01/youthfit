@@ -13,6 +13,13 @@ import {
   Sparkles,
   Loader2,
   ExternalLink,
+  Building2,
+  Phone,
+  FileText,
+  Users,
+  ClipboardCheck,
+  Gift,
+  Paperclip,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
@@ -130,7 +137,7 @@ function PolicyHeader({
         </button>
       </div>
       <h1 className="text-3xl font-bold text-neutral-900">{policy.title}</h1>
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-neutral-500">
         <span className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
           {getRegionName(policy.regionCode)}
@@ -140,8 +147,107 @@ function PolicyHeader({
           <Calendar className="h-4 w-4" />
           {formatDateRange(policy.applyStart, policy.applyEnd)}
         </span>
+        {policy.organization && (
+          <>
+            <span className="text-neutral-300">|</span>
+            <span className="flex items-center gap-1">
+              <Building2 className="h-4 w-4" />
+              {policy.organization}
+            </span>
+          </>
+        )}
       </div>
     </header>
+  );
+}
+
+function DetailSection({
+  icon: Icon,
+  title,
+  content,
+}: {
+  icon: typeof FileText;
+  title: string;
+  content: string;
+}) {
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Icon className="h-4 w-4 text-brand-800" />
+        {title}
+      </h2>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
+        {content}
+      </p>
+    </section>
+  );
+}
+
+function TagSection({ policy }: { policy: PolicyDetail }) {
+  const tags = [
+    ...(policy.lifeTags ?? []),
+    ...(policy.targetTags ?? []),
+    ...(policy.themeTags ?? []),
+  ];
+  if (tags.length === 0) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Users className="h-4 w-4 text-brand-800" />
+        관련 태그
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-800"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachments'] }) {
+  if (!attachments || attachments.length === 0) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Paperclip className="h-4 w-4 text-brand-800" />
+        첨부파일
+      </h2>
+      <ul className="space-y-2">
+        {attachments.map((att, i) => (
+          <li key={i}>
+            <a
+              href={att.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 transition-colors hover:border-brand-800 hover:bg-brand-100/40"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+              <span className="flex-1 truncate">{att.name}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ContactSection({ contact }: { contact: string | null }) {
+  if (!contact) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Phone className="h-4 w-4 text-brand-800" />
+        문의처
+      </h2>
+      <p className="whitespace-pre-wrap text-sm text-neutral-700">{contact}</p>
+    </section>
   );
 }
 
@@ -655,10 +761,34 @@ export default function PolicyDetailPage() {
           <GuideSummaryCard html={guide?.summaryHtml ?? null} isLoading={guideLoading} />
 
           {/* Policy Summary */}
-          <section className="mb-8 rounded-2xl border border-neutral-200 bg-white p-6">
+          <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
             <h2 className="mb-3 text-lg font-semibold text-neutral-900">정책 요약</h2>
-            <p className="text-sm leading-relaxed text-neutral-700">{policy.summary}</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{policy.summary}</p>
           </section>
+
+          {/* Structured Detail Sections */}
+          {policy.supportTarget && (
+            <DetailSection icon={Users} title="지원대상" content={policy.supportTarget} />
+          )}
+          {policy.selectionCriteria && (
+            <DetailSection
+              icon={ClipboardCheck}
+              title="선정기준"
+              content={policy.selectionCriteria}
+            />
+          )}
+          {policy.supportContent && (
+            <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
+          )}
+
+          {/* Tags */}
+          <TagSection policy={policy} />
+
+          {/* Attachments */}
+          <AttachmentSection attachments={policy.attachments} />
+
+          {/* Contact */}
+          <ContactSection contact={policy.contact} />
 
           {/* Official Application Link */}
           {policy.sourceUrl && (
