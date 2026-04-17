@@ -91,9 +91,14 @@ class PolicyControllerTest {
         // given
         LocalDateTime now = LocalDateTime.of(2026, 4, 15, 10, 0);
         PolicyDetailResult detail = new PolicyDetailResult(
-                1L, "청년 취업 지원", "요약", Category.JOBS, "11",
+                1L, "청년 취업 지원", "요약", null, null, null, null, null, null,
+                Category.JOBS, "11",
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
-                PolicyStatus.OPEN, DetailLevel.LITE, now, now);
+                PolicyStatus.OPEN, DetailLevel.LITE,
+                java.util.Set.of(), java.util.Set.of(), java.util.Set.of(),
+                java.util.List.of(),
+                "https://youth.seoul.go.kr/policy/1",
+                now, now);
 
         given(policyQueryService.findPolicyById(1L)).willReturn(detail);
 

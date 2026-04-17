@@ -9,6 +9,7 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PolicyQueryService {
 
     private final PolicyRepository policyRepository;
+    private final PolicySourceRepository policySourceRepository;
 
     public PolicyPageResult findPoliciesByFilters(String regionCode, Category category,
                                                   PolicyStatus status, String sortBy,
@@ -45,7 +47,10 @@ public class PolicyQueryService {
     public PolicyDetailResult findPolicyById(Long policyId) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "정책을 찾을 수 없습니다: " + policyId));
-        return PolicyDetailResult.from(policy);
+        String sourceUrl = policySourceRepository.findFirstByPolicyId(policyId)
+                .map(src -> src.getSourceUrl())
+                .orElse(null);
+        return PolicyDetailResult.from(policy, sourceUrl);
     }
 
     public PolicyPageResult searchPoliciesByKeyword(String keyword, int page, int size) {

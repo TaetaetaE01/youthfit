@@ -1,4 +1,5 @@
 {
+  "id": "bokjiro-central-welfare",
   "name": "YouthFit - 복지로 중앙부처 청년 정책 수집",
   "nodes": [
     {
@@ -20,6 +21,20 @@
     },
     {
       "parameters": {
+        "httpMethod": "POST",
+        "path": "bokjiro-manual",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "manual-webhook-trigger",
+      "name": "수동 실행 트리거",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "bokjiro-manual-trigger"
+    },
+    {
+      "parameters": {
         "jsCode": "// 초기 페이지 설정\nreturn [{ json: { pageNo: 1 } }];"
       },
       "id": "init-page",
@@ -37,7 +52,7 @@
             { "name": "serviceKey", "value": "={{ $env.BOKJIRO_SERVICE_KEY }}" },
             { "name": "callTp", "value": "L" },
             { "name": "pageNo", "value": "={{ $json.pageNo }}" },
-            { "name": "numOfRows", "value": "100" },
+            { "name": "numOfRows", "value": "15" },
             { "name": "srchKeyCode", "value": "001" },
             { "name": "lifeArray", "value": "004" }
           ]
@@ -73,7 +88,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const xml = $input.first().json.data || '';\nconst pageNo = $('페이지 초기화').first()?.json?.pageNo\n  || $('다음 페이지 이동').first()?.json?.pageNo\n  || 1;\n\n// resultCode 확인\nconst codeMatch = xml.match(/<resultCode>([^<]+)<\\/resultCode>/);\nconst resultCode = codeMatch ? codeMatch[1].trim() : '';\nif (resultCode && resultCode !== '0') {\n  const msgMatch = xml.match(/<resultMessage>([^<]+)<\\/resultMessage>/);\n  const msg = msgMatch ? msgMatch[1].trim() : '';\n  throw new Error(`복지로 API error: ${resultCode} ${msg}`);\n}\n\nconst totalCount = parseInt((xml.match(/<totalCount>([^<]+)<\\/totalCount>/) || [,'0'])[1], 10) || 0;\nconst numOfRows = 100;\nconst lastPage = totalCount === 0 ? 1 : Math.ceil(totalCount / numOfRows);\n\n// servList 블록별로 servId 추출\nconst blockRegex = /<servList>([\\s\\S]*?)<\\/servList>/g;\nconst items = [];\nlet m;\nwhile ((m = blockRegex.exec(xml)) !== null) {\n  const idMatch = m[1].match(/<servId>([^<]+)<\\/servId>/);\n  if (idMatch) {\n    items.push({ json: { servId: idMatch[1].trim(), pageNo, lastPage, totalCount } });\n  }\n}\n\nif (items.length === 0) {\n  return [{ json: { empty: true, pageNo, lastPage, totalCount } }];\n}\nreturn items;"
+        "jsCode": "const xml = $input.first().json.data || '';\nconst pageNo = $('페이지 초기화').first()?.json?.pageNo\n  || $('다음 페이지 이동').first()?.json?.pageNo\n  || 1;\n\n// resultCode 확인\nconst codeMatch = xml.match(/<resultCode>([^<]+)<\\/resultCode>/);\nconst resultCode = codeMatch ? codeMatch[1].trim() : '';\nif (resultCode && resultCode !== '0') {\n  const msgMatch = xml.match(/<resultMessage>([^<]+)<\\/resultMessage>/);\n  const msg = msgMatch ? msgMatch[1].trim() : '';\n  throw new Error(`복지로 API error: ${resultCode} ${msg}`);\n}\n\nconst totalCount = parseInt((xml.match(/<totalCount>([^<]+)<\\/totalCount>/) || [,'0'])[1], 10) || 0;\nconst numOfRows = 15;\n// TEST MODE: 첫 페이지 15건만 수집 (스키마 검증용)\nconst lastPage = 1;\n\n// servList 블록별로 servId 추출\nconst blockRegex = /<servList>([\\s\\S]*?)<\\/servList>/g;\nconst items = [];\nlet m;\nwhile ((m = blockRegex.exec(xml)) !== null) {\n  const idMatch = m[1].match(/<servId>([^<]+)<\\/servId>/);\n  if (idMatch) {\n    items.push({ json: { servId: idMatch[1].trim(), pageNo, lastPage, totalCount } });\n  }\n}\n\nif (items.length === 0) {\n  return [{ json: { empty: true, pageNo, lastPage, totalCount } }];\n}\nreturn items;"
       },
       "id": "extract-servids",
       "name": "servId 추출",
@@ -239,6 +254,9 @@
   ],
   "connections": {
     "매일 새벽 3시 실행": {
+      "main": [[{ "node": "페이지 초기화", "type": "main", "index": 0 }]]
+    },
+    "수동 실행 트리거": {
       "main": [[{ "node": "페이지 초기화", "type": "main", "index": 0 }]]
     },
     "페이지 초기화": {

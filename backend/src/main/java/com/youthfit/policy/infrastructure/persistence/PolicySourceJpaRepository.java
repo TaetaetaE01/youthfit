@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface PolicySourceJpaRepository extends JpaRepository<PolicySource, Long> {
 
     Optional<PolicySource> findBySourceTypeAndExternalId(SourceType sourceType, String externalId);
+
+    Optional<PolicySource> findFirstByPolicyIdOrderByIdAsc(Long policyId);
 }
