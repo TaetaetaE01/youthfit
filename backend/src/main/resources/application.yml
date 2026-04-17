@@ -49,6 +49,12 @@ openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_QNA_MODEL:gpt-4o-mini}
     max-tokens: ${OPENAI_QNA_MAX_TOKENS:1024}
+  ingestion:
+    period:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_INGESTION_PERIOD_MODEL:gpt-4o-mini}
+      max-tokens: ${OPENAI_INGESTION_PERIOD_MAX_TOKENS:128}
+      max-body-chars: ${OPENAI_INGESTION_PERIOD_MAX_BODY_CHARS:3000}
 
 youthfit:
   internal:
