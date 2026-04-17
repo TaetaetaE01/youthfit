@@ -50,7 +50,6 @@ const SPEC_LIST: SpecializationField[] = [
   'SME', 'WOMAN', 'BASIC_LIVELIHOOD', 'SINGLE_PARENT',
   'DISABLED', 'FARMER', 'MILITARY', 'LOCAL_TALENT', 'OTHER',
 ];
-
 const onlyDigits = (v: string) => v.replace(/[^0-9]/g, '');
 const formatWithCommas = (v: string) => {
   const digits = onlyDigits(v);
