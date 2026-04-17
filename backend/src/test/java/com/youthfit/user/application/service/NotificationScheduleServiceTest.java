@@ -5,9 +5,9 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.port.EmailSender;
 import com.youthfit.user.domain.model.*;
-import com.youthfit.user.domain.repository.BookmarkRepository;
 import com.youthfit.user.domain.repository.NotificationHistoryRepository;
 import com.youthfit.user.domain.repository.NotificationSettingRepository;
+import com.youthfit.user.domain.repository.PolicyNotificationSubscriptionRepository;
 import com.youthfit.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +39,7 @@ class NotificationScheduleServiceTest {
     private NotificationSettingRepository notificationSettingRepository;
 
     @Mock
-    private BookmarkRepository bookmarkRepository;
+    private PolicyNotificationSubscriptionRepository subscriptionRepository;
 
     @Mock
     private PolicyRepository policyRepository;
@@ -58,18 +58,18 @@ class NotificationScheduleServiceTest {
     class SendDeadlineNotifications {
 
         @Test
-        @DisplayName("마감 임박 북마크 정책에 대해 이메일을 발송하고 이력을 저장한다")
+        @DisplayName("마감 임박 구독 정책에 대해 이메일을 발송하고 이력을 저장한다")
         void eligiblePolicy_sendsEmailAndSavesHistory() {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            Bookmark bookmark = new Bookmark(1L, 10L);
+            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(3));
 
             given(notificationSettingRepository.findAllByEmailEnabled(true))
                     .willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(bookmarkRepository.findAllByUserId(1L)).willReturn(List.of(bookmark));
+            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, "DEADLINE"))
                     .willReturn(false);
@@ -88,13 +88,13 @@ class NotificationScheduleServiceTest {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            Bookmark bookmark = new Bookmark(1L, 10L);
+            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(3));
 
             given(notificationSettingRepository.findAllByEmailEnabled(true))
                     .willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(bookmarkRepository.findAllByUserId(1L)).willReturn(List.of(bookmark));
+            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, "DEADLINE"))
                     .willReturn(true);
@@ -119,7 +119,7 @@ class NotificationScheduleServiceTest {
             notificationScheduleService.sendDeadlineNotifications();
 
             // then
-            then(bookmarkRepository).should(never()).findAllByUserId(any());
+            then(subscriptionRepository).should(never()).findAllByUserId(any());
             then(emailSender).should(never()).sendDeadlineNotification(any(), any());
         }
 
@@ -129,12 +129,12 @@ class NotificationScheduleServiceTest {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            Bookmark bookmark = new Bookmark(1L, 10L);
+            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
 
             given(notificationSettingRepository.findAllByEmailEnabled(true))
                     .willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(bookmarkRepository.findAllByUserId(1L)).willReturn(List.of(bookmark));
+            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.empty());
 
             // when
@@ -150,13 +150,13 @@ class NotificationScheduleServiceTest {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            Bookmark bookmark = new Bookmark(1L, 10L);
+            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(30));
 
             given(notificationSettingRepository.findAllByEmailEnabled(true))
                     .willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(bookmarkRepository.findAllByUserId(1L)).willReturn(List.of(bookmark));
+            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
 
             // when

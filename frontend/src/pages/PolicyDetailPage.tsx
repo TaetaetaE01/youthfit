@@ -22,9 +22,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
 import { useMyBookmarkIds } from '@/hooks/queries/useMyBookmarkIds';
-import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings';
+import { usePolicySubscription } from '@/hooks/queries/usePolicySubscription';
 import { useJudgeEligibility } from '@/hooks/mutations/useJudgeEligibility';
 import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
+import { useUnsubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 import { fetchQnaAnswer } from '@/apis/qna.api';
 import { getRegionName } from '@/types/policy';
 import type {
@@ -291,10 +292,14 @@ function EligibilityCard({
 
 function NotificationCtaCard({
   onSubscribe,
+  onUnsubscribe,
   isSubscribed,
+  isPending,
 }: {
   onSubscribe: () => void;
+  onUnsubscribe: () => void;
   isSubscribed: boolean;
+  isPending: boolean;
 }) {
   return (
     <section className="rounded-2xl border border-neutral-200 bg-white p-6">
@@ -310,16 +315,17 @@ function NotificationCtaCard({
         </div>
       </div>
       <button
-        onClick={onSubscribe}
-        disabled={isSubscribed}
+        onClick={isSubscribed ? onUnsubscribe : onSubscribe}
+        disabled={isPending}
         className={cn(
           'mt-4 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors',
           isSubscribed
-            ? 'cursor-default bg-brand-100 text-brand-800'
+            ? 'border border-brand-800 bg-brand-100 text-brand-800 hover:bg-brand-100/70'
             : 'bg-brand-800 text-white hover:bg-brand-900',
+          isPending && 'opacity-60',
         )}
       >
-        {isSubscribed ? '알림 설정됨' : '알림 받기'}
+        {isSubscribed ? '알림 해제' : '알림 받기'}
       </button>
     </section>
   );
@@ -547,8 +553,9 @@ export default function PolicyDetailPage() {
   // --- Notification prompt sheet ---
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
-  const { data: notificationSettings } = useNotificationSettings();
-  const isSubscribed = !!notificationSettings?.emailEnabled;
+  const { data: subscription } = usePolicySubscription(policyId);
+  const unsubscribeMutation = useUnsubscribePolicy();
+  const isSubscribed = !!subscription?.subscribed;
 
   const handleSubscribeClick = () => {
     if (!isAuthenticated) {
@@ -556,6 +563,13 @@ export default function PolicyDetailPage() {
       return;
     }
     setNotificationSheetOpen(true);
+  };
+
+  const handleUnsubscribeClick = () => {
+    if (!isAuthenticated) return;
+    unsubscribeMutation.mutate(policyId, {
+      onSuccess: () => setNotificationToast('알림을 해제했어요'),
+    });
   };
 
   useEffect(() => {
@@ -684,7 +698,12 @@ export default function PolicyDetailPage() {
               onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
               sourceUrl={policy.sourceUrl}
             />
-            <NotificationCtaCard onSubscribe={handleSubscribeClick} isSubscribed={isSubscribed} />
+            <NotificationCtaCard
+              onSubscribe={handleSubscribeClick}
+              onUnsubscribe={handleUnsubscribeClick}
+              isSubscribed={isSubscribed}
+              isPending={unsubscribeMutation.isPending}
+            />
           </div>
         </aside>
 
@@ -698,7 +717,12 @@ export default function PolicyDetailPage() {
             onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
             sourceUrl={policy.sourceUrl}
           />
-          <NotificationCtaCard onSubscribe={handleSubscribeClick} isSubscribed={isSubscribed} />
+          <NotificationCtaCard
+            onSubscribe={handleSubscribeClick}
+            onUnsubscribe={handleUnsubscribeClick}
+            isSubscribed={isSubscribed}
+            isPending={unsubscribeMutation.isPending}
+          />
         </div>
       </div>
 
@@ -715,6 +739,7 @@ export default function PolicyDetailPage() {
       {/* Notification Prompt Sheet */}
       <NotificationPromptSheet
         open={notificationSheetOpen}
+        policyId={policyId}
         onClose={() => setNotificationSheetOpen(false)}
         onSubscribed={() => setNotificationToast('마감 7일 전 알려드릴게요')}
       />
