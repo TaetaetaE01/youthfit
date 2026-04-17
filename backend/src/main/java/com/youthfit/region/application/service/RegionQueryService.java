@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,13 @@ import java.util.List;
 public class RegionQueryService {
 
     private final LegalDongRepository legalDongRepository;
+
+    public Optional<RegionResult> findByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return Optional.empty();
+        }
+        return legalDongRepository.findByCode(code).map(RegionResult::from);
+    }
 
     public List<RegionResult> findRegions(RegionLevel level, String parentCode) {
         if (level == null) {
