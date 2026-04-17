@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { User } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import { useProfile } from "@/hooks/queries/useProfile";
 
 /* ──────────────────────────── Hooks ──────────────────────────── */
 
@@ -172,6 +175,8 @@ function Badge({ children, variant = "primary" }: { children: ReactNode; variant
 
 function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile();
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
@@ -193,9 +198,28 @@ function Navbar() {
 
         {/* CTA + Mobile toggle */}
         <div className="flex items-center gap-3">
-          <Link to="/login" className="rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900">
-            시작하기
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              to="/mypage"
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-brand-800 transition-colors hover:bg-brand-700 hover:text-white"
+              aria-label="마이페이지"
+            >
+              {profile?.profileImageUrl ? (
+                <img
+                  src={profile.profileImageUrl}
+                  alt={profile.nickname ?? '프로필'}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <User className="h-5 w-5" />
+              )}
+            </Link>
+          ) : (
+            <Link to="/login" className="rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900">
+              시작하기
+            </Link>
+          )}
           <button
             className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}

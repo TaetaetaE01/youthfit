@@ -3,7 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PolicyCard from '@/components/policy/PolicyCard';
+import LoginPromptModal from '@/components/auth/LoginPromptModal';
 import { usePolicies } from '@/hooks/queries/usePolicies';
+import { useMyBookmarkIds } from '@/hooks/queries/useMyBookmarkIds';
+import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
+import { useAuthStore } from '@/stores/authStore';
 import type {
   PolicyCategory,
   PolicyStatus,
@@ -256,6 +260,35 @@ export default function PolicyListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [inputValue, setInputValue] = useState(searchParams.get('keyword') ?? '');
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data: bookmarkIdPairs } = useMyBookmarkIds();
+  const addBookmarkMutation = useAddBookmark();
+  const removeBookmarkMutation = useRemoveBookmark();
+
+  const bookmarkMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const pair of bookmarkIdPairs ?? []) {
+      map.set(pair.policyId, pair.bookmarkId);
+    }
+    return map;
+  }, [bookmarkIdPairs]);
+
+  const handleBookmarkToggle = useCallback(
+    (policyId: number) => {
+      if (!isAuthenticated) {
+        setLoginModalOpen(true);
+        return;
+      }
+      const bookmarkId = bookmarkMap.get(policyId);
+      if (bookmarkId != null) {
+        removeBookmarkMutation.mutate(bookmarkId);
+      } else {
+        addBookmarkMutation.mutate(policyId);
+      }
+    },
+    [isAuthenticated, bookmarkMap, addBookmarkMutation, removeBookmarkMutation],
+  );
 
   // Read URL params
   const keyword = searchParams.get('keyword') ?? '';
@@ -331,6 +364,7 @@ export default function PolicyListPage() {
   };
 
   const sortValue = `${sortParam}:${ascendingParam}`;
+  const hasActiveQuery = Boolean(keyword || category || status || regionCode);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
@@ -471,7 +505,7 @@ export default function PolicyListPage() {
         <p className="text-sm text-gray-500">
           {data ? (
             <>
-              <span className="font-semibold text-gray-900">{data.totalCount}개</span> 정책
+              <span className="font-semibold text-gray-900">{data.totalCount ?? 0}개</span> 정책
             </>
           ) : (
             <span>&nbsp;</span>
@@ -517,35 +551,64 @@ export default function PolicyListPage() {
         </div>
       )}
 
-      {!isLoading && !isError && data && data.content.length === 0 && (
+      {!isLoading && !isError && data && (data.content?.length ?? 0) === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Search className="mb-4 h-12 w-12 text-gray-300" />
-          <h2 className="text-lg font-semibold text-gray-900">검색 결과가 없습니다</h2>
-          <p className="mt-1 text-sm text-gray-500">다른 키워드나 필터로 다시 시도해보세요.</p>
-          <button
-            onClick={resetFilters}
-            className="mt-4 rounded-xl border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            필터 초기화
-          </button>
+          {hasActiveQuery ? (
+            <>
+              <Search className="mb-4 h-12 w-12 text-gray-300" />
+              <h2 className="text-lg font-semibold text-gray-900">검색 결과가 없습니다</h2>
+              <p className="mt-1 text-sm text-gray-500">다른 키워드나 필터로 다시 시도해보세요.</p>
+              <button
+                onClick={resetFilters}
+                className="mt-4 rounded-xl border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                필터 초기화
+              </button>
+            </>
+          ) : (
+            <>
+              <Search className="mb-4 h-12 w-12 text-gray-300" />
+              <h2 className="text-lg font-semibold text-gray-900">아직 등록된 정책이 없어요</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                정책 데이터를 수집 중이에요. 잠시 후 다시 확인해주세요.
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="mt-4 rounded-xl bg-brand-800 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
+              >
+                새로고침
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {!isLoading && !isError && data && data.content.length > 0 && (
+      {!isLoading && !isError && data && (data.content?.length ?? 0) > 0 && (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-            {data.content.map((policy) => (
-              <PolicyCard key={policy.id} policy={policy} />
+            {(data.content ?? []).map((policy) => (
+              <PolicyCard
+                key={policy.id}
+                policy={policy}
+                isBookmarked={bookmarkMap.has(policy.id)}
+                onBookmarkToggle={handleBookmarkToggle}
+              />
             ))}
           </div>
 
           <Pagination
-            currentPage={data.page}
-            totalPages={data.totalPages}
+            currentPage={data.page ?? 0}
+            totalPages={data.totalPages ?? 1}
             onPageChange={(p) => updateParams({ page: String(p) })}
           />
         </>
       )}
+
+      <LoginPromptModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message="로그인하면 정책을 북마크할 수 있어요"
+      />
     </div>
   );
 }

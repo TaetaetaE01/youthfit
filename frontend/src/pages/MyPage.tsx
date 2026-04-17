@@ -9,6 +9,8 @@ import {
   AlertCircle,
   Save,
   ClipboardCheck,
+  Sparkles,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,7 +26,8 @@ import type { PolicyCategory, PolicyStatus } from '@/types/policy';
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
 
-function getDDay(dateStr: string): number {
+function getDDay(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr);
@@ -84,7 +87,7 @@ function BookmarkCard({ bookmark, onRemove, fading }: { bookmark: Bookmark; onRe
           )}>
             {statusLabel}
           </span>
-          {dDay >= 0 && dDay <= 7 && (
+          {dDay !== null && dDay >= 0 && dDay <= 7 && (
             <span className="rounded-full bg-warning-500 px-2 py-0.5 text-xs font-bold text-white">
               D-{dDay}
             </span>
@@ -103,7 +106,9 @@ function BookmarkCard({ bookmark, onRemove, fading }: { bookmark: Bookmark; onRe
           </h3>
         </Link>
         <div className="mt-3 text-xs text-gray-400">
-          마감: {bookmark.policy.applyEnd.slice(0, 10).replace(/-/g, '.')}
+          마감: {bookmark.policy.applyEnd
+            ? bookmark.policy.applyEnd.slice(0, 10).replace(/-/g, '.')
+            : '미정'}
         </div>
       </article>
     </div>
@@ -158,11 +163,27 @@ export default function MyPage() {
   /* ── Notification state (local optimistic) ── */
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [daysBeforeDeadline, setDaysBeforeDeadline] = useState(7);
+  const [eligibilityRecommendationEnabled, setEligibilityRecommendationEnabled] = useState(false);
+  const [notificationToast, setNotificationToast] = useState<string | null>(null);
+
+  /* ── Notification tab shared email editor ── */
+  const [isEditingNotifEmail, setIsEditingNotifEmail] = useState(false);
+  const [notifEmailDraft, setNotifEmailDraft] = useState('');
+  const [notifEmailError, setNotifEmailError] = useState<string | null>(null);
+  const [pendingEnable, setPendingEnable] = useState<'deadline' | 'recommendation' | null>(null);
+  const notifEmailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!notificationToast) return;
+    const t = setTimeout(() => setNotificationToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [notificationToast]);
 
   useEffect(() => {
     if (notificationData) {
       setEmailEnabled(notificationData.emailEnabled);
       setDaysBeforeDeadline(notificationData.daysBeforeDeadline);
+      setEligibilityRecommendationEnabled(notificationData.eligibilityRecommendationEnabled);
     }
   }, [notificationData]);
 
@@ -280,15 +301,114 @@ export default function MyPage() {
 
   const handleCloseToast = useCallback(() => setToast(null), []);
 
+  const handleStartEditNotifEmail = () => {
+    setNotifEmailDraft(profile?.email ?? '');
+    setNotifEmailError(null);
+    setIsEditingNotifEmail(true);
+    setTimeout(() => notifEmailInputRef.current?.focus(), 0);
+  };
+
+  const handleCancelEditNotifEmail = () => {
+    setIsEditingNotifEmail(false);
+    setNotifEmailError(null);
+    setPendingEnable(null);
+  };
+
+  const applyPendingEnable = () => {
+    if (pendingEnable === 'deadline') {
+      setEmailEnabled(true);
+      updateNotificationMutation.mutate({
+        emailEnabled: true,
+        daysBeforeDeadline,
+        eligibilityRecommendationEnabled,
+      });
+      setNotificationToast(`마감 ${daysBeforeDeadline}일 전 알려드릴게요`);
+    } else if (pendingEnable === 'recommendation') {
+      setEligibilityRecommendationEnabled(true);
+      updateNotificationMutation.mutate({
+        emailEnabled,
+        daysBeforeDeadline,
+        eligibilityRecommendationEnabled: true,
+      });
+      setNotificationToast('자격이 맞는 새 정책이 나오면 알려드릴게요');
+    } else {
+      setNotificationToast('이메일을 등록했어요');
+    }
+    setPendingEnable(null);
+  };
+
+  const handleSaveNotifEmail = () => {
+    const trimmed = notifEmailDraft.trim();
+    if (!trimmed) {
+      setNotifEmailError('이메일을 입력해주세요');
+      return;
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmed)) {
+      setNotifEmailError('올바른 이메일 형식이 아니에요');
+      return;
+    }
+    if (trimmed === profile?.email) {
+      setIsEditingNotifEmail(false);
+      setNotifEmailError(null);
+      applyPendingEnable();
+      return;
+    }
+    updateProfileMutation.mutate(
+      { nickname: profile?.nickname ?? '', email: trimmed },
+      {
+        onSuccess: () => {
+          setIsEditingNotifEmail(false);
+          setNotifEmailError(null);
+          applyPendingEnable();
+        },
+        onError: (err: unknown) => {
+          const message = err instanceof Error ? err.message : '';
+          setNotifEmailError(
+            message.includes('409') ? '이미 사용 중인 이메일이에요' : '이메일 저장에 실패했어요',
+          );
+        },
+      },
+    );
+  };
+
   const handleNotificationToggle = () => {
+    if (!profile?.email) {
+      setPendingEnable('deadline');
+      handleStartEditNotifEmail();
+      return;
+    }
     const newEnabled = !emailEnabled;
     setEmailEnabled(newEnabled);
-    updateNotificationMutation.mutate({ emailEnabled: newEnabled, daysBeforeDeadline });
+    updateNotificationMutation.mutate({
+      emailEnabled: newEnabled,
+      daysBeforeDeadline,
+      eligibilityRecommendationEnabled,
+    });
   };
 
   const handleDaysChange = (days: number) => {
     setDaysBeforeDeadline(days);
-    updateNotificationMutation.mutate({ emailEnabled, daysBeforeDeadline: days });
+    updateNotificationMutation.mutate({
+      emailEnabled,
+      daysBeforeDeadline: days,
+      eligibilityRecommendationEnabled,
+    });
+  };
+
+  const handleRecommendationToggle = () => {
+    if (!profile?.email) {
+      setPendingEnable('recommendation');
+      handleStartEditNotifEmail();
+      return;
+    }
+    const newEnabled = !eligibilityRecommendationEnabled;
+    setEligibilityRecommendationEnabled(newEnabled);
+    updateNotificationMutation.mutate({
+      emailEnabled,
+      daysBeforeDeadline,
+      eligibilityRecommendationEnabled: newEnabled,
+    });
   };
 
   const handleLogout = () => {
@@ -438,15 +558,7 @@ export default function MyPage() {
                       변경
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleStartEditEmail}
-                    className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
-                  >
-                    이메일 등록하기
-                  </button>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -719,58 +831,216 @@ export default function MyPage() {
               aria-labelledby="tab-notifications"
               hidden={activeTab !== 'notifications'}
             >
-              <div className="rounded-2xl bg-white p-6 shadow-card">
-                <h3 className="text-lg font-semibold text-neutral-900">이메일 알림</h3>
-                <p className="mt-1 text-sm text-neutral-500">
-                  북마크한 정책의 마감일 전에 이메일로 알려드려요.
-                </p>
+              <div className="space-y-4">
+                {/* 공통 이메일 카드 */}
+                <div className="rounded-2xl bg-white p-6 shadow-card">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
+                      <Mail className="h-4 w-4 text-brand-800" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-neutral-900">알림 받을 이메일</h3>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        마감 알림과 맞춤 추천을 이 이메일로 보내드려요.
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="mt-6 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-neutral-700">마감 알림 받기</span>
-                  <button
-                    role="switch"
-                    aria-checked={emailEnabled}
-                    aria-label="마감 알림 받기"
-                    onClick={handleNotificationToggle}
-                    className={cn(
-                      'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-                      emailEnabled ? 'bg-brand-800' : 'bg-neutral-300',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                        emailEnabled ? 'translate-x-[22px]' : 'translate-x-0.5',
+                  {!profile?.email && !isEditingNotifEmail && (
+                    <div className="mt-4 rounded-xl bg-brand-100/60 p-4 text-center">
+                      <p className="text-sm text-neutral-600">
+                        이메일을 등록하면 아래 알림을 받을 수 있어요.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleStartEditNotifEmail}
+                        className="mt-3 rounded-lg bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
+                      >
+                        이메일 등록하기
+                      </button>
+                    </div>
+                  )}
+
+                  {profile?.email && !isEditingNotifEmail && (
+                    <div className="mt-4 flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3">
+                      <Mail className="h-4 w-4 shrink-0 text-neutral-400" />
+                      <span className="flex-1 truncate text-sm text-neutral-900">{profile.email}</span>
+                      <button
+                        type="button"
+                        onClick={handleStartEditNotifEmail}
+                        className="shrink-0 text-xs font-semibold text-indigo-600 hover:underline"
+                      >
+                        변경
+                      </button>
+                    </div>
+                  )}
+
+                  {isEditingNotifEmail && (
+                    <div className="mt-4">
+                      <label htmlFor="notif-email-input" className="mb-1.5 block text-sm font-medium text-neutral-700">
+                        알림 받을 이메일
+                      </label>
+                      <input
+                        ref={notifEmailInputRef}
+                        id="notif-email-input"
+                        type="email"
+                        value={notifEmailDraft}
+                        onChange={(e) => {
+                          setNotifEmailDraft(e.target.value);
+                          if (notifEmailError) setNotifEmailError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveNotifEmail();
+                          }
+                          if (e.key === 'Escape') handleCancelEditNotifEmail();
+                        }}
+                        placeholder="example@email.com"
+                        className="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm text-neutral-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        aria-invalid={notifEmailError != null}
+                        aria-describedby={notifEmailError ? 'notif-email-error' : undefined}
+                      />
+                      {notifEmailError && (
+                        <p id="notif-email-error" className="mt-2 text-xs text-error-500">
+                          {notifEmailError}
+                        </p>
                       )}
-                    />
-                  </button>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSaveNotifEmail}
+                          disabled={updateProfileMutation.isPending}
+                          className="rounded-lg bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-900 disabled:opacity-50"
+                        >
+                          {updateProfileMutation.isPending ? '저장 중…' : '저장'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEditNotifEmail}
+                          className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <fieldset className="mt-6" disabled={!emailEnabled}>
-                  <legend className="text-sm font-semibold text-neutral-700">알림 시점</legend>
-                  <div className="mt-3 flex flex-col gap-3">
-                    {[3, 7, 14].map((days) => (
-                      <label
-                        key={days}
+                {/* 마감 임박 알림 */}
+                <div
+                  className={cn(
+                    'rounded-2xl bg-white p-6 shadow-card transition-opacity',
+                    !profile?.email && 'opacity-70',
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
+                      <Bell className="h-4 w-4 text-brand-800" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-neutral-900">마감 임박 알림</h3>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        북마크한 정책의 마감일 전에 이메일로 알려드려요.
+                      </p>
+                      {!profile?.email && (
+                        <p className="mt-2 text-xs text-neutral-500">
+                          활성화하려면 위에서 이메일을 먼저 등록해주세요.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={emailEnabled}
+                      aria-label="마감 알림 받기"
+                      onClick={handleNotificationToggle}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+                        emailEnabled && profile?.email ? 'bg-brand-800' : 'bg-neutral-300',
+                      )}
+                    >
+                      <span
                         className={cn(
-                          'flex cursor-pointer items-center gap-3 text-sm',
-                          !emailEnabled && 'cursor-not-allowed opacity-50',
+                          'pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                          emailEnabled && profile?.email ? 'translate-x-[22px]' : 'translate-x-0.5',
                         )}
-                      >
-                        <input
-                          type="radio"
-                          name="daysBeforeDeadline"
-                          value={days}
-                          checked={daysBeforeDeadline === days}
-                          onChange={() => handleDaysChange(days)}
-                          disabled={!emailEnabled}
-                          className="h-4 w-4 border-neutral-300 text-brand-800 focus:ring-brand-800"
-                        />
-                        <span className="text-neutral-700">마감 {days}일 전</span>
-                      </label>
-                    ))}
+                      />
+                    </button>
                   </div>
-                </fieldset>
+
+                  <fieldset className="mt-6" disabled={!emailEnabled || !profile?.email}>
+                    <legend className="text-sm font-semibold text-neutral-700">알림 시점</legend>
+                    <div className="mt-3 flex flex-col gap-3">
+                      {[3, 7, 14].map((days) => (
+                        <label
+                          key={days}
+                          className={cn(
+                            'flex cursor-pointer items-center gap-3 text-sm',
+                            (!emailEnabled || !profile?.email) && 'cursor-not-allowed opacity-50',
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="daysBeforeDeadline"
+                            value={days}
+                            checked={daysBeforeDeadline === days}
+                            onChange={() => handleDaysChange(days)}
+                            disabled={!emailEnabled || !profile?.email}
+                            className="h-4 w-4 border-neutral-300 text-brand-800 focus:ring-brand-800"
+                          />
+                          <span className="text-neutral-700">마감 {days}일 전</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* 맞춤 정책 추천 */}
+                <div
+                  className={cn(
+                    'rounded-2xl bg-white p-6 shadow-card transition-opacity',
+                    !profile?.email && 'opacity-70',
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
+                      <Sparkles className="h-4 w-4 text-brand-800" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-neutral-900">맞춤 정책 추천</h3>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        적합도 판정 정보를 바탕으로 자격이 맞을 가능성이 높은 새 정책을 이메일로 추천해 드려요.
+                      </p>
+                      {!profile?.email && (
+                        <p className="mt-2 text-xs text-neutral-500">
+                          활성화하려면 위에서 이메일을 먼저 등록해주세요.
+                        </p>
+                      )}
+                      {profile?.email && !extraFilled && (
+                        <p className="mt-2 text-xs text-warning-500">
+                          적합도 판정 정보를 먼저 입력하면 더 정확한 추천을 받을 수 있어요.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={eligibilityRecommendationEnabled}
+                      aria-label="맞춤 정책 추천 받기"
+                      onClick={handleRecommendationToggle}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+                        eligibilityRecommendationEnabled && profile?.email ? 'bg-brand-800' : 'bg-neutral-300',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                          eligibilityRecommendationEnabled && profile?.email ? 'translate-x-[22px]' : 'translate-x-0.5',
+                        )}
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -830,6 +1100,17 @@ export default function MyPage() {
       {/* ── Toast ── */}
       {toast && (
         <Toast message={toast.message} onUndo={handleUndo} onClose={handleCloseToast} />
+      )}
+
+      {/* ── Notification Toast ── */}
+      {notificationToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-neutral-900 px-5 py-3 text-sm text-white shadow-lg"
+        >
+          {notificationToast}
+        </div>
       )}
     </div>
   );

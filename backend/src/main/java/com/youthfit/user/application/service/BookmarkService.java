@@ -5,6 +5,7 @@ import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.dto.command.CreateBookmarkCommand;
+import com.youthfit.user.application.dto.result.BookmarkIdPairResult;
 import com.youthfit.user.application.dto.result.BookmarkResult;
 import com.youthfit.user.application.dto.result.BookmarkWithPolicyResult;
 import com.youthfit.user.domain.model.Bookmark;
@@ -14,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +49,13 @@ public class BookmarkService {
         }
 
         bookmarkRepository.delete(bookmark);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookmarkIdPairResult> findMyBookmarkIdPairs(Long userId) {
+        return bookmarkRepository.findAllByUserId(userId).stream()
+                .map(BookmarkIdPairResult::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

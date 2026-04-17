@@ -21,5 +21,5 @@ YouthFit PRD를 도메인/기능별로 분리한 문서 목록이다.
 | [04-eligibility.md](04-eligibility.md) | eligibility | F-06 | 규칙 기반 적합도 판정 |
 | [05-qna.md](05-qna.md) | qna | F-07 | RAG 기반 정책 Q&A |
 | [06-bookmark.md](06-bookmark.md) | user(bookmark) | F-08 | 북마크 CRUD |
-| [07-notification.md](07-notification.md) | user(notification) | F-09 | 마감일 이메일 알림 |
+| [07-notification.md](07-notification.md) | user(notification) | F-09 | 마감일 알림 + 적합도 기반 맞춤 정책 추천 알림 |
 | [08-ingestion.md](08-ingestion.md) | ingestion | - | n8n 연동 정책 수집 |

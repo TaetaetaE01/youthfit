@@ -8,6 +8,7 @@ export function useAddBookmark() {
     mutationFn: (policyId: number) => addBookmark(policyId),
     onSuccess: (_data, policyId) => {
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      queryClient.invalidateQueries({ queryKey: ['bookmarkIds'] });
       queryClient.invalidateQueries({ queryKey: ['policy', policyId] });
     },
   });
@@ -20,6 +21,7 @@ export function useRemoveBookmark() {
     mutationFn: (bookmarkId: number) => removeBookmark(bookmarkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      queryClient.invalidateQueries({ queryKey: ['bookmarkIds'] });
       queryClient.invalidateQueries({ queryKey: ['policies'] });
     },
   });

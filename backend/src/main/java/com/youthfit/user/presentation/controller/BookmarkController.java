@@ -1,10 +1,12 @@
 package com.youthfit.user.presentation.controller;
 
 import com.youthfit.common.response.ApiResponse;
+import com.youthfit.user.application.dto.result.BookmarkIdPairResult;
 import com.youthfit.user.application.dto.result.BookmarkResult;
 import com.youthfit.user.application.dto.result.BookmarkWithPolicyResult;
 import com.youthfit.user.application.service.BookmarkService;
 import com.youthfit.user.presentation.dto.request.CreateBookmarkRequest;
+import com.youthfit.user.presentation.dto.response.BookmarkIdPairResponse;
 import com.youthfit.user.presentation.dto.response.BookmarkPageResponse;
 import com.youthfit.user.presentation.dto.response.BookmarkResponse;
 import jakarta.validation.Valid;
@@ -16,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/bookmarks")
@@ -43,6 +47,17 @@ public class BookmarkController implements BookmarkApi {
         Long userId = (Long) authentication.getPrincipal();
         bookmarkService.deleteBookmark(userId, bookmarkId);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @GetMapping("/ids")
+    @Override
+    public ResponseEntity<ApiResponse<List<BookmarkIdPairResponse>>> findMyBookmarkIds(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        List<BookmarkIdPairResult> pairs = bookmarkService.findMyBookmarkIdPairs(userId);
+        return ResponseEntity.ok(ApiResponse.ok(
+                pairs.stream().map(BookmarkIdPairResponse::from).toList()
+        ));
     }
 
     @GetMapping

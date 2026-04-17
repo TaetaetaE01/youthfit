@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Heart, MapPin, Calendar } from 'lucide-react';
+import { Bookmark, MapPin, Calendar } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Policy, PolicyCategory, PolicyStatus } from '@/types/policy';
 import { CATEGORY_LABELS, STATUS_LABELS, getRegionName } from '@/types/policy';
@@ -65,10 +65,10 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
             aria-label={isBookmarked ? '북마크 해제' : '북마크 추가'}
             aria-pressed={isBookmarked}
           >
-            <Heart
+            <Bookmark
               className={cn(
                 'h-5 w-5 transition-colors',
-                isBookmarked ? 'fill-error-500 text-error-500' : 'text-gray-300',
+                isBookmarked ? 'fill-brand-800 text-brand-800' : 'text-gray-300',
               )}
             />
           </button>
