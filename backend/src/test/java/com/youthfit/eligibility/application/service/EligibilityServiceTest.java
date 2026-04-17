@@ -11,9 +11,8 @@ import com.youthfit.eligibility.domain.repository.EligibilityRuleRepository;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.domain.model.AuthProvider;
-import com.youthfit.user.domain.model.User;
-import com.youthfit.user.domain.repository.UserRepository;
+import com.youthfit.user.domain.model.EligibilityProfile;
+import com.youthfit.user.domain.repository.EligibilityProfileRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,7 +41,7 @@ class EligibilityServiceTest {
     private EligibilityRuleRepository eligibilityRuleRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private EligibilityProfileRepository eligibilityProfileRepository;
 
     @Mock
     private PolicyRepository policyRepository;
@@ -55,13 +54,13 @@ class EligibilityServiceTest {
         @DisplayName("모든 기준이 충족되면 LIKELY_ELIGIBLE을 반환한다")
         void allCriteriaMet_returnsLikelyEligible() {
             // given
-            User user = createMockUser(29, "11", 30000000L);
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
             Policy policy = createMockPolicy();
             List<EligibilityRule> rules = List.of(
                     createRule("age", RuleOperator.BETWEEN, "19~34", "연령"),
-                    createRule("region", RuleOperator.EQ, "11", "거주지")
+                    createRule("region", RuleOperator.EQ, "1100000000", "거주지")
             );
-            setupMocks(user, policy, rules);
+            setupMocks(profile, policy, rules);
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -76,13 +75,13 @@ class EligibilityServiceTest {
         @DisplayName("하나의 기준이 미충족이면 LIKELY_INELIGIBLE을 반환한다")
         void oneCriterionFails_returnsLikelyIneligible() {
             // given
-            User user = createMockUser(36, "11", 30000000L);
+            EligibilityProfile profile = createMockProfile(36, "1100000000", 30000000L);
             Policy policy = createMockPolicy();
             List<EligibilityRule> rules = List.of(
                     createRule("age", RuleOperator.BETWEEN, "19~34", "연령"),
-                    createRule("region", RuleOperator.EQ, "11", "거주지")
+                    createRule("region", RuleOperator.EQ, "1100000000", "거주지")
             );
-            setupMocks(user, policy, rules);
+            setupMocks(profile, policy, rules);
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -95,13 +94,13 @@ class EligibilityServiceTest {
         @DisplayName("필드값이 누락되면 UNCERTAIN을 반환하고 missingFields에 포함한다")
         void missingField_returnsUncertain() {
             // given
-            User user = createMockUser(29, "11", null);
+            EligibilityProfile profile = createMockProfile(29, "1100000000", null);
             Policy policy = createMockPolicy();
             List<EligibilityRule> rules = List.of(
                     createRule("age", RuleOperator.BETWEEN, "19~34", "연령"),
                     createRule("annualIncome", RuleOperator.LTE, "50000000", "소득 상한")
             );
-            setupMocks(user, policy, rules);
+            setupMocks(profile, policy, rules);
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -115,13 +114,13 @@ class EligibilityServiceTest {
         @DisplayName("INELIGIBLE이 UNCERTAIN보다 우선한다")
         void ineligibleTakesPriorityOverUncertain() {
             // given
-            User user = createMockUser(36, "11", null);
+            EligibilityProfile profile = createMockProfile(36, "1100000000", null);
             Policy policy = createMockPolicy();
             List<EligibilityRule> rules = List.of(
                     createRule("age", RuleOperator.BETWEEN, "19~34", "연령"),
                     createRule("annualIncome", RuleOperator.LTE, "50000000", "소득 상한")
             );
-            setupMocks(user, policy, rules);
+            setupMocks(profile, policy, rules);
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -134,9 +133,9 @@ class EligibilityServiceTest {
         @DisplayName("규칙이 없으면 LIKELY_ELIGIBLE을 반환한다")
         void noRules_returnsLikelyEligible() {
             // given
-            User user = createMockUser(29, "11", 30000000L);
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
             Policy policy = createMockPolicy();
-            setupMocks(user, policy, List.of());
+            setupMocks(profile, policy, List.of());
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -150,9 +149,9 @@ class EligibilityServiceTest {
         @DisplayName("disclaimer가 항상 포함된다")
         void disclaimerAlwaysPresent() {
             // given
-            User user = createMockUser(29, "11", 30000000L);
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
             Policy policy = createMockPolicy();
-            setupMocks(user, policy, List.of());
+            setupMocks(profile, policy, List.of());
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -166,9 +165,9 @@ class EligibilityServiceTest {
         @DisplayName("정책 정보가 응답에 포함된다")
         void policyInfoIncluded() {
             // given
-            User user = createMockUser(29, "11", 30000000L);
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
             Policy policy = createMockPolicy();
-            setupMocks(user, policy, List.of());
+            setupMocks(profile, policy, List.of());
 
             // when
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
@@ -177,6 +176,26 @@ class EligibilityServiceTest {
             assertThat(result.policyId()).isEqualTo(1L);
             assertThat(result.policyTitle()).isEqualTo("2026 청년월세지원");
         }
+
+        @Test
+        @DisplayName("적합도 프로필이 없으면 빈 프로필로 판정한다")
+        void missingProfile_usesEmptyProfile() {
+            // given
+            Policy policy = createMockPolicy();
+            List<EligibilityRule> rules = List.of(
+                    createRule("age", RuleOperator.BETWEEN, "19~34", "연령")
+            );
+            given(eligibilityProfileRepository.findByUserId(1L)).willReturn(Optional.empty());
+            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
+            given(eligibilityRuleRepository.findAllByPolicyId(1L)).willReturn(rules);
+
+            // when
+            EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
+
+            // then
+            assertThat(result.overallResult()).isEqualTo(EligibilityResult.UNCERTAIN);
+            assertThat(result.missingFields()).containsExactly("age");
+        }
     }
 
     @Nested
@@ -184,26 +203,11 @@ class EligibilityServiceTest {
     class ExceptionCases {
 
         @Test
-        @DisplayName("존재하지 않는 사용자이면 NOT_FOUND 예외가 발생한다")
-        void userNotFound_throwsException() {
-            // given
-            given(userRepository.findById(999L)).willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> eligibilityService.judgeEligibility(999L, new JudgeEligibilityCommand(1L)))
-                    .isInstanceOf(YouthFitException.class)
-                    .satisfies(ex -> {
-                        YouthFitException yfe = (YouthFitException) ex;
-                        assertThat(yfe.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
-                    });
-        }
-
-        @Test
         @DisplayName("존재하지 않는 정책이면 NOT_FOUND 예외가 발생한다")
         void policyNotFound_throwsException() {
             // given
-            User user = createMockUser(29, "11", 30000000L);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
+            given(eligibilityProfileRepository.findByUserId(1L)).willReturn(Optional.of(profile));
             given(policyRepository.findById(999L)).willReturn(Optional.empty());
 
             // when & then
@@ -218,24 +222,25 @@ class EligibilityServiceTest {
 
     // ── 헬퍼 메서드 ──
 
-    private void setupMocks(User user, Policy policy, List<EligibilityRule> rules) {
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+    private void setupMocks(EligibilityProfile profile, Policy policy, List<EligibilityRule> rules) {
+        given(eligibilityProfileRepository.findByUserId(1L)).willReturn(Optional.of(profile));
         given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
         given(eligibilityRuleRepository.findAllByPolicyId(1L)).willReturn(rules);
     }
 
-    private User createMockUser(Integer age, String region, Long annualIncome) {
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("테스터")
-                .authProvider(AuthProvider.KAKAO)
-                .providerId("12345")
-                .build();
-        ReflectionTestUtils.setField(user, "id", 1L);
-        ReflectionTestUtils.setField(user, "age", age);
-        ReflectionTestUtils.setField(user, "region", region);
-        ReflectionTestUtils.setField(user, "annualIncome", annualIncome);
-        return user;
+    private EligibilityProfile createMockProfile(Integer age, String legalDongCode, Long incomeMax) {
+        EligibilityProfile profile = EligibilityProfile.empty(1L);
+        ReflectionTestUtils.setField(profile, "id", 1L);
+        if (age != null) {
+            profile.changeAge(age);
+        }
+        if (legalDongCode != null) {
+            profile.changeLegalDongCode(legalDongCode);
+        }
+        if (incomeMax != null) {
+            profile.changeIncomeRange(null, incomeMax);
+        }
+        return profile;
     }
 
     private Policy createMockPolicy() {

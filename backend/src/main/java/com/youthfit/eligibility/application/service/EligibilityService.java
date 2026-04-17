@@ -12,8 +12,8 @@ import com.youthfit.eligibility.domain.service.CriterionEvaluation;
 import com.youthfit.eligibility.domain.service.EligibilityEvaluator;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.domain.model.User;
-import com.youthfit.user.domain.repository.UserRepository;
+import com.youthfit.user.domain.model.EligibilityProfile;
+import com.youthfit.user.domain.repository.EligibilityProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +25,14 @@ import java.util.List;
 public class EligibilityService {
 
     private final EligibilityRuleRepository eligibilityRuleRepository;
-    private final UserRepository userRepository;
+    private final EligibilityProfileRepository eligibilityProfileRepository;
     private final PolicyRepository policyRepository;
     private final EligibilityEvaluator evaluator = new EligibilityEvaluator();
 
     @Transactional(readOnly = true)
     public EligibilityJudgmentResult judgeEligibility(Long userId, JudgeEligibilityCommand command) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+        EligibilityProfile profile = eligibilityProfileRepository.findByUserId(userId)
+                .orElseGet(() -> EligibilityProfile.empty(userId));
 
         Policy policy = policyRepository.findById(command.policyId())
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "정책을 찾을 수 없습니다"));
@@ -40,7 +40,7 @@ public class EligibilityService {
         List<EligibilityRule> rules = eligibilityRuleRepository.findAllByPolicyId(command.policyId());
 
         List<CriterionEvaluation> evaluations = rules.stream()
-                .map(rule -> evaluator.evaluateRule(rule, user))
+                .map(rule -> evaluator.evaluateRule(rule, profile))
                 .toList();
 
         List<CriterionResult> criteria = evaluations.stream()

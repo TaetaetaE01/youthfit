@@ -2,14 +2,14 @@ package com.youthfit.eligibility.domain.service;
 
 import com.youthfit.eligibility.domain.model.EligibilityRule;
 import com.youthfit.eligibility.domain.model.RuleOperator;
-import com.youthfit.user.domain.model.User;
+import com.youthfit.user.domain.model.EligibilityProfile;
 
 import java.util.Set;
 
 public class EligibilityEvaluator {
 
-    public CriterionEvaluation evaluateRule(EligibilityRule rule, User user) {
-        Object userValue = extractFieldValue(user, rule.getField());
+    public CriterionEvaluation evaluateRule(EligibilityRule rule, EligibilityProfile profile) {
+        Object userValue = extractFieldValue(profile, rule.getField());
         if (userValue == null) {
             return CriterionEvaluation.uncertain(rule);
         }
@@ -19,16 +19,24 @@ public class EligibilityEvaluator {
                 : CriterionEvaluation.ineligible(rule, userValue);
     }
 
-    private Object extractFieldValue(User user, String field) {
+    private Object extractFieldValue(EligibilityProfile profile, String field) {
         return switch (field) {
-            case "age" -> user.getAge();
-            case "region" -> user.getRegion();
-            case "annualIncome" -> user.getAnnualIncome();
-            case "employmentStatus" -> user.getEmploymentStatus() != null
-                    ? user.getEmploymentStatus().name() : null;
-            case "educationLevel" -> user.getEducationLevel() != null
-                    ? user.getEducationLevel().name() : null;
-            case "householdSize" -> user.getHouseholdSize();
+            case "age" -> profile.getAge();
+            case "region", "legalDongCode" -> profile.getLegalDongCode();
+            case "incomeMin" -> profile.getIncomeMin();
+            case "incomeMax" -> profile.getIncomeMax();
+            case "annualIncome" -> profile.getIncomeMax() != null
+                    ? profile.getIncomeMax() : profile.getIncomeMin();
+            case "maritalStatus" -> profile.getMaritalStatus() != null
+                    ? profile.getMaritalStatus().name() : null;
+            case "employmentKind", "employmentStatus" -> profile.getEmploymentKind() != null
+                    ? profile.getEmploymentKind().name() : null;
+            case "education", "educationLevel" -> profile.getEducation() != null
+                    ? profile.getEducation().name() : null;
+            case "majorField" -> profile.getMajorField() != null
+                    ? profile.getMajorField().name() : null;
+            case "specializationField" -> profile.getSpecializationField() != null
+                    ? profile.getSpecializationField().name() : null;
             default -> null;
         };
     }

@@ -111,26 +111,6 @@ class UserTest {
         }
     }
 
-    @Test
-    @DisplayName("적합도 판정용 프로필 정보를 업데이트한다")
-    void updateEligibilityProfile_setsAllFields() {
-        // given
-        User user = createMockUser();
-
-        // when
-        user.updateEligibilityProfile(
-                25, "서울", 30_000_000L,
-                EmploymentStatus.UNEMPLOYED, EducationLevel.UNIVERSITY, 1);
-
-        // then
-        assertThat(user.getAge()).isEqualTo(25);
-        assertThat(user.getRegion()).isEqualTo("서울");
-        assertThat(user.getAnnualIncome()).isEqualTo(30_000_000L);
-        assertThat(user.getEmploymentStatus()).isEqualTo(EmploymentStatus.UNEMPLOYED);
-        assertThat(user.getEducationLevel()).isEqualTo(EducationLevel.UNIVERSITY);
-        assertThat(user.getHouseholdSize()).isEqualTo(1);
-    }
-
     // ── 헬퍼 메서드 ──
 
     private User createMockUser() {
