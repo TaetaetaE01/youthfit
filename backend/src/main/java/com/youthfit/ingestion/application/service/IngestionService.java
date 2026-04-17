@@ -1,9 +1,10 @@
 package com.youthfit.ingestion.application.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
-import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.SourceType;
@@ -21,27 +22,35 @@ import java.util.UUID;
 public class IngestionService {
 
     private final PolicyIngestionService policyIngestionService;
+    private final ObjectMapper objectMapper;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Category category = mapCategory(command.category());
         SourceType sourceType = resolveSourceType(command.sourceType());
-        String sourceHash = sha256(command.body());
+        String rawJson = serialize(command);
+        String sourceHash = sha256(rawJson);
+        String externalId = command.externalId() != null && !command.externalId().isBlank()
+                ? command.externalId()
+                : command.sourceUrl();
+        String summary = command.summary() != null && !command.summary().isBlank()
+                ? command.summary()
+                : command.body();
 
         RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
                 command.title(),
-                command.body(),
+                summary,
                 category,
                 command.region(),
                 command.applyStart(),
                 command.applyEnd(),
                 sourceType,
+                externalId,
                 command.sourceUrl(),
-                command.sourceUrl(),
-                command.body(),
+                rawJson,
                 sourceHash
         );
 
-        PolicyIngestionResult result = policyIngestionService.registerPolicy(registerCommand);
+        policyIngestionService.registerPolicy(registerCommand);
 
         return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
     }
@@ -64,6 +73,14 @@ public class IngestionService {
             return SourceType.valueOf(type);
         } catch (IllegalArgumentException e) {
             return SourceType.YOUTH_SEOUL_CRAWL;
+        }
+    }
+
+    private String serialize(IngestPolicyCommand command) {
+        try {
+            return objectMapper.writeValueAsString(command);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize ingest command", e);
         }
     }
 
