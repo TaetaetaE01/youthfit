@@ -42,6 +42,14 @@ const initialFields: PersonalInfoFields = {
   specializationField: null,
 };
 
+const ENUM_FIELDS_TO_NULLIFY_ON_ANY: (keyof PersonalInfoFields)[] = [
+  'maritalStatus',
+  'education',
+  'employmentKind',
+  'majorField',
+  'specializationField',
+];
+
 export const usePersonalInfoStore = create<PersonalInfoState>()(
   persist(
     (set) => ({
@@ -60,7 +68,18 @@ export const usePersonalInfoStore = create<PersonalInfoState>()(
     }),
     {
       name: 'youthfit-personal-info',
-      version: 1,
+      version: 2,
+      migrate: (persisted, version) => {
+        const base = { ...initialFields, ...(persisted as Partial<PersonalInfoFields>) };
+        if (version < 2) {
+          for (const key of ENUM_FIELDS_TO_NULLIFY_ON_ANY) {
+            if ((base as Record<string, unknown>)[key] === 'ANY') {
+              (base as Record<string, unknown>)[key] = null;
+            }
+          }
+        }
+        return base as PersonalInfoState;
+      },
     },
   ),
 );
