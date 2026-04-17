@@ -5,9 +5,11 @@ import { useProfile } from '@/hooks/queries/useProfile';
 import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings';
 import { useUpdateProfile } from '@/hooks/mutations/useUpdateProfile';
 import { useUpdateNotificationSettings } from '@/hooks/mutations/useUpdateNotificationSettings';
+import { useSubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 
 interface NotificationPromptSheetProps {
   open: boolean;
+  policyId: number;
   onClose: () => void;
   onSubscribed: (email: string) => void;
 }
@@ -17,6 +19,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function NotificationPromptSheet({
   open,
+  policyId,
   onClose,
   onSubscribed,
 }: NotificationPromptSheetProps) {
@@ -24,6 +27,7 @@ export default function NotificationPromptSheet({
   const { data: existingSettings } = useNotificationSettings();
   const updateProfile = useUpdateProfile();
   const updateNotification = useUpdateNotificationSettings();
+  const subscribePolicy = useSubscribePolicy();
 
   const existingEmail = profile?.email ?? '';
   const [isEditing, setIsEditing] = useState(!existingEmail);
@@ -59,23 +63,27 @@ export default function NotificationPromptSheet({
 
   if (!open) return null;
 
-  const isPending = updateProfile.isPending || updateNotification.isPending;
+  const isPending =
+    updateProfile.isPending ||
+    updateNotification.isPending ||
+    subscribePolicy.isPending;
 
-  const finalizeSubscription = (targetEmail: string) => {
-    updateNotification.mutate(
-      {
-        emailEnabled: true,
-        daysBeforeDeadline: existingSettings?.daysBeforeDeadline ?? DEFAULT_DAYS_BEFORE,
-        eligibilityRecommendationEnabled: existingSettings?.eligibilityRecommendationEnabled ?? false,
-      },
-      {
-        onSuccess: () => {
-          onSubscribed(targetEmail);
-          onClose();
-        },
-        onError: () => setError('알림 신청에 실패했어요. 잠시 후 다시 시도해주세요.'),
-      },
-    );
+  const finalizeSubscription = async (targetEmail: string) => {
+    try {
+      if (!existingSettings?.emailEnabled) {
+        await updateNotification.mutateAsync({
+          emailEnabled: true,
+          daysBeforeDeadline: existingSettings?.daysBeforeDeadline ?? DEFAULT_DAYS_BEFORE,
+          eligibilityRecommendationEnabled:
+            existingSettings?.eligibilityRecommendationEnabled ?? false,
+        });
+      }
+      await subscribePolicy.mutateAsync(policyId);
+      onSubscribed(targetEmail);
+      onClose();
+    } catch {
+      setError('알림 신청에 실패했어요. 잠시 후 다시 시도해주세요.');
+    }
   };
 
   const handleSubmit = () => {

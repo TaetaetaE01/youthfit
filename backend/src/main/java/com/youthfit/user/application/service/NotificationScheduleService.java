@@ -3,13 +3,13 @@ package com.youthfit.user.application.service;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.port.EmailSender;
-import com.youthfit.user.domain.model.Bookmark;
 import com.youthfit.user.domain.model.NotificationHistory;
 import com.youthfit.user.domain.model.NotificationSetting;
+import com.youthfit.user.domain.model.PolicyNotificationSubscription;
 import com.youthfit.user.domain.model.User;
-import com.youthfit.user.domain.repository.BookmarkRepository;
 import com.youthfit.user.domain.repository.NotificationHistoryRepository;
 import com.youthfit.user.domain.repository.NotificationSettingRepository;
+import com.youthfit.user.domain.repository.PolicyNotificationSubscriptionRepository;
 import com.youthfit.user.domain.repository.UserRepository;
 import com.youthfit.user.domain.service.NotificationTargetResolver;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class NotificationScheduleService {
     private static final String NOTIFICATION_TYPE_DEADLINE = "DEADLINE";
 
     private final NotificationSettingRepository notificationSettingRepository;
-    private final BookmarkRepository bookmarkRepository;
+    private final PolicyNotificationSubscriptionRepository subscriptionRepository;
     private final PolicyRepository policyRepository;
     private final UserRepository userRepository;
     private final NotificationHistoryRepository notificationHistoryRepository;
@@ -46,10 +46,13 @@ public class NotificationScheduleService {
                 log.warn("알림 설정 userId={} 에 해당하는 사용자를 찾을 수 없습니다", userId);
                 continue;
             }
+            if (user.getEmail() == null || user.getEmail().isBlank()) {
+                continue;
+            }
 
-            List<Bookmark> bookmarks = bookmarkRepository.findAllByUserId(userId);
-            for (Bookmark bookmark : bookmarks) {
-                Policy policy = policyRepository.findById(bookmark.getPolicyId()).orElse(null);
+            List<PolicyNotificationSubscription> subscriptions = subscriptionRepository.findAllByUserId(userId);
+            for (PolicyNotificationSubscription subscription : subscriptions) {
+                Policy policy = policyRepository.findById(subscription.getPolicyId()).orElse(null);
                 if (policy == null) {
                     continue;
                 }
@@ -60,10 +63,6 @@ public class NotificationScheduleService {
 
                 if (notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(
                         userId, policy.getId(), NOTIFICATION_TYPE_DEADLINE)) {
-                    continue;
-                }
-
-                if (user.getEmail() == null || user.getEmail().isBlank()) {
                     continue;
                 }
 
