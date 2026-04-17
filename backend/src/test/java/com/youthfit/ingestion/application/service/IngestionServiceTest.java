@@ -4,12 +4,17 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
+import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
+import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
+import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -33,6 +38,12 @@ class IngestionServiceTest {
 
     @Mock
     private PolicyIngestionService policyIngestionService;
+
+    @Mock
+    private PolicyPeriodLlmProvider policyPeriodLlmProvider;
+
+    @Spy
+    private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();
 
     @Spy
     private ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
@@ -101,6 +112,82 @@ class IngestionServiceTest {
 
             // then
             assertThat(result.status()).isEqualTo("RECEIVED");
+        }
+
+        @Test
+        @DisplayName("기간이 비어 있으면 본문에서 정규식으로 보강한다")
+        void enrichesPeriodViaRegexWhenMissing() {
+            // given
+            IngestPolicyCommand command = commandWithoutPeriod("신청기간: 2026.05.01.~2026.06.30.");
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(new PolicyIngestionResult(1L, true));
+
+            // when
+            ingestionService.receivePolicy(command);
+
+            // then
+            ArgumentCaptor<RegisterPolicyCommand> captor = ArgumentCaptor.forClass(RegisterPolicyCommand.class);
+            then(policyIngestionService).should().registerPolicy(captor.capture());
+            assertThat(captor.getValue().applyStart()).isEqualTo(LocalDate.of(2026, 5, 1));
+            assertThat(captor.getValue().applyEnd()).isEqualTo(LocalDate.of(2026, 6, 30));
+            then(policyPeriodLlmProvider).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("정규식이 실패하면 LLM 제공자로 폴백한다")
+        void fallsBackToLlmWhenRegexFails() {
+            // given
+            IngestPolicyCommand command = commandWithoutPeriod("상시접수");
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.of(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)));
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(new PolicyIngestionResult(1L, true));
+
+            // when
+            ingestionService.receivePolicy(command);
+
+            // then
+            ArgumentCaptor<RegisterPolicyCommand> captor = ArgumentCaptor.forClass(RegisterPolicyCommand.class);
+            then(policyIngestionService).should().registerPolicy(captor.capture());
+            assertThat(captor.getValue().applyStart()).isEqualTo(LocalDate.of(2026, 7, 1));
+            assertThat(captor.getValue().applyEnd()).isEqualTo(LocalDate.of(2026, 7, 31));
+        }
+
+        @Test
+        @DisplayName("command에 기간이 이미 있으면 보강 로직을 호출하지 않는다")
+        void keepsCommandPeriodWhenPresent() {
+            // given
+            IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(new PolicyIngestionResult(1L, true));
+
+            // when
+            ingestionService.receivePolicy(command);
+
+            // then
+            then(policyPeriodLlmProvider).shouldHaveNoInteractions();
+        }
+
+        private IngestPolicyCommand commandWithoutPeriod(String body) {
+            return new IngestPolicyCommand(
+                    "https://example.com/policy/2",
+                    "BOKJIRO_CENTRAL",
+                    LocalDateTime.of(2026, 4, 15, 10, 0),
+                    "EXT-002",
+                    "정책",
+                    "요약",
+                    body,
+                    "복지",
+                    "전국",
+                    null,
+                    null,
+                    "보건복지부",
+                    "129",
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
         }
 
         private IngestPolicyCommand command(String sourceType, String category) {

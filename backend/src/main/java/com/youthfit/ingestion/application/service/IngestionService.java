@@ -4,6 +4,9 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
+import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
+import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import com.youthfit.policy.domain.model.Category;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -32,6 +36,8 @@ public class IngestionService {
 
     private final PolicyIngestionService policyIngestionService;
     private final ObjectMapper objectMapper;
+    private final PolicyPeriodExtractor policyPeriodExtractor;
+    private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Category category = mapCategory(command.category());
@@ -46,6 +52,7 @@ public class IngestionService {
                 : command.body();
 
         Sections sections = parseSections(command.body());
+        PolicyPeriod period = resolvePeriod(command);
 
         RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
                 command.title(),
@@ -58,8 +65,8 @@ public class IngestionService {
                 command.contact(),
                 category,
                 command.region(),
-                command.applyStart(),
-                command.applyEnd(),
+                period.start(),
+                period.end(),
                 toSet(command.lifeTags()),
                 toSet(command.themeTags()),
                 toSet(command.targetTags()),
@@ -95,6 +102,19 @@ public class IngestionService {
         } catch (IllegalArgumentException e) {
             return SourceType.YOUTH_SEOUL_CRAWL;
         }
+    }
+
+    private PolicyPeriod resolvePeriod(IngestPolicyCommand command) {
+        LocalDate applyStart = command.applyStart();
+        LocalDate applyEnd = command.applyEnd();
+        if (applyStart != null || applyEnd != null) {
+            return PolicyPeriod.of(applyStart, applyEnd);
+        }
+        PolicyPeriod regexPeriod = policyPeriodExtractor.extract(command.body());
+        if (!regexPeriod.isEmpty()) {
+            return regexPeriod;
+        }
+        return policyPeriodLlmProvider.extractPeriod(command.title(), command.body());
     }
 
     private Sections parseSections(String body) {
