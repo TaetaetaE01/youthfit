@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfile } from '@/hooks/queries/useProfile';
 
 const NAV_LINKS = [
   { to: '/policies', label: '정책 목록' },
@@ -12,6 +13,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile();
   const location = useLocation();
 
   return (
@@ -45,10 +47,19 @@ export default function Navbar() {
           {isAuthenticated ? (
             <Link
               to="/mypage"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-800 transition-colors hover:bg-brand-700 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-brand-800 transition-colors hover:bg-brand-700 hover:text-white"
               aria-label="마이페이지"
             >
-              <User className="h-5 w-5" />
+              {profile?.profileImageUrl ? (
+                <img
+                  src={profile.profileImageUrl}
+                  alt={profile.nickname ?? '프로필'}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <User className="h-5 w-5" />
+              )}
             </Link>
           ) : (
             <Link

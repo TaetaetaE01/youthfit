@@ -114,7 +114,7 @@ com.youthfit/
 
 ### 4.2 user
 
-사용자 프로필, 북마크, 알림 설정 및 마감일 이메일 알림을 담당한다.
+사용자 프로필, 북마크, 알림 설정(마감일 알림 + 적합도 기반 맞춤 정책 추천 알림) 및 이메일 발송을 담당한다.
 
 | 레이어 | 주요 클래스 | 역할 |
 |--------|------------|------|
@@ -123,13 +123,15 @@ com.youthfit/
 | Application | `BookmarkService` | 북마크 생성/삭제/목록(정책 정보 포함) |
 | Application | `NotificationSettingService` | 알림 설정 조회/수정 |
 | Application | `NotificationScheduleService` | 마감 임박 정책 알림 대상 조회 및 발송 |
+| Application | `RecommendationNotificationService` | 적합도 기반 맞춤 정책 추천 알림 대상 조회 및 발송 |
 | Domain | `User` | 프로필 수정, 적합도 프로필 업데이트, 토큰 관리 |
 | Domain | `Bookmark` | userId + policyId 유니크 제약 |
-| Domain | `NotificationSetting` | 이메일 활성화 여부, 마감 전 알림 일수 |
+| Domain | `NotificationSetting` | 마감 알림 활성화 여부, 마감 전 알림 일수, 맞춤 추천 알림 활성화 여부 |
 | Domain | `NotificationHistory` | 발송 이력 (중복 방지) |
 | Domain Service | `NotificationTargetResolver` | 알림 대상 사용자 결정 |
 | Infrastructure | `LoggingEmailSender` | EmailSender 포트 구현체 (현재 로그 출력) |
-| Infrastructure | `NotificationScheduler` | 매일 09:00 실행 (`0 0 9 * * *`) |
+| Infrastructure | `NotificationScheduler` | 매일 09:00 실행 (`0 0 9 * * *`) — 마감 알림 |
+| Infrastructure | `RecommendationScheduler` | 주 1회 월요일 09:00 실행 (`0 0 9 * * MON`) — 맞춤 추천 알림 |
 
 **도메인 Enum**: `AuthProvider(KAKAO)`, `Role(USER, ADMIN)`, `EmploymentStatus`, `EducationLevel`
 
@@ -412,9 +414,25 @@ users ──1:N── bookmark ──N:1── policy
 NotificationScheduler (매일 09:00)
   → NotificationScheduleService
     → 마감 임박 정책 조회 (북마크 기준)
-    → NotificationTargetResolver (대상 사용자 필터)
+    → NotificationTargetResolver (emailEnabled=true 사용자 필터)
     → EmailSender 발송
-    → NotificationHistory 기록 (중복 방지)
+    → NotificationHistory 기록 (type=DEADLINE, 중복 방지)
+```
+
+### 맞춤 정책 추천 알림
+
+```
+RecommendationScheduler (주 1회 월요일 09:00)
+  → RecommendationNotificationService
+    → 신규/업데이트된 OPEN 정책 조회
+    → 대상 사용자 필터
+       (eligibilityRecommendationEnabled=true
+        ∧ email 등록됨
+        ∧ 프로필 적합도 정보 보유)
+    → eligibility.domain 으로 LIKELY_ELIGIBLE 정책 선별
+    → 북마크·발송 이력 기반 중복 제거 (type=RECOMMENDATION)
+    → 사용자별 최대 5건 선정 → EmailSender 발송
+    → NotificationHistory 기록
 ```
 
 ---

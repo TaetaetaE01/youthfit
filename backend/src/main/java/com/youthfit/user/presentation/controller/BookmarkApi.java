@@ -2,6 +2,7 @@ package com.youthfit.user.presentation.controller;
 
 import com.youthfit.common.response.ApiResponse;
 import com.youthfit.user.presentation.dto.request.CreateBookmarkRequest;
+import com.youthfit.user.presentation.dto.response.BookmarkIdPairResponse;
 import com.youthfit.user.presentation.dto.response.BookmarkPageResponse;
 import com.youthfit.user.presentation.dto.response.BookmarkResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+
+import java.util.List;
 
 @Tag(name = "북마크", description = "정책 북마크 등록, 삭제, 목록 조회 API")
 public interface BookmarkApi {
@@ -39,6 +42,15 @@ public interface BookmarkApi {
     ResponseEntity<ApiResponse<Void>> deleteBookmark(
             Authentication authentication,
             @Parameter(description = "북마크 ID") Long bookmarkId);
+
+    @Operation(summary = "내 북마크 ID 목록 조회", description = "로그인한 사용자의 북마크/정책 ID 페어 전체를 반환한다. 목록 화면에서 북마크 여부를 빠르게 표시하기 위한 가벼운 응답")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류가 발생했습니다 (YF-500)")
+    })
+    ResponseEntity<ApiResponse<List<BookmarkIdPairResponse>>> findMyBookmarkIds(
+            Authentication authentication);
 
     @Operation(summary = "내 북마크 목록 조회", description = "로그인한 사용자의 북마크 목록을 페이징 조회한다")
     @ApiResponses(value = {

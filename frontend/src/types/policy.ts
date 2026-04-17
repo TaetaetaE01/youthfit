@@ -90,7 +90,7 @@ export interface BookmarkPolicy {
   title: string;
   category: string;
   status: string;
-  applyEnd: string;
+  applyEnd: string | null;
 }
 
 export interface Bookmark {
@@ -105,6 +105,11 @@ export interface BookmarkPage {
   currentPage: number;
   size: number;
   content: Bookmark[];
+}
+
+export interface BookmarkIdPair {
+  bookmarkId: number;
+  policyId: number;
 }
 
 /* ── User ── */
@@ -133,6 +138,7 @@ export interface UpdateProfileRequest {
 export interface NotificationSettings {
   emailEnabled: boolean;
   daysBeforeDeadline: number;
+  eligibilityRecommendationEnabled: boolean;
 }
 
 /* ── Common ── */

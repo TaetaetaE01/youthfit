@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Heart,
+  Bookmark,
+  Bell,
   MapPin,
   Calendar,
   ChevronRight,
@@ -16,9 +17,12 @@ import {
 import { cn } from '@/lib/cn';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
+import NotificationPromptSheet from '@/components/policy/NotificationPromptSheet';
 import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
+import { useMyBookmarkIds } from '@/hooks/queries/useMyBookmarkIds';
+import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings';
 import { useJudgeEligibility } from '@/hooks/mutations/useJudgeEligibility';
 import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { fetchQnaAnswer } from '@/apis/qna.api';
@@ -35,8 +39,10 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatDateRange(start: string, end: string) {
-  const fmt = (d: string) => d.slice(0, 10).replace(/-/g, '.');
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+  const fmt = (d: string | null | undefined) =>
+    d ? d.slice(0, 10).replace(/-/g, '.') : '미정';
+  if (!start && !end) return '상시';
   return `${fmt(start)} ~ ${fmt(end)}`;
 }
 
@@ -112,11 +118,11 @@ function PolicyHeader({
           aria-label={isBookmarked ? '북마크 해제' : '북마크 추가'}
           aria-pressed={isBookmarked}
         >
-          <Heart
+          <Bookmark
             className={cn(
               'h-6 w-6 transition-colors',
               isBookmarked
-                ? 'fill-error-500 text-error-500'
+                ? 'fill-brand-800 text-brand-800'
                 : 'text-gray-300',
             )}
           />
@@ -275,6 +281,46 @@ function EligibilityCard({
           )}
         </div>
       )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notification CTA Card
+// ---------------------------------------------------------------------------
+
+function NotificationCtaCard({
+  onSubscribe,
+  isSubscribed,
+}: {
+  onSubscribe: () => void;
+  isSubscribed: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-neutral-200 bg-white p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100">
+          <Bell className={cn('h-5 w-5', isSubscribed ? 'fill-brand-800 text-brand-800' : 'text-brand-800')} />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-base font-semibold text-neutral-900">마감일 알림 받기</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            마감 7일 전 이메일로 한 번만 알려드려요.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onSubscribe}
+        disabled={isSubscribed}
+        className={cn(
+          'mt-4 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors',
+          isSubscribed
+            ? 'cursor-default bg-brand-100 text-brand-800'
+            : 'bg-brand-800 text-white hover:bg-brand-900',
+        )}
+      >
+        {isSubscribed ? '알림 설정됨' : '알림 받기'}
+      </button>
     </section>
   );
 }
@@ -469,8 +515,21 @@ export default function PolicyDetailPage() {
   // --- Bookmark state ---
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkId, setBookmarkId] = useState<number | null>(null);
+  const { data: bookmarkIdPairs } = useMyBookmarkIds();
   const addBookmarkMutation = useAddBookmark();
   const removeBookmarkMutation = useRemoveBookmark();
+
+  useEffect(() => {
+    if (!bookmarkIdPairs) return;
+    const found = bookmarkIdPairs.find((p) => p.policyId === policyId);
+    if (found) {
+      setBookmarked(true);
+      setBookmarkId(found.bookmarkId);
+    } else {
+      setBookmarked(false);
+      setBookmarkId(null);
+    }
+  }, [bookmarkIdPairs, policyId]);
 
   // --- Eligibility ---
   const [eligibility, setEligibility] = useState<EligibilityResponse | null>(null);
@@ -484,6 +543,26 @@ export default function PolicyDetailPage() {
     setLoginModalMessage(message ?? '로그인하면 이 기능을 이용할 수 있어요');
     setLoginModalOpen(true);
   }, []);
+
+  // --- Notification prompt sheet ---
+  const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
+  const [notificationToast, setNotificationToast] = useState<string | null>(null);
+  const { data: notificationSettings } = useNotificationSettings();
+  const isSubscribed = !!notificationSettings?.emailEnabled;
+
+  const handleSubscribeClick = () => {
+    if (!isAuthenticated) {
+      openLoginPrompt('로그인하면 마감일 알림을 받을 수 있어요');
+      return;
+    }
+    setNotificationSheetOpen(true);
+  };
+
+  useEffect(() => {
+    if (!notificationToast) return;
+    const t = setTimeout(() => setNotificationToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [notificationToast]);
 
   const handleBookmarkToggle = () => {
     if (!isAuthenticated) {
@@ -605,11 +684,12 @@ export default function PolicyDetailPage() {
               onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
               sourceUrl={policy.sourceUrl}
             />
+            <NotificationCtaCard onSubscribe={handleSubscribeClick} isSubscribed={isSubscribed} />
           </div>
         </aside>
 
-        {/* Eligibility Card (Mobile - inline) */}
-        <div className="mt-8 lg:hidden">
+        {/* Eligibility + Notification (Mobile - inline) */}
+        <div className="mt-8 space-y-6 lg:hidden">
           <EligibilityCard
             isAuthenticated={isAuthenticated}
             eligibility={eligibility}
@@ -618,6 +698,7 @@ export default function PolicyDetailPage() {
             onLoginPrompt={() => openLoginPrompt('로그인하면 적합도를 확인할 수 있어요')}
             sourceUrl={policy.sourceUrl}
           />
+          <NotificationCtaCard onSubscribe={handleSubscribeClick} isSubscribed={isSubscribed} />
         </div>
       </div>
 
@@ -630,6 +711,24 @@ export default function PolicyDetailPage() {
         onClose={() => setLoginModalOpen(false)}
         message={loginModalMessage}
       />
+
+      {/* Notification Prompt Sheet */}
+      <NotificationPromptSheet
+        open={notificationSheetOpen}
+        onClose={() => setNotificationSheetOpen(false)}
+        onSubscribed={() => setNotificationToast('마감 7일 전 알려드릴게요')}
+      />
+
+      {/* Notification Toast */}
+      {notificationToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-neutral-900 px-5 py-3 text-sm text-white shadow-lg"
+        >
+          {notificationToast}
+        </div>
+      )}
     </div>
   );
 }

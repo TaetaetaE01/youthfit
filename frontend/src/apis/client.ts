@@ -13,9 +13,12 @@ const api = ky.create({
       },
     ],
     afterResponse: [
-      async ({ response }) => {
-        if (response.status === 401) {
-          useAuthStore.getState().logout();
+      async ({ request, response }) => {
+        if (response.status === 401 || response.status === 403) {
+          const hadToken = request.headers.get('Authorization');
+          if (hadToken) {
+            useAuthStore.getState().logout();
+          }
         }
       },
     ],

@@ -24,6 +24,7 @@
 
 ### Phase 4 — 알림 및 마무리
 - [ ] user 모듈: 마감일 이메일 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
+- [ ] user 모듈: 적합도 기반 맞춤 정책 추천 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
 - [ ] 비기능 요구사항 점검 (성능, 보안, 모니터링) → [09-common.md](09-common.md)
 - [ ] 프론트엔드 통합 및 E2E 테스트
 - [ ] MVP 출시

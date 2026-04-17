@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchNotificationSettings } from '@/apis/user.api';
+import { fetchMyBookmarkIds } from '@/apis/bookmark.api';
 import { useAuthStore } from '@/stores/authStore';
 
-export function useNotificationSettings() {
+export function useMyBookmarkIds() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return useQuery({
-    queryKey: ['notificationSettings'],
-    queryFn: fetchNotificationSettings,
+    queryKey: ['bookmarkIds'],
+    queryFn: fetchMyBookmarkIds,
     enabled: isAuthenticated,
+    staleTime: 60_000,
   });
 }

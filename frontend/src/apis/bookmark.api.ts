@@ -1,10 +1,17 @@
 import api from './client';
-import type { ApiResponse, BookmarkPage } from '@/types/policy';
+import type { ApiResponse, BookmarkIdPair, BookmarkPage } from '@/types/policy';
 
 export async function fetchBookmarks(page = 0, size = 20): Promise<BookmarkPage> {
   const res = await api
     .get('v1/bookmarks', { searchParams: { page: String(page), size: String(size) } })
     .json<ApiResponse<BookmarkPage>>();
+  return res.data;
+}
+
+export async function fetchMyBookmarkIds(): Promise<BookmarkIdPair[]> {
+  const res = await api
+    .get('v1/bookmarks/ids')
+    .json<ApiResponse<BookmarkIdPair[]>>();
   return res.data;
 }
 
