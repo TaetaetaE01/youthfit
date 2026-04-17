@@ -958,7 +958,7 @@ Content-Type: application/json
 | 위험 | 영향 | 대응 방안 |
 |------|------|----------|
 | 적합도 판정 오해 | 사용자가 법적 판정으로 오인 | "참고용" disclaimer 상시 노출, 공식 채널 안내 병행 |
-| 크롤링 법적 이슈 | 원천 사이트 차단 또는 법적 분쟁 | robots.txt 준수, 식별 가능 User-Agent, rate limit, 원문 전체 노출 금지 |
+| 공공 API 장애·정책 변경 | 원천 API 응답 실패 또는 스펙 변경 | 기존 저장분으로 서비스 유지, 응답 스키마 파싱 실패 시 알림, 식별 가능 User-Agent·rate limit 준수 |
 | 사용자 유입 부족 | 서비스 지속 불가 | MVP 핵심 가치(탐색·해석)에 집중, 초기 타겟 커뮤니티 공략 |
 
 ---
@@ -975,7 +975,7 @@ Content-Type: application/json
 ### Phase 2 — 핵심 기능
 - [ ] user 모듈: 북마크 CRUD
 - [ ] eligibility 모듈: 규칙 기반 적합도 판정
-- [ ] ingestion 모듈: n8n 연동 정책 수집 엔드포인트
+- [ ] ingestion 모듈: 복지로·온통청년 공공 API 수집 엔드포인트
 - [ ] policy 모듈: PolicySource 관리, 중복 제거
 
 ### Phase 3 — AI 기능

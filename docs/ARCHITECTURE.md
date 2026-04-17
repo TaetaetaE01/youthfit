@@ -148,7 +148,7 @@ com.youthfit/
 | Domain | `PolicySource` | 외부 출처 추적, 소스 해시 기반 변경 감지 |
 | Infrastructure | `PolicySpecification` | JPA Criteria API 기반 동적 필터링 |
 
-**도메인 Enum**: `Category(JOBS, HOUSING, EDUCATION, WELFARE, FINANCE, CULTURE, PARTICIPATION)`, `PolicyStatus(UPCOMING, OPEN, CLOSED)`, `DetailLevel(LITE, FULL)`, `SourceType(YOUTH_SEOUL_CRAWL)`
+**도메인 Enum**: `Category(JOBS, HOUSING, EDUCATION, WELFARE, FINANCE, CULTURE, PARTICIPATION)`, `PolicyStatus(UPCOMING, OPEN, CLOSED)`, `DetailLevel(LITE, FULL)`, `SourceType(BOKJIRO_CENTRAL, YOUTH_CENTER, YOUTH_SEOUL_CRAWL)`
 
 **상태 전이**:
 ```
