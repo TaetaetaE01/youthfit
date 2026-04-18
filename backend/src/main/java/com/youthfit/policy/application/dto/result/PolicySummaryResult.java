@@ -12,6 +12,7 @@ public record PolicySummaryResult(
         String regionCode,
         LocalDate applyStart,
         LocalDate applyEnd,
+        Integer referenceYear,
         PolicyStatus status,
         DetailLevel detailLevel,
         String organization
@@ -25,6 +26,7 @@ public record PolicySummaryResult(
                 policy.getRegionCode(),
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
+                policy.getReferenceYear(),
                 policy.getStatus(),
                 policy.getDetailLevel(),
                 policy.getOrganization()
