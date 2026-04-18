@@ -95,7 +95,7 @@ function BookmarkCard({ bookmark, onRemove, fading }: { bookmark: Bookmark; onRe
           </span>
           <span className={cn(
             'rounded-full px-2.5 py-0.5 text-xs font-semibold',
-            effectiveStatus === 'OPEN' ? 'bg-success-100 text-success-500' :
+            effectiveStatus === 'OPEN' ? 'bg-success-100 text-success-700' :
             effectiveStatus === 'UPCOMING' ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400',
           )}>
             {statusLabel}

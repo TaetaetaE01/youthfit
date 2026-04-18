@@ -22,7 +22,7 @@ function CategoryBadge({ category }: { category: PolicyCategory }) {
 
 function StatusBadge({ status }: { status: PolicyStatus }) {
   const styles: Record<PolicyStatus, string> = {
-    OPEN: 'bg-success-100 text-success-500',
+    OPEN: 'bg-success-100 text-success-700',
     UPCOMING: 'bg-brand-100 text-brand-700',
     CLOSED: 'bg-gray-100 text-gray-400',
   };

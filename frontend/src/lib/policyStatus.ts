@@ -32,11 +32,12 @@ export function getEffectiveStatus(
   if (start !== null && today < start) return 'UPCOMING';
   if (start !== null && end !== null) return 'OPEN';
 
-  if (
-    policy.referenceYear != null &&
-    policy.referenceYear < now.getFullYear()
-  ) {
+  const currentYear = now.getFullYear();
+  if (policy.referenceYear != null && policy.referenceYear < currentYear) {
     return 'CLOSED';
+  }
+  if (policy.referenceYear === currentYear) {
+    return 'OPEN';
   }
 
   return policy.status;
