@@ -13,8 +13,15 @@ function parseDate(dateStr: string | null | undefined): number | null {
   return toStartOfDay(parsed);
 }
 
+type PolicyLike = {
+  applyStart: string | null;
+  applyEnd: string | null;
+  referenceYear?: number | null;
+  status: PolicyStatus;
+};
+
 export function getEffectiveStatus(
-  policy: { applyStart: string | null; applyEnd: string | null; status: PolicyStatus },
+  policy: PolicyLike,
   now: Date = new Date(),
 ): PolicyStatus {
   const today = toStartOfDay(now);
@@ -25,12 +32,35 @@ export function getEffectiveStatus(
   if (start !== null && today < start) return 'UPCOMING';
   if (start !== null && end !== null) return 'OPEN';
 
+  const currentYear = now.getFullYear();
+  if (policy.referenceYear != null && policy.referenceYear < currentYear) {
+    return 'CLOSED';
+  }
+  if (policy.referenceYear === currentYear) {
+    return 'OPEN';
+  }
+
   return policy.status;
 }
 
 export function isExpired(
-  policy: { applyStart: string | null; applyEnd: string | null; status: PolicyStatus },
+  policy: PolicyLike,
   now: Date = new Date(),
 ): boolean {
   return getEffectiveStatus(policy, now) === 'CLOSED';
+}
+
+export function formatPolicyPeriod(
+  policy: PolicyLike,
+  now: Date = new Date(),
+): string {
+  const { applyStart, applyEnd } = policy;
+  const fmt = (d: string) => d.slice(0, 10).replace(/-/g, '.');
+  if (!applyStart && !applyEnd) {
+    const status = getEffectiveStatus(policy, now);
+    return status === 'CLOSED' ? '마감' : '상시';
+  }
+  if (!applyStart) return `~${fmt(applyEnd!)}`;
+  if (!applyEnd) return `${fmt(applyStart)}~`;
+  return `${fmt(applyStart)}~${fmt(applyEnd)}`;
 }

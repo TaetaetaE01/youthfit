@@ -21,12 +21,17 @@ public record PolicyDetailResult(
         String regionCode,
         LocalDate applyStart,
         LocalDate applyEnd,
+        Integer referenceYear,
+        String supportCycle,
+        String provideType,
         PolicyStatus status,
         DetailLevel detailLevel,
         Set<String> lifeTags,
         Set<String> themeTags,
         Set<String> targetTags,
         List<Attachment> attachments,
+        List<ReferenceSite> referenceSites,
+        List<ApplyMethod> applyMethods,
         String sourceUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -34,6 +39,18 @@ public record PolicyDetailResult(
     public record Attachment(String name, String url, String mediaType) {
         public static Attachment from(PolicyAttachment attachment) {
             return new Attachment(attachment.getName(), attachment.getUrl(), attachment.getMediaType());
+        }
+    }
+
+    public record ReferenceSite(String name, String url) {
+        public static ReferenceSite from(PolicyReferenceSite site) {
+            return new ReferenceSite(site.name(), site.url());
+        }
+    }
+
+    public record ApplyMethod(String stageName, String description) {
+        public static ApplyMethod from(PolicyApplyMethod method) {
+            return new ApplyMethod(method.stageName(), method.description());
         }
     }
 
@@ -52,12 +69,17 @@ public record PolicyDetailResult(
                 policy.getRegionCode(),
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
+                policy.getReferenceYear(),
+                policy.getSupportCycle(),
+                policy.getProvideType(),
                 policy.getStatus(),
                 policy.getDetailLevel(),
                 Set.copyOf(policy.getLifeTags()),
                 Set.copyOf(policy.getThemeTags()),
                 Set.copyOf(policy.getTargetTags()),
                 policy.getAttachments().stream().map(Attachment::from).toList(),
+                policy.getReferenceSites().stream().map(ReferenceSite::from).toList(),
+                policy.getApplyMethods().stream().map(ApplyMethod::from).toList(),
                 sourceUrl,
                 policy.getCreatedAt(),
                 policy.getUpdatedAt()

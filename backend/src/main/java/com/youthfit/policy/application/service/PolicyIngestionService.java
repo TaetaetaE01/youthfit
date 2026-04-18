@@ -3,7 +3,9 @@ package com.youthfit.policy.application.service;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyApplyMethod;
 import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.model.PolicyReferenceSite;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
@@ -43,10 +45,15 @@ public class PolicyIngestionService {
                         command.category(),
                         command.regionCode(),
                         command.applyStart(),
-                        command.applyEnd()
+                        command.applyEnd(),
+                        command.referenceYear(),
+                        command.supportCycle(),
+                        command.provideType()
                 );
                 policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
                 policy.replaceAttachments(toAttachments(command.attachments()));
+                policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
+                policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
             }
             return new PolicyIngestionResult(source.getPolicy().getId(), false);
         }
@@ -64,9 +71,14 @@ public class PolicyIngestionService {
                 .regionCode(command.regionCode())
                 .applyStart(command.applyStart())
                 .applyEnd(command.applyEnd())
+                .referenceYear(command.referenceYear())
+                .supportCycle(command.supportCycle())
+                .provideType(command.provideType())
                 .build();
         policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
         policy.replaceAttachments(toAttachments(command.attachments()));
+        policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
+        policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
         Policy savedPolicy = policyRepository.save(policy);
 
         PolicySource policySource = PolicySource.builder()
@@ -90,6 +102,20 @@ public class PolicyIngestionService {
                         .url(a.url())
                         .mediaType(a.mediaType())
                         .build())
+                .toList();
+    }
+
+    private List<PolicyReferenceSite> toReferenceSites(List<RegisterPolicyCommand.ReferenceSite> sites) {
+        if (sites == null || sites.isEmpty()) return List.of();
+        return sites.stream()
+                .map(s -> new PolicyReferenceSite(s.name(), s.url()))
+                .toList();
+    }
+
+    private List<PolicyApplyMethod> toApplyMethods(List<RegisterPolicyCommand.ApplyMethod> methods) {
+        if (methods == null || methods.isEmpty()) return List.of();
+        return methods.stream()
+                .map(m -> new PolicyApplyMethod(m.stageName(), m.description()))
                 .toList();
     }
 }

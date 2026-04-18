@@ -15,6 +15,7 @@ public record PolicySummaryResponse(
         String regionCode,
         LocalDate applyStart,
         LocalDate applyEnd,
+        Integer referenceYear,
         PolicyStatus status,
         DetailLevel detailLevel,
         String organization
@@ -28,6 +29,7 @@ public record PolicySummaryResponse(
                 result.regionCode(),
                 result.applyStart(),
                 result.applyEnd(),
+                result.referenceYear(),
                 result.status(),
                 result.detailLevel(),
                 result.organization()

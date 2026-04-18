@@ -20,10 +20,15 @@ public record RegisterPolicyCommand(
         String regionCode,
         LocalDate applyStart,
         LocalDate applyEnd,
+        Integer referenceYear,
+        String supportCycle,
+        String provideType,
         Set<String> lifeTags,
         Set<String> themeTags,
         Set<String> targetTags,
         List<Attachment> attachments,
+        List<ReferenceSite> referenceSites,
+        List<ApplyMethod> applyMethods,
         SourceType sourceType,
         String externalId,
         String sourceUrl,
@@ -31,4 +36,6 @@ public record RegisterPolicyCommand(
         String sourceHash
 ) {
     public record Attachment(String name, String url, String mediaType) {}
+    public record ReferenceSite(String name, String url) {}
+    public record ApplyMethod(String stageName, String description) {}
 }

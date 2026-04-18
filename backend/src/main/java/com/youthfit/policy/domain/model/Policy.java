@@ -8,6 +8,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -62,6 +64,23 @@ public class Policy extends BaseTimeEntity {
     @Column(name = "apply_end")
     private LocalDate applyEnd;
 
+    @Column(name = "reference_year")
+    private Integer referenceYear;
+
+    @Column(name = "support_cycle", length = 100)
+    private String supportCycle;
+
+    @Column(name = "provide_type", length = 100)
+    private String provideType;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reference_sites", columnDefinition = "jsonb")
+    private List<PolicyReferenceSite> referenceSites = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "apply_methods", columnDefinition = "jsonb")
+    private List<PolicyApplyMethod> applyMethods = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PolicyStatus status;
@@ -93,7 +112,8 @@ public class Policy extends BaseTimeEntity {
                    String supportTarget, String selectionCriteria, String supportContent,
                    String organization, String contact,
                    Category category, String regionCode,
-                   LocalDate applyStart, LocalDate applyEnd) {
+                   LocalDate applyStart, LocalDate applyEnd,
+                   Integer referenceYear, String supportCycle, String provideType) {
         this.title = title;
         this.summary = summary;
         this.body = body;
@@ -106,6 +126,9 @@ public class Policy extends BaseTimeEntity {
         this.regionCode = regionCode;
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
+        this.referenceYear = referenceYear;
+        this.supportCycle = supportCycle;
+        this.provideType = provideType;
         this.status = PolicyStatus.UPCOMING;
         this.detailLevel = DetailLevel.LITE;
     }
@@ -145,7 +168,8 @@ public class Policy extends BaseTimeEntity {
                            String supportTarget, String selectionCriteria, String supportContent,
                            String organization, String contact,
                            Category category, String regionCode,
-                           LocalDate applyStart, LocalDate applyEnd) {
+                           LocalDate applyStart, LocalDate applyEnd,
+                           Integer referenceYear, String supportCycle, String provideType) {
         this.title = title;
         this.summary = summary;
         this.body = body;
@@ -158,6 +182,17 @@ public class Policy extends BaseTimeEntity {
         this.regionCode = regionCode;
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
+        this.referenceYear = referenceYear;
+        this.supportCycle = supportCycle;
+        this.provideType = provideType;
+    }
+
+    public void replaceReferenceSites(List<PolicyReferenceSite> sites) {
+        this.referenceSites = sites == null ? new ArrayList<>() : new ArrayList<>(sites);
+    }
+
+    public void replaceApplyMethods(List<PolicyApplyMethod> methods) {
+        this.applyMethods = methods == null ? new ArrayList<>() : new ArrayList<>(methods);
     }
 
     public void replaceTags(Set<String> lifeTags, Set<String> themeTags, Set<String> targetTags) {

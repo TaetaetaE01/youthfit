@@ -67,10 +67,15 @@ public class IngestionService {
                 command.region(),
                 period.start(),
                 period.end(),
+                command.referenceYear(),
+                command.supportCycle(),
+                command.provideType(),
                 toSet(command.lifeTags()),
                 toSet(command.themeTags()),
                 toSet(command.targetTags()),
                 mapAttachments(command.attachments()),
+                mapReferenceSites(command.referenceSites()),
+                mapApplyMethods(command.applyMethods()),
                 sourceType,
                 externalId,
                 command.sourceUrl(),
@@ -145,6 +150,20 @@ public class IngestionService {
         if (attachments == null || attachments.isEmpty()) return List.of();
         return attachments.stream()
                 .map(a -> new RegisterPolicyCommand.Attachment(a.name(), a.url(), a.mediaType()))
+                .toList();
+    }
+
+    private List<RegisterPolicyCommand.ReferenceSite> mapReferenceSites(List<IngestPolicyCommand.ReferenceSite> sites) {
+        if (sites == null || sites.isEmpty()) return List.of();
+        return sites.stream()
+                .map(s -> new RegisterPolicyCommand.ReferenceSite(s.name(), s.url()))
+                .toList();
+    }
+
+    private List<RegisterPolicyCommand.ApplyMethod> mapApplyMethods(List<IngestPolicyCommand.ApplyMethod> methods) {
+        if (methods == null || methods.isEmpty()) return List.of();
+        return methods.stream()
+                .map(m -> new RegisterPolicyCommand.ApplyMethod(m.stageName(), m.description()))
                 .toList();
     }
 

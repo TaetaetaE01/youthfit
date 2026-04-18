@@ -23,6 +23,7 @@ export interface Policy {
   regionCode: string;
   applyStart: string | null;
   applyEnd: string | null;
+  referenceYear: number | null;
   status: PolicyStatus;
   detailLevel: DetailLevel;
   organization: string | null;
@@ -34,16 +35,31 @@ export interface PolicyAttachment {
   mediaType: string | null;
 }
 
+export interface PolicyReferenceSite {
+  name: string;
+  url: string;
+}
+
+export interface PolicyApplyMethod {
+  stageName: string;
+  description: string | null;
+}
+
 export interface PolicyDetail extends Policy {
   body: string | null;
   supportTarget: string | null;
   selectionCriteria: string | null;
   supportContent: string | null;
   contact: string | null;
+  referenceYear: number | null;
+  supportCycle: string | null;
+  provideType: string | null;
   lifeTags: string[];
   themeTags: string[];
   targetTags: string[];
   attachments: PolicyAttachment[];
+  referenceSites: PolicyReferenceSite[];
+  applyMethods: PolicyApplyMethod[];
   sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;

@@ -20,9 +20,12 @@ import {
   ClipboardCheck,
   Gift,
   Paperclip,
+  Repeat,
+  Tag,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { getEffectiveStatus } from '@/lib/policyStatus';
+import { getEffectiveStatus, formatPolicyPeriod } from '@/lib/policyStatus';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
 import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
@@ -48,13 +51,6 @@ import type {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
-  const fmt = (d: string | null | undefined) =>
-    d ? d.slice(0, 10).replace(/-/g, '.') : '미정';
-  if (!start && !end) return '상시';
-  return `${fmt(start)} ~ ${fmt(end)}`;
-}
 
 const RESULT_CONFIG: Record<
   EligibilityResult,
@@ -148,7 +144,7 @@ function PolicyHeader({
         <span className="text-neutral-300">|</span>
         <span className="flex items-center gap-1">
           <Calendar className="h-4 w-4" />
-          {formatDateRange(policy.applyStart, policy.applyEnd)}
+          {formatPolicyPeriod(policy)}
         </span>
         {policy.organization && (
           <>
@@ -207,6 +203,76 @@ function PolicyTagList({ policy }: { policy: PolicyDetail }) {
   );
 }
 
+function PolicyMetaSummary({
+  referenceYear,
+  supportCycle,
+  provideType,
+  contact,
+}: {
+  referenceYear: number | null;
+  supportCycle: string | null;
+  provideType: string | null;
+  contact: string | null;
+}) {
+  const items: { icon: typeof Calendar; label: string; value: string }[] = [];
+  if (referenceYear) items.push({ icon: Calendar, label: '기준연도', value: `${referenceYear}년` });
+  if (supportCycle) items.push({ icon: Repeat, label: '지원주기', value: supportCycle });
+  if (provideType) items.push({ icon: Tag, label: '제공유형', value: provideType });
+  if (contact) items.push({ icon: Phone, label: '문의처', value: contact });
+  if (items.length === 0) return null;
+
+  return (
+    <section className="mb-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div className="grid grid-cols-2 divide-x divide-y divide-neutral-200 sm:grid-cols-4 sm:divide-y-0">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="flex flex-col items-center gap-1.5 px-4 py-5 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100">
+                <Icon className="h-4 w-4 text-brand-800" />
+              </div>
+              <span className="text-xs text-neutral-500">{item.label}</span>
+              <span className="text-sm font-semibold text-neutral-900">{item.value}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ReferenceSiteSection({
+  referenceSites,
+}: {
+  referenceSites: PolicyDetail['referenceSites'];
+}) {
+  if (!referenceSites || referenceSites.length === 0) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Globe className="h-4 w-4 text-brand-800" />
+        관련 사이트
+      </h2>
+      <ul className="space-y-2">
+        {referenceSites.map((site, i) => (
+          <li key={i}>
+            <a
+              href={site.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 transition-colors hover:border-brand-800 hover:bg-brand-100/40"
+            >
+              <Globe className="h-4 w-4 shrink-0 text-neutral-500" />
+              <span className="flex-1 truncate">{site.name}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachments'] }) {
   if (!attachments || attachments.length === 0) return null;
   return (
@@ -231,19 +297,6 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function ContactSection({ contact }: { contact: string | null }) {
-  if (!contact) return null;
-  return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-neutral-900">
-        <Phone className="h-4 w-4 text-brand-800" />
-        문의처
-      </h2>
-      <FormattedPolicyText text={contact} />
     </section>
   );
 }
@@ -768,6 +821,14 @@ export default function PolicyDetailPage() {
             <FormattedPolicyText text={policy.summary} />
           </section>
 
+          {/* Policy Meta Summary (기준연도 / 지원주기 / 제공유형 / 문의처) */}
+          <PolicyMetaSummary
+            referenceYear={policy.referenceYear}
+            supportCycle={policy.supportCycle}
+            provideType={policy.provideType}
+            contact={policy.contact}
+          />
+
           {/* Structured Detail Sections */}
           {policy.supportTarget && (
             <DetailSection icon={Users} title="지원대상" content={policy.supportTarget} />
@@ -783,11 +844,11 @@ export default function PolicyDetailPage() {
             <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
           )}
 
+          {/* Reference Sites */}
+          <ReferenceSiteSection referenceSites={policy.referenceSites} />
+
           {/* Attachments */}
           <AttachmentSection attachments={policy.attachments} />
-
-          {/* Contact */}
-          <ContactSection contact={policy.contact} />
 
           {/* Official Application Link */}
           {policy.sourceUrl && (

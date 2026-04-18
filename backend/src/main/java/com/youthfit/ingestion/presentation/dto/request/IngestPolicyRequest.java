@@ -27,6 +27,9 @@ public record IngestPolicyRequest(
                 rawData.region(),
                 rawData.applyStart(),
                 rawData.applyEnd(),
+                rawData.referenceYear(),
+                rawData.supportCycle(),
+                rawData.provideType(),
                 rawData.organization(),
                 rawData.contact(),
                 rawData.lifeTags(),
@@ -34,6 +37,12 @@ public record IngestPolicyRequest(
                 rawData.targetTags(),
                 rawData.attachments() == null ? List.of() : rawData.attachments().stream()
                         .map(a -> new IngestPolicyCommand.Attachment(a.name(), a.url(), a.mediaType()))
+                        .toList(),
+                rawData.referenceSites() == null ? List.of() : rawData.referenceSites().stream()
+                        .map(s -> new IngestPolicyCommand.ReferenceSite(s.name(), s.url()))
+                        .toList(),
+                rawData.applyMethods() == null ? List.of() : rawData.applyMethods().stream()
+                        .map(m -> new IngestPolicyCommand.ApplyMethod(m.stageName(), m.description()))
                         .toList()
         );
     }
@@ -53,17 +62,32 @@ public record IngestPolicyRequest(
             @NotBlank String region,
             LocalDate applyStart,
             LocalDate applyEnd,
+            Integer referenceYear,
+            String supportCycle,
+            String provideType,
             String organization,
             String contact,
             List<String> lifeTags,
             List<String> themeTags,
             List<String> targetTags,
-            List<@Valid Attachment> attachments
+            List<@Valid Attachment> attachments,
+            List<@Valid ReferenceSite> referenceSites,
+            List<@Valid ApplyMethod> applyMethods
     ) {}
 
     public record Attachment(
             @NotBlank String name,
             @NotBlank String url,
             String mediaType
+    ) {}
+
+    public record ReferenceSite(
+            @NotBlank String name,
+            @NotBlank String url
+    ) {}
+
+    public record ApplyMethod(
+            @NotBlank String stageName,
+            String description
     ) {}
 }
