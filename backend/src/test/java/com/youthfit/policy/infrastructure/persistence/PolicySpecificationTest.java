@@ -32,7 +32,7 @@ class PolicySpecificationTest {
         Predicate conjunction = mock(Predicate.class);
         given(cb.and(any(Predicate[].class))).willReturn(conjunction);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, null);
+        Specification<Policy> spec = PolicySpecification.withFiltersAndSort(null, null, null, null);
 
         // when
         Predicate result = spec.toPredicate(root, query, cb);
@@ -52,7 +52,7 @@ class PolicySpecificationTest {
         given(cb.equal(path, "11")).willReturn(predicate);
         given(cb.and(any(Predicate[].class))).willReturn(predicate);
 
-        Specification<Policy> spec = PolicySpecification.withFilters("11", null, null);
+        Specification<Policy> spec = PolicySpecification.withFiltersAndSort("11", null, null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -71,7 +71,7 @@ class PolicySpecificationTest {
         given(cb.equal(path, Category.JOBS)).willReturn(predicate);
         given(cb.and(any(Predicate[].class))).willReturn(predicate);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, Category.JOBS, null);
+        Specification<Policy> spec = PolicySpecification.withFiltersAndSort(null, Category.JOBS, null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -90,7 +90,7 @@ class PolicySpecificationTest {
         given(cb.equal(path, PolicyStatus.OPEN)).willReturn(predicate);
         given(cb.and(any(Predicate[].class))).willReturn(predicate);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFiltersAndSort(null, null, PolicyStatus.OPEN, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -119,7 +119,7 @@ class PolicySpecificationTest {
         given(cb.equal(statusPath, PolicyStatus.OPEN)).willReturn(p3);
         given(cb.and(any(Predicate[].class))).willReturn(combined);
 
-        Specification<Policy> spec = PolicySpecification.withFilters("11", Category.JOBS, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFiltersAndSort("11", Category.JOBS, PolicyStatus.OPEN, null);
 
         // when
         spec.toPredicate(root, query, cb);

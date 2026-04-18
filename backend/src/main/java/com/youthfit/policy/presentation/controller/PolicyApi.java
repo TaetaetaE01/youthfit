@@ -1,6 +1,7 @@
 package com.youthfit.policy.presentation.controller;
 
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.PolicySortType;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.presentation.dto.response.PolicyDetailResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyPageResponse;
@@ -26,8 +27,8 @@ public interface PolicyApi {
             String regionCode,
             Category category,
             PolicyStatus status,
-            String sortBy,
-            boolean ascending,
+            @Parameter(description = "정렬 기준: DEADLINE(마감임박순, 기본값), LATEST(최신순), UPCOMING(모집시작임박순)")
+            PolicySortType sortType,
             int page,
             int size);
 

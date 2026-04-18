@@ -10,6 +10,7 @@ import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBo
 import { useAuthStore } from '@/stores/authStore';
 import type {
   PolicyCategory,
+  PolicySortType,
   PolicyStatus,
 } from '@/types/policy';
 import {
@@ -42,10 +43,18 @@ function SkeletonCard() {
 
 const PAGE_SIZE = 6;
 
-const SORT_OPTIONS = [
-  { value: 'createdAt:false', label: '최신순' },
-  { value: 'applyEnd:true', label: '마감임박순' },
-] as const;
+const SORT_OPTIONS: { value: PolicySortType; label: string }[] = [
+  { value: 'DEADLINE', label: '마감 임박순' },
+  { value: 'LATEST', label: '최신순' },
+  { value: 'UPCOMING', label: '모집 시작 임박순' },
+];
+
+const DEFAULT_SORT: PolicySortType = 'DEADLINE';
+const SORT_VALUES = SORT_OPTIONS.map((o) => o.value);
+
+function parseSortType(raw: string | null): PolicySortType {
+  return raw && (SORT_VALUES as string[]).includes(raw) ? (raw as PolicySortType) : DEFAULT_SORT;
+}
 
 const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
 const STATUS_ENTRIES = Object.entries(STATUS_LABELS) as [PolicyStatus, string][];
@@ -295,8 +304,7 @@ export default function PolicyListPage() {
   const category = (searchParams.get('category') ?? '') as PolicyCategory | '';
   const status = (searchParams.get('status') ?? '') as PolicyStatus | '';
   const regionCode = searchParams.get('regionCode') ?? '';
-  const sortParam = searchParams.get('sortBy') ?? 'createdAt';
-  const ascendingParam = searchParams.get('ascending') ?? 'false';
+  const sortType = parseSortType(searchParams.get('sortType'));
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
 
   // Fetch data via API
@@ -305,8 +313,7 @@ export default function PolicyListPage() {
     category,
     status,
     regionCode: regionCode || undefined,
-    sortBy: sortParam,
-    ascending: ascendingParam === 'true',
+    sortType,
     page,
     size: PAGE_SIZE,
   });
@@ -363,7 +370,6 @@ export default function PolicyListPage() {
     updateParams({ keyword: inputValue, page: '' });
   };
 
-  const sortValue = `${sortParam}:${ascendingParam}`;
   const hasActiveQuery = Boolean(keyword || category || status || regionCode);
 
   return (
@@ -512,10 +518,10 @@ export default function PolicyListPage() {
           )}
         </p>
         <select
-          value={sortValue}
+          value={sortType}
           onChange={(e) => {
-            const [sb, asc] = e.target.value.split(':');
-            updateParams({ sortBy: sb, ascending: asc, page: '' });
+            const next = e.target.value as PolicySortType;
+            updateParams({ sortType: next === DEFAULT_SORT ? '' : next, page: '' });
           }}
           className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-800 focus:outline-none focus:ring-1 focus:ring-brand-800"
           aria-label="정렬 기준"
