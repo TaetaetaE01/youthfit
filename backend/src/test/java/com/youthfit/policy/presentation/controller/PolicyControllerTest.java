@@ -50,7 +50,7 @@ class PolicyControllerTest {
         PolicySummaryResult summary = new PolicySummaryResult(
                 1L, "청년 취업 지원", "요약", Category.JOBS, "11",
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
-                PolicyStatus.OPEN, DetailLevel.LITE);
+                PolicyStatus.OPEN, DetailLevel.LITE, "서울시");
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
@@ -94,8 +94,11 @@ class PolicyControllerTest {
                 1L, "청년 취업 지원", "요약", null, null, null, null, null, null,
                 Category.JOBS, "11",
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
+                null, null, null,
                 PolicyStatus.OPEN, DetailLevel.LITE,
                 java.util.Set.of(), java.util.Set.of(), java.util.Set.of(),
+                java.util.List.of(),
+                java.util.List.of(),
                 java.util.List.of(),
                 "https://youth.seoul.go.kr/policy/1",
                 now, now);
@@ -116,7 +119,7 @@ class PolicyControllerTest {
         // given
         PolicySummaryResult summary = new PolicySummaryResult(
                 1L, "청년 취업 지원", "요약", Category.JOBS, "11",
-                null, null, PolicyStatus.OPEN, DetailLevel.LITE);
+                null, null, PolicyStatus.OPEN, DetailLevel.LITE, "서울시");
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 

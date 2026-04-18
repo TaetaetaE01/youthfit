@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Bookmark, MapPin, Calendar, Building2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { getEffectiveStatus } from '@/lib/policyStatus';
+import { getEffectiveStatus, formatPolicyPeriod } from '@/lib/policyStatus';
 import type { Policy, PolicyCategory, PolicyStatus } from '@/types/policy';
 import { CATEGORY_LABELS, STATUS_LABELS, getRegionName } from '@/types/policy';
 
@@ -31,14 +31,6 @@ function StatusBadge({ status }: { status: PolicyStatus }) {
       {STATUS_LABELS[status]}
     </span>
   );
-}
-
-function formatDateRange(start: string | null, end: string | null) {
-  if (!start && !end) return '상시';
-  const fmt = (d: string) => d.slice(0, 10).replace(/-/g, '.');
-  if (!start) return `~${fmt(end!)}`;
-  if (!end) return `${fmt(start)}~`;
-  return `${fmt(start)}~${fmt(end)}`;
 }
 
 export { CategoryBadge, StatusBadge };
@@ -104,7 +96,7 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
         <span className="text-gray-200">|</span>
         <span className="flex items-center gap-1">
           <Calendar className="h-3.5 w-3.5" />
-          {formatDateRange(policy.applyStart, policy.applyEnd)}
+          {formatPolicyPeriod(policy)}
         </span>
         {policy.organization && (
           <>

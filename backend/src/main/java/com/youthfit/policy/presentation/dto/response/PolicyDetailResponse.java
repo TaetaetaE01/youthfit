@@ -24,12 +24,17 @@ public record PolicyDetailResponse(
         String regionCode,
         LocalDate applyStart,
         LocalDate applyEnd,
+        Integer referenceYear,
+        String supportCycle,
+        String provideType,
         PolicyStatus status,
         DetailLevel detailLevel,
         Set<String> lifeTags,
         Set<String> themeTags,
         Set<String> targetTags,
         List<Attachment> attachments,
+        List<ReferenceSite> referenceSites,
+        List<ApplyMethod> applyMethods,
         String sourceUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -37,6 +42,18 @@ public record PolicyDetailResponse(
     public record Attachment(String name, String url, String mediaType) {
         static Attachment from(PolicyDetailResult.Attachment a) {
             return new Attachment(a.name(), a.url(), a.mediaType());
+        }
+    }
+
+    public record ReferenceSite(String name, String url) {
+        static ReferenceSite from(PolicyDetailResult.ReferenceSite s) {
+            return new ReferenceSite(s.name(), s.url());
+        }
+    }
+
+    public record ApplyMethod(String stageName, String description) {
+        static ApplyMethod from(PolicyDetailResult.ApplyMethod m) {
+            return new ApplyMethod(m.stageName(), m.description());
         }
     }
 
@@ -55,12 +72,17 @@ public record PolicyDetailResponse(
                 result.regionCode(),
                 result.applyStart(),
                 result.applyEnd(),
+                result.referenceYear(),
+                result.supportCycle(),
+                result.provideType(),
                 result.status(),
                 result.detailLevel(),
                 result.lifeTags(),
                 result.themeTags(),
                 result.targetTags(),
                 result.attachments().stream().map(Attachment::from).toList(),
+                result.referenceSites().stream().map(ReferenceSite::from).toList(),
+                result.applyMethods().stream().map(ApplyMethod::from).toList(),
                 result.sourceUrl(),
                 result.createdAt(),
                 result.updatedAt()

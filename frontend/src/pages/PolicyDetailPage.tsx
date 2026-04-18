@@ -20,9 +20,13 @@ import {
   ClipboardCheck,
   Gift,
   Paperclip,
+  Repeat,
+  Tag,
+  ListOrdered,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { getEffectiveStatus } from '@/lib/policyStatus';
+import { getEffectiveStatus, formatPolicyPeriod } from '@/lib/policyStatus';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
 import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
@@ -48,13 +52,6 @@ import type {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
-  const fmt = (d: string | null | undefined) =>
-    d ? d.slice(0, 10).replace(/-/g, '.') : '미정';
-  if (!start && !end) return '상시';
-  return `${fmt(start)} ~ ${fmt(end)}`;
-}
 
 const RESULT_CONFIG: Record<
   EligibilityResult,
@@ -148,7 +145,7 @@ function PolicyHeader({
         <span className="text-neutral-300">|</span>
         <span className="flex items-center gap-1">
           <Calendar className="h-4 w-4" />
-          {formatDateRange(policy.applyStart, policy.applyEnd)}
+          {formatPolicyPeriod(policy)}
         </span>
         {policy.organization && (
           <>
@@ -204,6 +201,109 @@ function PolicyTagList({ policy }: { policy: PolicyDetail }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function SupportOverviewSection({
+  supportCycle,
+  provideType,
+}: {
+  supportCycle: string | null;
+  provideType: string | null;
+}) {
+  if (!supportCycle && !provideType) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-4 text-base font-semibold text-neutral-900">지원 개요</h2>
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {supportCycle && (
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
+              <Repeat className="h-4 w-4 text-brand-800" />
+            </div>
+            <div>
+              <dt className="text-xs text-neutral-500">지원주기</dt>
+              <dd className="text-sm font-medium text-neutral-900">{supportCycle}</dd>
+            </div>
+          </div>
+        )}
+        {provideType && (
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
+              <Tag className="h-4 w-4 text-brand-800" />
+            </div>
+            <div>
+              <dt className="text-xs text-neutral-500">제공유형</dt>
+              <dd className="text-sm font-medium text-neutral-900">{provideType}</dd>
+            </div>
+          </div>
+        )}
+      </dl>
+    </section>
+  );
+}
+
+function ApplyMethodSection({ applyMethods }: { applyMethods: PolicyDetail['applyMethods'] }) {
+  if (!applyMethods || applyMethods.length === 0) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <ListOrdered className="h-4 w-4 text-brand-800" />
+        신청방법
+      </h2>
+      <ol className="space-y-3">
+        {applyMethods.map((step, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-800 text-xs font-bold text-white">
+              {i + 1}
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-neutral-900">{step.stageName}</p>
+              {step.description && (
+                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
+                  {step.description}
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-4 text-xs text-neutral-500">
+        자세한 절차는 공식 신청 채널에서 확인해주세요.
+      </p>
+    </section>
+  );
+}
+
+function ReferenceSiteSection({
+  referenceSites,
+}: {
+  referenceSites: PolicyDetail['referenceSites'];
+}) {
+  if (!referenceSites || referenceSites.length === 0) return null;
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <Globe className="h-4 w-4 text-brand-800" />
+        관련 사이트
+      </h2>
+      <ul className="space-y-2">
+        {referenceSites.map((site, i) => (
+          <li key={i}>
+            <a
+              href={site.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 transition-colors hover:border-brand-800 hover:bg-brand-100/40"
+            >
+              <Globe className="h-4 w-4 shrink-0 text-neutral-500" />
+              <span className="flex-1 truncate">{site.name}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -768,6 +868,12 @@ export default function PolicyDetailPage() {
             <FormattedPolicyText text={policy.summary} />
           </section>
 
+          {/* Support Overview (cycle / provide type) */}
+          <SupportOverviewSection
+            supportCycle={policy.supportCycle}
+            provideType={policy.provideType}
+          />
+
           {/* Structured Detail Sections */}
           {policy.supportTarget && (
             <DetailSection icon={Users} title="지원대상" content={policy.supportTarget} />
@@ -782,6 +888,12 @@ export default function PolicyDetailPage() {
           {policy.supportContent && (
             <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
           )}
+
+          {/* Apply Methods */}
+          <ApplyMethodSection applyMethods={policy.applyMethods} />
+
+          {/* Reference Sites */}
+          <ReferenceSiteSection referenceSites={policy.referenceSites} />
 
           {/* Attachments */}
           <AttachmentSection attachments={policy.attachments} />
