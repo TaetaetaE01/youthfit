@@ -1,7 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronRight, ClipboardCheck, Check } from 'lucide-react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
+import { ChevronRight, ClipboardCheck, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { usePersonalInfoStore } from '@/stores/personalInfoStore';
 import {
   MARITAL_STATUS_LABELS,
   EDUCATION_LABELS,
@@ -13,9 +12,10 @@ import {
   type EmploymentKind,
   type MajorField,
   type SpecializationField,
+  type EligibilityProfile,
+  type UpdateEligibilityProfileRequest,
 } from '@/types/personalInfo';
-import { REGION_OPTIONS } from '@/types/policy';
-import type { UserProfile, UpdateProfileRequest } from '@/types/policy';
+import { useSidoList, useSigunguList } from '@/hooks/queries/useRegions';
 
 type RowKey =
   | 'region'
@@ -28,8 +28,9 @@ type RowKey =
   | 'specialization';
 
 interface EligibilityInfoCardProps {
-  profile: UserProfile;
-  onUpdateProfile: (data: UpdateProfileRequest) => void;
+  profile: EligibilityProfile;
+  onUpdate: (data: UpdateEligibilityProfileRequest) => void;
+  isUpdating?: boolean;
 }
 
 const MARITAL_LIST: MaritalStatus[] = ['MARRIED', 'SINGLE'];
@@ -181,14 +182,22 @@ function GroupHeading({ children }: { children: ReactNode }) {
   );
 }
 
-export default function EligibilityInfoCard({ profile, onUpdateProfile }: EligibilityInfoCardProps) {
-  const pi = usePersonalInfoStore();
+export default function EligibilityInfoCard({ profile, onUpdate, isUpdating }: EligibilityInfoCardProps) {
   const [open, setOpen] = useState<RowKey | null>(null);
 
   const [ageDraft, setAgeDraft] = useState('');
-  const [districtDraft, setDistrictDraft] = useState('');
   const [incomeMinDraft, setIncomeMinDraft] = useState('');
   const [incomeMaxDraft, setIncomeMaxDraft] = useState('');
+  const [sidoDraft, setSidoDraft] = useState<string | null>(null);
+  const [sigunguDraft, setSigunguDraft] = useState<string | null>(null);
+
+  const { data: sidoList = [], isLoading: sidoLoading } = useSidoList();
+  const { data: sigunguList = [], isLoading: sigunguLoading } = useSigunguList(sidoDraft);
+
+  useEffect(() => {
+    setSidoDraft(profile.sidoCode);
+    setSigunguDraft(profile.legalDongCode);
+  }, [profile.sidoCode, profile.legalDongCode]);
 
   const handleToggle = (k: RowKey) => {
     if (open === k) {
@@ -196,63 +205,72 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
       return;
     }
     if (k === 'age') setAgeDraft(profile.age != null ? String(profile.age) : '');
-    if (k === 'region') setDistrictDraft(pi.regionDistrict ?? '');
+    if (k === 'region') {
+      setSidoDraft(profile.sidoCode);
+      setSigunguDraft(profile.legalDongCode);
+    }
     if (k === 'income') {
-      setIncomeMinDraft(pi.incomeMin != null ? pi.incomeMin.toLocaleString() : '');
-      setIncomeMaxDraft(pi.incomeMax != null ? pi.incomeMax.toLocaleString() : '');
+      setIncomeMinDraft(profile.incomeMin != null ? profile.incomeMin.toLocaleString() : '');
+      setIncomeMaxDraft(profile.incomeMax != null ? profile.incomeMax.toLocaleString() : '');
     }
     setOpen(k);
   };
 
   const regionLabel = useMemo(() => {
-    if (!profile.regionCode) return '';
-    const base = REGION_OPTIONS.find((r) => r.value === profile.regionCode)?.label ?? profile.regionCode;
-    return pi.regionDistrict ? `${base} · ${pi.regionDistrict}` : base;
-  }, [profile.regionCode, pi.regionDistrict]);
+    if (!profile.sidoName) return '';
+    return profile.sigunguName ? `${profile.sidoName} · ${profile.sigunguName}` : profile.sidoName;
+  }, [profile.sidoName, profile.sigunguName]);
 
   const ageLabel = profile.age != null ? `만 ${profile.age}세` : '';
-  const maritalLabel = pi.maritalStatus ? MARITAL_STATUS_LABELS[pi.maritalStatus] : '';
-  const educationLabel = pi.education ? EDUCATION_LABELS[pi.education] : '';
+  const maritalLabel = profile.maritalStatus ? MARITAL_STATUS_LABELS[profile.maritalStatus] : '';
+  const educationLabel = profile.education ? EDUCATION_LABELS[profile.education] : '';
   const incomeLabel = useMemo(() => {
-    const { incomeMin: mn, incomeMax: mx } = pi;
+    const { incomeMin: mn, incomeMax: mx } = profile;
     if (mn == null && mx == null) return '';
     if (mn != null && mx != null) return `연 ${mn.toLocaleString()}~${mx.toLocaleString()}만원`;
     if (mn != null) return `연 ${mn.toLocaleString()}만원 이상`;
     return `연 ${mx!.toLocaleString()}만원 이하`;
-  }, [pi.incomeMin, pi.incomeMax]);
-  const employmentLabel = pi.employmentKind ? EMPLOYMENT_KIND_LABELS[pi.employmentKind] : '';
-  const majorLabel = pi.majorField ? MAJOR_FIELD_LABELS[pi.majorField] : '';
-  const specLabel = pi.specializationField ? SPECIALIZATION_LABELS[pi.specializationField] : '';
+  }, [profile]);
+  const employmentLabel = profile.employmentKind ? EMPLOYMENT_KIND_LABELS[profile.employmentKind] : '';
+  const majorLabel = profile.majorField ? MAJOR_FIELD_LABELS[profile.majorField] : '';
+  const specLabel = profile.specializationField ? SPECIALIZATION_LABELS[profile.specializationField] : '';
 
   const filledCount = [
     profile.age != null,
-    !!profile.regionCode,
-    pi.maritalStatus != null,
-    pi.education != null,
-    pi.incomeMin != null || pi.incomeMax != null,
-    pi.employmentKind != null,
-    pi.majorField != null,
-    pi.specializationField != null,
+    !!profile.legalDongCode,
+    profile.maritalStatus != null,
+    profile.education != null,
+    profile.incomeMin != null || profile.incomeMax != null,
+    profile.employmentKind != null,
+    profile.majorField != null,
+    profile.specializationField != null,
   ].filter(Boolean).length;
   const pct = Math.round((filledCount / 8) * 100);
 
   const saveAge = () => {
     if (ageDraft === '') {
-      onUpdateProfile({ age: null });
+      onUpdate({ age: null });
       setOpen(null);
       return;
     }
     const n = Number(ageDraft);
     if (Number.isNaN(n) || n < 0 || n > 99) return;
-    onUpdateProfile({ age: n });
+    onUpdate({ age: n });
     setOpen(null);
   };
-  const saveDistrict = () => {
-    pi.setField('regionDistrict', districtDraft.trim() || null);
+  const saveRegion = () => {
+    const code = sigunguDraft ?? sidoDraft ?? null;
+    onUpdate({ legalDongCode: code });
+    setOpen(null);
+  };
+  const clearRegion = () => {
+    setSidoDraft(null);
+    setSigunguDraft(null);
+    onUpdate({ legalDongCode: null });
     setOpen(null);
   };
   const saveIncome = () => {
-    pi.setMany({
+    onUpdate({
       incomeMin: parseNullableNumber(incomeMinDraft),
       incomeMax: parseNullableNumber(incomeMaxDraft),
     });
@@ -270,6 +288,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
           <div className="flex items-center gap-1.5">
             <ClipboardCheck className="h-4 w-4 text-brand-800" />
             <h3 className="text-base font-semibold text-neutral-900">적합도 판정 정보</h3>
+            {isUpdating && <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />}
           </div>
           <p className="mt-1 text-xs leading-relaxed text-neutral-500">
             {pct === 100
@@ -285,7 +304,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="거주 지역"
           value={regionLabel}
-          filled={!!profile.regionCode}
+          filled={!!profile.legalDongCode}
           open={open === 'region'}
           onToggle={() => handleToggle('region')}
         >
@@ -293,36 +312,50 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
             <div>
               <label className="mb-1.5 block text-xs font-medium text-neutral-600">시/도</label>
               <select
-                value={profile.regionCode ?? ''}
-                onChange={(e) => onUpdateProfile({ regionCode: e.target.value || null })}
-                className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={sidoDraft ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value || null;
+                  setSidoDraft(v);
+                  setSigunguDraft(null);
+                }}
+                disabled={sidoLoading}
+                className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
               >
                 <option value="">선택</option>
-                {REGION_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                {sidoList.map((r) => (
+                  <option key={r.code} value={r.code}>{r.name}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-neutral-600">
-                구/군 <span className="text-neutral-400">(선택)</span>
+                시/군/구 <span className="text-neutral-400">(선택)</span>
               </label>
-              <input
-                type="text"
-                value={districtDraft}
-                onChange={(e) => setDistrictDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveDistrict();
-                }}
-                placeholder="예: 강남구"
-                className="h-10 w-full rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+              <select
+                value={sigunguDraft ?? ''}
+                onChange={(e) => setSigunguDraft(e.target.value || null)}
+                disabled={!sidoDraft || sigunguLoading}
+                className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              >
+                <option value="">전체</option>
+                {sigunguList.map((r) => (
+                  <option key={r.code} value={r.code}>{r.name}</option>
+                ))}
+              </select>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-between">
               <button
                 type="button"
-                onClick={saveDistrict}
-                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                onClick={clearRegion}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-100"
+              >
+                지우기
+              </button>
+              <button
+                type="button"
+                onClick={saveRegion}
+                disabled={!sidoDraft}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
                 완료
               </button>
@@ -367,7 +400,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="혼인 여부"
           value={maritalLabel}
-          filled={pi.maritalStatus != null}
+          filled={profile.maritalStatus != null}
           open={open === 'marital'}
           onToggle={() => handleToggle('marital')}
         >
@@ -376,9 +409,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
               <Chip
                 key={v}
                 label={MARITAL_STATUS_LABELS[v]}
-                selected={pi.maritalStatus === v}
+                selected={profile.maritalStatus === v}
                 onClick={() => {
-                  pi.setField('maritalStatus', v);
+                  onUpdate({ maritalStatus: v });
                   setOpen(null);
                 }}
               />
@@ -391,7 +424,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="학력"
           value={educationLabel}
-          filled={pi.education != null}
+          filled={profile.education != null}
           open={open === 'education'}
           onToggle={() => handleToggle('education')}
         >
@@ -400,9 +433,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
               <Chip
                 key={v}
                 label={EDUCATION_LABELS[v]}
-                selected={pi.education === v}
+                selected={profile.education === v}
                 onClick={() => {
-                  pi.setField('education', v);
+                  onUpdate({ education: v });
                   setOpen(null);
                 }}
               />
@@ -413,7 +446,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="연소득"
           value={incomeLabel}
-          filled={pi.incomeMin != null || pi.incomeMax != null}
+          filled={profile.incomeMin != null || profile.incomeMax != null}
           open={open === 'income'}
           onToggle={() => handleToggle('income')}
         >
@@ -461,7 +494,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="취업 상태"
           value={employmentLabel}
-          filled={pi.employmentKind != null}
+          filled={profile.employmentKind != null}
           open={open === 'employment'}
           onToggle={() => handleToggle('employment')}
         >
@@ -470,9 +503,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
               <Chip
                 key={v}
                 label={EMPLOYMENT_KIND_LABELS[v]}
-                selected={pi.employmentKind === v}
+                selected={profile.employmentKind === v}
                 onClick={() => {
-                  pi.setField('employmentKind', v);
+                  onUpdate({ employmentKind: v });
                   setOpen(null);
                 }}
               />
@@ -483,7 +516,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="전공 분야"
           value={majorLabel}
-          filled={pi.majorField != null}
+          filled={profile.majorField != null}
           open={open === 'major'}
           onToggle={() => handleToggle('major')}
         >
@@ -492,9 +525,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
               <Chip
                 key={v}
                 label={MAJOR_FIELD_LABELS[v]}
-                selected={pi.majorField === v}
+                selected={profile.majorField === v}
                 onClick={() => {
-                  pi.setField('majorField', v);
+                  onUpdate({ majorField: v });
                   setOpen(null);
                 }}
               />
@@ -505,7 +538,7 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
         <Row
           label="특화 분야"
           value={specLabel}
-          filled={pi.specializationField != null}
+          filled={profile.specializationField != null}
           open={open === 'specialization'}
           onToggle={() => handleToggle('specialization')}
         >
@@ -514,9 +547,9 @@ export default function EligibilityInfoCard({ profile, onUpdateProfile }: Eligib
               <Chip
                 key={v}
                 label={SPECIALIZATION_LABELS[v]}
-                selected={pi.specializationField === v}
+                selected={profile.specializationField === v}
                 onClick={() => {
-                  pi.setField('specializationField', v);
+                  onUpdate({ specializationField: v });
                   setOpen(null);
                 }}
               />

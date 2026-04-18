@@ -48,27 +48,6 @@ public class User extends BaseTimeEntity {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-    // ── 적합도 판정용 프로필 필드 ──
-
-    private Integer age;
-
-    @Column(length = 20)
-    private String region;
-
-    @Column(name = "annual_income")
-    private Long annualIncome;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "employment_status", length = 20)
-    private EmploymentStatus employmentStatus;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "education_level", length = 20)
-    private EducationLevel educationLevel;
-
-    @Column(name = "household_size")
-    private Integer householdSize;
-
     @Builder
     private User(String email, String nickname, String profileImageUrl,
                  AuthProvider authProvider, String providerId) {
@@ -79,8 +58,6 @@ public class User extends BaseTimeEntity {
         this.providerId = providerId;
         this.role = Role.USER;
     }
-
-    // ── 비즈니스 메서드 ──
 
     public void updateProfile(String nickname, String profileImageUrl) {
         if (nickname == null || nickname.isBlank()) {
@@ -103,17 +80,5 @@ public class User extends BaseTimeEntity {
 
     public void clearRefreshToken() {
         this.refreshToken = null;
-    }
-
-    public void updateEligibilityProfile(Integer age, String region, Long annualIncome,
-                                         EmploymentStatus employmentStatus,
-                                         EducationLevel educationLevel,
-                                         Integer householdSize) {
-        this.age = age;
-        this.region = region;
-        this.annualIncome = annualIncome;
-        this.employmentStatus = employmentStatus;
-        this.educationLevel = educationLevel;
-        this.householdSize = householdSize;
     }
 }

@@ -191,10 +191,44 @@ export const SUMMARY_ICONS = {
   specialization: BookMarked,
 } as const;
 
-/* ─────────────────────────── Region district list ─────────────────────────── */
+/* ─────────────────────────── Region ─────────────────────────── */
 
-export const SEOUL_DISTRICTS = [
-  '강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', '금천구',
-  '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', '서초구', '성동구',
-  '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구',
-];
+export type RegionLevel = 'SIDO' | 'SIGUNGU';
+
+export interface Region {
+  code: string;
+  name: string;
+  level: RegionLevel;
+  parentCode: string | null;
+}
+
+/* ─────────────────────────── Eligibility Profile ─────────────────────────── */
+
+export interface EligibilityProfile {
+  id: number | null;
+  userId: number;
+  legalDongCode: string | null;
+  sidoCode: string | null;
+  sidoName: string | null;
+  sigunguName: string | null;
+  age: number | null;
+  maritalStatus: MaritalStatus | null;
+  incomeMin: number | null;
+  incomeMax: number | null;
+  education: Education | null;
+  employmentKind: EmploymentKind | null;
+  majorField: MajorField | null;
+  specializationField: SpecializationField | null;
+}
+
+export interface UpdateEligibilityProfileRequest {
+  legalDongCode?: string | null;
+  age?: number | null;
+  maritalStatus?: MaritalStatus | null;
+  incomeMin?: number | null;
+  incomeMax?: number | null;
+  education?: Education | null;
+  employmentKind?: EmploymentKind | null;
+  majorField?: MajorField | null;
+  specializationField?: SpecializationField | null;
+}
