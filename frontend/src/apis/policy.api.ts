@@ -1,12 +1,11 @@
 import api from './client';
-import type { PolicyPage, PolicyDetail } from '@/types/policy';
+import type { PolicyPage, PolicyDetail, PolicySortType } from '@/types/policy';
 
 interface PolicyListParams {
   category?: string;
   regionCode?: string;
   status?: string;
-  sortBy?: string;
-  ascending?: boolean;
+  sortType?: PolicySortType;
   page?: number;
   size?: number;
 }
@@ -16,8 +15,7 @@ export async function fetchPolicies(params: PolicyListParams): Promise<PolicyPag
   if (params.category) searchParams.set('category', params.category);
   if (params.regionCode) searchParams.set('regionCode', params.regionCode);
   if (params.status) searchParams.set('status', params.status);
-  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
-  if (params.ascending !== undefined) searchParams.set('ascending', String(params.ascending));
+  if (params.sortType) searchParams.set('sortType', params.sortType);
   searchParams.set('page', String(params.page ?? 0));
   searchParams.set('size', String(params.size ?? 20));
 

@@ -54,7 +54,7 @@ class PolicyControllerTest {
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
@@ -71,7 +71,7 @@ class PolicyControllerTest {
     void findPolicies_withFilters_returns200() throws Exception {
         // given
         PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then

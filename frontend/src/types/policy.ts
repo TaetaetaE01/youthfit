@@ -9,6 +9,8 @@ export type PolicyCategory =
 
 export type PolicyStatus = 'UPCOMING' | 'OPEN' | 'CLOSED';
 
+export type PolicySortType = 'LATEST' | 'DEADLINE' | 'UPCOMING';
+
 export type DetailLevel = 'BASIC' | 'FULL';
 
 export type EligibilityResult = 'LIKELY_ELIGIBLE' | 'UNCERTAIN' | 'LIKELY_INELIGIBLE';

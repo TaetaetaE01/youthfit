@@ -92,12 +92,12 @@ class PolicyQueryServiceTest {
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
             given(policyRepository.findAllByFilters(
-                    eq("11"), eq(Category.HOUSING), isNull(), any(Pageable.class)))
+                    eq("11"), eq(Category.HOUSING), isNull(), any(), any(Pageable.class)))
                     .willReturn(mockPage);
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    "11", Category.HOUSING, null, "createdAt", false, 0, 20);
+                    "11", Category.HOUSING, null, null, 0, 20);
 
             // then
             assertThat(result.policies()).hasSize(1);
@@ -111,12 +111,12 @@ class PolicyQueryServiceTest {
             // given
             Page<Policy> emptyPage = Page.empty();
             given(policyRepository.findAllByFilters(
-                    any(), any(), any(), any(Pageable.class)))
+                    any(), any(), any(), any(), any(Pageable.class)))
                     .willReturn(emptyPage);
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    null, null, null, "createdAt", false, 0, 20);
+                    null, null, null, null, 0, 20);
 
             // then
             assertThat(result.policies()).isEmpty();
@@ -135,7 +135,7 @@ class PolicyQueryServiceTest {
             Page<Policy> mockPage = new PageImpl<>(
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
-            given(policyRepository.searchByKeyword(eq("주거"), any(Pageable.class)))
+            given(policyRepository.searchByKeyword(eq("주거"), any(), any(Pageable.class)))
                     .willReturn(mockPage);
 
             // when
