@@ -16,7 +16,8 @@ public record PolicySummaryResponse(
         LocalDate applyStart,
         LocalDate applyEnd,
         PolicyStatus status,
-        DetailLevel detailLevel
+        DetailLevel detailLevel,
+        String organization
 ) {
     public static PolicySummaryResponse from(PolicySummaryResult result) {
         return new PolicySummaryResponse(
@@ -28,7 +29,8 @@ public record PolicySummaryResponse(
                 result.applyStart(),
                 result.applyEnd(),
                 result.status(),
-                result.detailLevel()
+                result.detailLevel(),
+                result.organization()
         );
     }
 }

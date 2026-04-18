@@ -25,6 +25,7 @@ export interface Policy {
   applyEnd: string | null;
   status: PolicyStatus;
   detailLevel: DetailLevel;
+  organization: string | null;
 }
 
 export interface PolicyAttachment {
@@ -38,7 +39,6 @@ export interface PolicyDetail extends Policy {
   supportTarget: string | null;
   selectionCriteria: string | null;
   supportContent: string | null;
-  organization: string | null;
   contact: string | null;
   lifeTags: string[];
   themeTags: string[];
@@ -194,5 +194,6 @@ export const REGION_OPTIONS = [
 ] as const;
 
 export function getRegionName(regionCode: string): string {
+  if (regionCode === '전국') return '전국(중앙정부)';
   return REGION_OPTIONS.find((r) => r.value === regionCode)?.label ?? regionCode;
 }
