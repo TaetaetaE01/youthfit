@@ -1,5 +1,6 @@
 package com.youthfit.region.presentation.controller;
 
+import com.youthfit.common.response.ApiResponse;
 import com.youthfit.region.application.service.RegionQueryService;
 import com.youthfit.region.domain.model.RegionLevel;
 import com.youthfit.region.presentation.dto.response.RegionResponse;
@@ -21,13 +22,13 @@ public class RegionController implements RegionApi {
 
     @GetMapping
     @Override
-    public ResponseEntity<List<RegionResponse>> findRegions(
+    public ResponseEntity<ApiResponse<List<RegionResponse>>> findRegions(
             @RequestParam RegionLevel level,
             @RequestParam(required = false) String parentCode) {
 
         List<RegionResponse> body = regionQueryService.findRegions(level, parentCode).stream()
                 .map(RegionResponse::from)
                 .toList();
-        return ResponseEntity.ok(body);
+        return ResponseEntity.ok(ApiResponse.ok(body));
     }
 }

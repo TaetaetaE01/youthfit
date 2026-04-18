@@ -23,7 +23,7 @@ public interface RegionApi {
             @ApiResponse(responseCode = "500", description = "서버 내부 오류가 발생했습니다 (YF-500)")
     })
     @SecurityRequirements
-    ResponseEntity<List<RegionResponse>> findRegions(
+    ResponseEntity<com.youthfit.common.response.ApiResponse<List<RegionResponse>>> findRegions(
             @Parameter(description = "조회 레벨: SIDO | SIGUNGU", required = true) RegionLevel level,
             @Parameter(description = "상위 법정동코드 (SIGUNGU 조회 시 필수)") String parentCode
     );
