@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Bookmark, MapPin, Calendar } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { getEffectiveStatus } from '@/lib/policyStatus';
 import type { Policy, PolicyCategory, PolicyStatus } from '@/types/policy';
 import { CATEGORY_LABELS, STATUS_LABELS, getRegionName } from '@/types/policy';
 
@@ -22,7 +23,7 @@ function CategoryBadge({ category }: { category: PolicyCategory }) {
 function StatusBadge({ status }: { status: PolicyStatus }) {
   const styles: Record<PolicyStatus, string> = {
     OPEN: 'bg-success-100 text-success-500',
-    UPCOMING: 'bg-gray-100 text-gray-500',
+    UPCOMING: 'bg-brand-100 text-brand-700',
     CLOSED: 'bg-gray-100 text-gray-400',
   };
   return (
@@ -43,12 +44,19 @@ function formatDateRange(start: string | null, end: string | null) {
 export { CategoryBadge, StatusBadge };
 
 export default function PolicyCard({ policy, isBookmarked = false, onBookmarkToggle, dDay }: PolicyCardProps) {
+  const effectiveStatus = getEffectiveStatus(policy);
+  const isClosed = effectiveStatus === 'CLOSED';
   return (
-    <article className="group relative rounded-2xl border border-gray-100 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover md:p-6">
+    <article
+      className={cn(
+        'group relative rounded-2xl border border-gray-100 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover md:p-6',
+        isClosed && 'opacity-60 hover:opacity-100',
+      )}
+    >
       {/* 상단: 배지 + 북마크 */}
       <div className="mb-3 flex items-center gap-2">
         <CategoryBadge category={policy.category} />
-        <StatusBadge status={policy.status} />
+        <StatusBadge status={effectiveStatus} />
         {dDay != null && dDay <= 7 && dDay >= 0 && (
           <span className="rounded-full bg-warning-500 px-2 py-0.5 text-xs font-bold text-white">
             D-{dDay}
