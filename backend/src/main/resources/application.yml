@@ -25,6 +25,17 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
 jwt:
   secret: ${JWT_SECRET:default-secret-key-for-local-dev-minimum-32-bytes!!}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:1800000}   # 30분
