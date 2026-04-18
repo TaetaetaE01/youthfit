@@ -13,7 +13,8 @@ public record PolicySummaryResult(
         LocalDate applyStart,
         LocalDate applyEnd,
         PolicyStatus status,
-        DetailLevel detailLevel
+        DetailLevel detailLevel,
+        String organization
 ) {
     public static PolicySummaryResult from(Policy policy) {
         return new PolicySummaryResult(
@@ -25,7 +26,8 @@ public record PolicySummaryResult(
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
                 policy.getStatus(),
-                policy.getDetailLevel()
+                policy.getDetailLevel(),
+                policy.getOrganization()
         );
     }
 }
