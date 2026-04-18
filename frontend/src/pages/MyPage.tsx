@@ -11,6 +11,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { getEffectiveStatus } from '@/lib/policyStatus';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfile } from '@/hooks/queries/useProfile';
 import { useBookmarks } from '@/hooks/queries/useBookmarks';
@@ -72,23 +73,34 @@ function Toast({
 function BookmarkCard({ bookmark, onRemove, fading }: { bookmark: Bookmark; onRemove: () => void; fading: boolean }) {
   const dDay = getDDay(bookmark.policy.applyEnd);
   const categoryLabel = CATEGORY_LABELS[bookmark.policy.category as PolicyCategory] ?? bookmark.policy.category;
-  const statusLabel = STATUS_LABELS[bookmark.policy.status as PolicyStatus] ?? bookmark.policy.status;
+  const effectiveStatus = getEffectiveStatus({
+    applyStart: null,
+    applyEnd: bookmark.policy.applyEnd,
+    status: bookmark.policy.status as PolicyStatus,
+  });
+  const statusLabel = STATUS_LABELS[effectiveStatus] ?? bookmark.policy.status;
+  const isClosed = effectiveStatus === 'CLOSED';
 
   return (
     <div className={cn('transition-all duration-300', fading && 'scale-95 opacity-0')}>
-      <article className="group relative rounded-2xl border border-gray-100 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover">
+      <article
+        className={cn(
+          'group relative rounded-2xl border border-gray-100 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover',
+          isClosed && 'opacity-60 hover:opacity-100',
+        )}
+      >
         <div className="mb-3 flex items-center gap-2">
           <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
             {categoryLabel}
           </span>
           <span className={cn(
             'rounded-full px-2.5 py-0.5 text-xs font-semibold',
-            bookmark.policy.status === 'OPEN' ? 'bg-success-100 text-success-500' :
-            bookmark.policy.status === 'UPCOMING' ? 'bg-gray-100 text-gray-500' : 'bg-gray-100 text-gray-400',
+            effectiveStatus === 'OPEN' ? 'bg-success-100 text-success-500' :
+            effectiveStatus === 'UPCOMING' ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400',
           )}>
             {statusLabel}
           </span>
-          {dDay !== null && dDay >= 0 && dDay <= 7 && (
+          {!isClosed && dDay !== null && dDay >= 0 && dDay <= 7 && (
             <span className="rounded-full bg-warning-500 px-2 py-0.5 text-xs font-bold text-white">
               D-{dDay}
             </span>

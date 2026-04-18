@@ -22,6 +22,7 @@ import {
   Paperclip,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { getEffectiveStatus } from '@/lib/policyStatus';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
 import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
@@ -120,7 +121,7 @@ function PolicyHeader({
     <header className="relative mb-8">
       <div className="mb-3 flex items-center gap-2">
         <CategoryBadge category={policy.category} />
-        <StatusBadge status={policy.status} />
+        <StatusBadge status={getEffectiveStatus(policy)} />
         <button
           onClick={onBookmarkToggle}
           className="ml-auto flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-50"
