@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
+import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
 import NotificationPromptSheet from '@/components/policy/NotificationPromptSheet';
 import { useAuthStore } from '@/stores/authStore';
@@ -176,9 +177,7 @@ function DetailSection({
         <Icon className="h-4 w-4 text-brand-800" />
         {title}
       </h2>
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
-        {content}
-      </p>
+      <FormattedPolicyText text={content} />
     </section>
   );
 }
@@ -246,7 +245,7 @@ function ContactSection({ contact }: { contact: string | null }) {
         <Phone className="h-4 w-4 text-brand-800" />
         문의처
       </h2>
-      <p className="whitespace-pre-wrap text-sm text-neutral-700">{contact}</p>
+      <FormattedPolicyText text={contact} />
     </section>
   );
 }
@@ -456,7 +455,8 @@ function QnaChatSection({
   const accessToken = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length === 0) return;
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages]);
 
   const handleSend = useCallback(
@@ -620,6 +620,10 @@ export default function PolicyDetailPage() {
   const policyId = Number(policyIdParam) || 0;
   const { isAuthenticated } = useAuthStore();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [policyId]);
+
   // --- Data fetching ---
   const { data: policy, isLoading: policyLoading, isError: policyError } = usePolicy(policyId);
   const { data: guide, isLoading: guideLoading } = useGuide(policyId);
@@ -763,7 +767,7 @@ export default function PolicyDetailPage() {
           {/* Policy Summary */}
           <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
             <h2 className="mb-3 text-lg font-semibold text-neutral-900">정책 요약</h2>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{policy.summary}</p>
+            <FormattedPolicyText text={policy.summary} />
           </section>
 
           {/* Structured Detail Sections */}
