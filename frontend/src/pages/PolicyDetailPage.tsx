@@ -139,6 +139,7 @@ function PolicyHeader({
         </button>
       </div>
       <h1 className="text-3xl font-bold text-neutral-900">{policy.title}</h1>
+      <PolicyTagList policy={policy} />
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-neutral-500">
         <span className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
@@ -183,30 +184,26 @@ function DetailSection({
   );
 }
 
-function TagSection({ policy }: { policy: PolicyDetail }) {
-  const tags = [
-    ...(policy.lifeTags ?? []),
-    ...(policy.targetTags ?? []),
-    ...(policy.themeTags ?? []),
-  ];
+function PolicyTagList({ policy }: { policy: PolicyDetail }) {
+  const tags = Array.from(
+    new Set([
+      ...(policy.lifeTags ?? []),
+      ...(policy.targetTags ?? []),
+      ...(policy.themeTags ?? []),
+    ]),
+  );
   if (tags.length === 0) return null;
   return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
-        <Users className="h-4 w-4 text-brand-800" />
-        관련 태그
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-800"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </section>
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-800"
+        >
+          #{tag}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -785,9 +782,6 @@ export default function PolicyDetailPage() {
           {policy.supportContent && (
             <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
           )}
-
-          {/* Tags */}
-          <TagSection policy={policy} />
 
           {/* Attachments */}
           <AttachmentSection attachments={policy.attachments} />

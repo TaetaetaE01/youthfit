@@ -166,18 +166,63 @@ colors: {
 
 ### 6.3 태그 배지
 
+> 4가지 변형을 용도별로 엄격히 구분한다. 한 화면에서 같은 위계의 정보에 같은 변형을 섞어 쓰지 않는다.
+
+#### (A) Status Pill — 상태/카테고리
+
 | 속성 | 값 |
 |------|----|
 | 배경 | `primary-100` (#EEF0FF) |
 | 텍스트 | `secondary-600` (#4F46E5) |
-| 폰트 | `label-sm` (12px, SemiBold, uppercase) |
-| 패딩 | 4px 12px |
-| Radius | `radius-full` (pill) |
+| 폰트 | `label-sm` (12px, SemiBold) |
+| 패딩 | 2px 10px |
+| Radius | `radius-full` |
+| 용도 | 정책 카테고리("복지"), 예정/진행 상태, AI Summary 라벨 |
 
-**Semantic 변형** ("지원가능"):
-- 배경: `success-100`
-- 텍스트/도트: `success-500`
-- 왼쪽에 작은 도트 인디케이터 (6px circle)
+#### (B) Success Pill — 긍정 상태
+
+| 속성 | 값 |
+|------|----|
+| 배경 | `success-100` (#DCFCE7) |
+| 텍스트 | `success-500` (#22C55E) |
+| 폰트 | `label-sm` (12px, SemiBold) |
+| 패딩 | 2px 10px |
+| Radius | `radius-full` |
+| 용도 | "진행중", "지원가능", 적합도 높음 |
+| 옵션 | 왼쪽에 6px 도트 인디케이터 추가 가능 |
+
+#### (C) Subtle Badge — 부가 메타
+
+| 속성 | 값 |
+|------|----|
+| 배경 | `neutral-100` (#F3F4F6) |
+| 텍스트 | `neutral-700` (#374151) |
+| 폰트 | `caption` (12px, Regular) |
+| 패딩 | 2px 8px |
+| Radius | `radius-md` (12px) |
+| 용도 | 버전 번호, 카운트, 중요도 낮은 인라인 메타 |
+
+#### (D) Pill Chip — 필터/태그
+
+| 속성 | 값 |
+|------|----|
+| 배경 | `white` |
+| Border | `1px solid neutral-300` (#D1D5DB) |
+| 텍스트 | `neutral-800` (#1F2937) |
+| 폰트 | `caption` (12px, Medium) |
+| 패딩 | 4px 12px |
+| Radius | `radius-full` |
+| 용도 | 정책 상세의 관련 태그(`#청년`, `#주거`), 필터 칩, 보조 분류 |
+| 규칙 | Status/Success Pill과 같은 줄에 두지 않는다. 태그 텍스트는 `#` prefix로 시각적 구분 |
+
+#### 선택 가이드
+
+| 상황 | 사용 변형 |
+|------|----------|
+| "이게 어떤 종류의 정책인가?" | (A) Status Pill |
+| "지금 신청 가능한가?" | (B) Success Pill / (A) 상태 pill |
+| "v2.4 / 3건 남음" | (C) Subtle Badge |
+| "어떤 주제·대상에 해당하는가?" | (D) Pill Chip |
 
 ### 6.4 검색바
 
