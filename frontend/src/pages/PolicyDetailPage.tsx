@@ -22,7 +22,6 @@ import {
   Paperclip,
   Repeat,
   Tag,
-  ListOrdered,
   Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -156,6 +155,12 @@ function PolicyHeader({
             </span>
           </>
         )}
+        {policy.referenceYear && (
+          <>
+            <span className="text-neutral-300">|</span>
+            <span className="flex items-center gap-1">{policy.referenceYear}년 기준</span>
+          </>
+        )}
       </div>
     </header>
   );
@@ -239,38 +244,6 @@ function SupportOverviewSection({
           </div>
         )}
       </dl>
-    </section>
-  );
-}
-
-function ApplyMethodSection({ applyMethods }: { applyMethods: PolicyDetail['applyMethods'] }) {
-  if (!applyMethods || applyMethods.length === 0) return null;
-  return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-neutral-900">
-        <ListOrdered className="h-4 w-4 text-brand-800" />
-        신청방법
-      </h2>
-      <ol className="space-y-3">
-        {applyMethods.map((step, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-800 text-xs font-bold text-white">
-              {i + 1}
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-neutral-900">{step.stageName}</p>
-              {step.description && (
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
-                  {step.description}
-                </p>
-              )}
-            </div>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-4 text-xs text-neutral-500">
-        자세한 절차는 공식 신청 채널에서 확인해주세요.
-      </p>
     </section>
   );
 }
@@ -888,9 +861,6 @@ export default function PolicyDetailPage() {
           {policy.supportContent && (
             <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
           )}
-
-          {/* Apply Methods */}
-          <ApplyMethodSection applyMethods={policy.applyMethods} />
 
           {/* Reference Sites */}
           <ReferenceSiteSection referenceSites={policy.referenceSites} />
