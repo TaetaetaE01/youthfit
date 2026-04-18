@@ -155,12 +155,6 @@ function PolicyHeader({
             </span>
           </>
         )}
-        {policy.referenceYear && (
-          <>
-            <span className="text-neutral-300">|</span>
-            <span className="flex items-center gap-1">{policy.referenceYear}년 기준</span>
-          </>
-        )}
       </div>
     </header>
   );
@@ -209,41 +203,40 @@ function PolicyTagList({ policy }: { policy: PolicyDetail }) {
   );
 }
 
-function SupportOverviewSection({
+function PolicyMetaSummary({
+  referenceYear,
   supportCycle,
   provideType,
+  contact,
 }: {
+  referenceYear: number | null;
   supportCycle: string | null;
   provideType: string | null;
+  contact: string | null;
 }) {
-  if (!supportCycle && !provideType) return null;
+  const items: { icon: typeof Calendar; label: string; value: string }[] = [];
+  if (referenceYear) items.push({ icon: Calendar, label: '기준연도', value: `${referenceYear}년` });
+  if (supportCycle) items.push({ icon: Repeat, label: '지원주기', value: supportCycle });
+  if (provideType) items.push({ icon: Tag, label: '제공유형', value: provideType });
+  if (contact) items.push({ icon: Phone, label: '문의처', value: contact });
+  if (items.length === 0) return null;
+
   return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-4 text-base font-semibold text-neutral-900">지원 개요</h2>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {supportCycle && (
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
-              <Repeat className="h-4 w-4 text-brand-800" />
+    <section className="mb-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div className="grid grid-cols-2 divide-x divide-y divide-neutral-200 sm:grid-cols-4 sm:divide-y-0">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="flex flex-col items-center gap-1.5 px-4 py-5 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100">
+                <Icon className="h-4 w-4 text-brand-800" />
+              </div>
+              <span className="text-xs text-neutral-500">{item.label}</span>
+              <span className="text-sm font-semibold text-neutral-900">{item.value}</span>
             </div>
-            <div>
-              <dt className="text-xs text-neutral-500">지원주기</dt>
-              <dd className="text-sm font-medium text-neutral-900">{supportCycle}</dd>
-            </div>
-          </div>
-        )}
-        {provideType && (
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
-              <Tag className="h-4 w-4 text-brand-800" />
-            </div>
-            <div>
-              <dt className="text-xs text-neutral-500">제공유형</dt>
-              <dd className="text-sm font-medium text-neutral-900">{provideType}</dd>
-            </div>
-          </div>
-        )}
-      </dl>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -304,19 +297,6 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function ContactSection({ contact }: { contact: string | null }) {
-  if (!contact) return null;
-  return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-neutral-900">
-        <Phone className="h-4 w-4 text-brand-800" />
-        문의처
-      </h2>
-      <FormattedPolicyText text={contact} />
     </section>
   );
 }
@@ -841,10 +821,12 @@ export default function PolicyDetailPage() {
             <FormattedPolicyText text={policy.summary} />
           </section>
 
-          {/* Support Overview (cycle / provide type) */}
-          <SupportOverviewSection
+          {/* Policy Meta Summary (기준연도 / 지원주기 / 제공유형 / 문의처) */}
+          <PolicyMetaSummary
+            referenceYear={policy.referenceYear}
             supportCycle={policy.supportCycle}
             provideType={policy.provideType}
+            contact={policy.contact}
           />
 
           {/* Structured Detail Sections */}
@@ -867,9 +849,6 @@ export default function PolicyDetailPage() {
 
           {/* Attachments */}
           <AttachmentSection attachments={policy.attachments} />
-
-          {/* Contact */}
-          <ContactSection contact={policy.contact} />
 
           {/* Official Application Link */}
           {policy.sourceUrl && (
