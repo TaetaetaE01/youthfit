@@ -1,7 +1,6 @@
 package com.youthfit.policy.presentation.controller;
 
 import com.youthfit.policy.domain.model.Category;
-import com.youthfit.policy.domain.model.PolicySortType;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.presentation.dto.response.PolicyDetailResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyPageResponse;
@@ -16,7 +15,8 @@ import org.springframework.http.ResponseEntity;
 @Tag(name = "정책", description = "정책 목록 조회, 상세 조회, 키워드 검색 API")
 public interface PolicyApi {
 
-    @Operation(summary = "정책 목록 조회", description = "필터 조건에 따라 정책 목록을 페이징 조회한다")
+    @Operation(summary = "정책 목록 조회",
+            description = "필터 조건에 따라 정책 목록을 페이징 조회한다. status에 따라 정렬이 자동 결정된다 — OPEN: applyEnd asc, UPCOMING: applyStart asc, CLOSED: applyEnd desc.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "400", description = "입력값이 올바르지 않습니다 (YF-001)"),
@@ -26,9 +26,8 @@ public interface PolicyApi {
     ResponseEntity<PolicyPageResponse> findPolicies(
             String regionCode,
             Category category,
+            @Parameter(description = "정책 상태 필터: OPEN(진행중) / UPCOMING(예정) / CLOSED(마감). 미지정 시 전체.")
             PolicyStatus status,
-            @Parameter(description = "정렬 기준: DEADLINE(마감임박순, 기본값), LATEST(최신순), UPCOMING(모집시작임박순)")
-            PolicySortType sortType,
             int page,
             int size);
 
@@ -42,7 +41,8 @@ public interface PolicyApi {
     ResponseEntity<PolicyDetailResponse> getPolicyDetail(
             @Parameter(description = "정책 ID") Long policyId);
 
-    @Operation(summary = "정책 키워드 검색", description = "키워드로 정책을 검색한다")
+    @Operation(summary = "정책 키워드 검색",
+            description = "키워드로 정책을 검색한다. status를 함께 전달하면 동일한 정렬 규칙이 적용된다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "검색 성공"),
             @ApiResponse(responseCode = "400", description = "입력값이 올바르지 않습니다 (YF-001)"),
@@ -51,6 +51,8 @@ public interface PolicyApi {
     @SecurityRequirements
     ResponseEntity<PolicyPageResponse> searchPolicies(
             String keyword,
+            @Parameter(description = "정책 상태 필터: OPEN / UPCOMING / CLOSED. 미지정 시 전체.")
+            PolicyStatus status,
             int page,
             int size);
 }

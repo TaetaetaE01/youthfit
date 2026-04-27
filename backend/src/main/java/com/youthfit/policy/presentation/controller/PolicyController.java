@@ -4,7 +4,6 @@ import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.service.PolicyQueryService;
 import com.youthfit.policy.domain.model.Category;
-import com.youthfit.policy.domain.model.PolicySortType;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.presentation.dto.response.PolicyDetailResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyPageResponse;
@@ -25,12 +24,11 @@ public class PolicyController implements PolicyApi {
             @RequestParam(required = false) String regionCode,
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) PolicyStatus status,
-            @RequestParam(defaultValue = "DEADLINE") PolicySortType sortType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                regionCode, category, status, sortType, page, size);
+                regionCode, category, status, page, size);
         return ResponseEntity.ok(PolicyPageResponse.from(result));
     }
 
@@ -45,10 +43,11 @@ public class PolicyController implements PolicyApi {
     @Override
     public ResponseEntity<PolicyPageResponse> searchPolicies(
             @RequestParam String keyword,
+            @RequestParam(required = false) PolicyStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        PolicyPageResult result = policyQueryService.searchPoliciesByKeyword(keyword, page, size);
+        PolicyPageResult result = policyQueryService.searchPoliciesByKeyword(keyword, status, page, size);
         return ResponseEntity.ok(PolicyPageResponse.from(result));
     }
 }
