@@ -44,7 +44,7 @@ const PAGE_SIZE = 6;
 const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
 
 const STATUS_TABS: { value: PolicyStatus; label: string }[] = [
-  { value: 'OPEN', label: '진행중' },
+  { value: 'OPEN', label: '모집중' },
   { value: 'UPCOMING', label: '예정' },
   { value: 'CLOSED', label: '마감' },
 ];
