@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { getEffectiveStatus, formatPolicyPeriod } from '@/lib/policyStatus';
 import type { Policy, PolicyCategory, PolicyStatus } from '@/types/policy';
 import { CATEGORY_LABELS, STATUS_LABELS, getRegionName } from '@/types/policy';
+import SourceBadge from '@/components/policy/SourceBadge';
 
 interface PolicyCardProps {
   policy: Policy;
@@ -49,6 +50,7 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
       <div className="mb-3 flex items-center gap-2">
         <CategoryBadge category={policy.category} />
         <StatusBadge status={effectiveStatus} />
+        <SourceBadge sourceType={policy.sourceType} sourceLabel={policy.sourceLabel} size="sm" />
         {dDay != null && dDay <= 7 && dDay >= 0 && (
           <span className="rounded-full bg-warning-500 px-2 py-0.5 text-xs font-bold text-white">
             D-{dDay}
