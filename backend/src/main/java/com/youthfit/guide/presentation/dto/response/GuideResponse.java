@@ -1,13 +1,14 @@
 package com.youthfit.guide.presentation.dto.response;
 
 import com.youthfit.guide.application.dto.result.GuideResult;
+import com.youthfit.guide.domain.model.GuideContent;
 
 import java.time.LocalDateTime;
 
 public record GuideResponse(
         Long id,
         Long policyId,
-        String summaryHtml,
+        GuideContent content,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -16,7 +17,7 @@ public record GuideResponse(
         return new GuideResponse(
                 result.id(),
                 result.policyId(),
-                result.summaryHtml(),
+                result.content(),
                 result.createdAt(),
                 result.updatedAt()
         );

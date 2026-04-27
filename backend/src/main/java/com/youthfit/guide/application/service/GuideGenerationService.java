@@ -1,11 +1,14 @@
 package com.youthfit.guide.application.service;
 
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.dto.command.GuideGenerationInput;
 import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 import com.youthfit.guide.application.dto.result.GuideResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
+import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.repository.GuideRepository;
+import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,7 @@ public class GuideGenerationService {
 
     private final GuideRepository guideRepository;
     private final PolicyDocumentRepository policyDocumentRepository;
+    private final PolicyRepository policyRepository;
     private final GuideLlmProvider guideLlmProvider;
 
     @Transactional(readOnly = true)
@@ -40,6 +44,9 @@ public class GuideGenerationService {
 
     @Transactional
     public GuideGenerationResult generateGuide(GenerateGuideCommand command) {
+        var policy = policyRepository.findById(command.policyId())
+                .orElseThrow(() -> new IllegalArgumentException("정책을 찾을 수 없습니다"));
+
         List<PolicyDocument> chunks = policyDocumentRepository
                 .findByPolicyIdOrderByChunkIndex(command.policyId());
 
@@ -48,11 +55,9 @@ public class GuideGenerationService {
                     "인덱싱된 문서가 없습니다");
         }
 
-        String combinedContent = chunks.stream()
+        String contentHash = computeHash(chunks.stream()
                 .map(PolicyDocument::getContent)
-                .collect(Collectors.joining("\n\n"));
-
-        String contentHash = computeHash(combinedContent);
+                .collect(Collectors.joining("\n\n")));
 
         Optional<Guide> existing = guideRepository.findByPolicyId(command.policyId());
         if (existing.isPresent() && !existing.get().hasChanged(contentHash)) {
@@ -61,17 +66,17 @@ public class GuideGenerationService {
                     "문서 변경 없음");
         }
 
-        String summaryHtml = guideLlmProvider.generateGuideSummary(
-                command.policyTitle(), combinedContent);
+        GuideGenerationInput input = GuideGenerationInput.of(policy, chunks);
+        GuideContent content = guideLlmProvider.generateGuide(input);
 
         if (existing.isPresent()) {
-            existing.get().regenerate(summaryHtml, contentHash);
+            existing.get().regenerate(content, contentHash);
             guideRepository.save(existing.get());
             log.info("가이드 재생성 완료: policyId={}", command.policyId());
         } else {
             Guide guide = Guide.builder()
                     .policyId(command.policyId())
-                    .summaryHtml(summaryHtml)
+                    .content(content)
                     .sourceHash(contentHash)
                     .build();
             guideRepository.save(guide);

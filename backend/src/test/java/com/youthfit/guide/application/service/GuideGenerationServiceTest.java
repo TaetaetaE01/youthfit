@@ -1,11 +1,18 @@
 package com.youthfit.guide.application.service;
 
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.dto.command.GuideGenerationInput;
 import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 import com.youthfit.guide.application.dto.result.GuideResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
+import com.youthfit.guide.domain.model.GuideContent;
+import com.youthfit.guide.domain.model.GuidePairedSection;
+import com.youthfit.guide.domain.model.GuidePitfall;
+import com.youthfit.guide.domain.model.GuideSourceField;
 import com.youthfit.guide.domain.repository.GuideRepository;
+import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +48,9 @@ class GuideGenerationServiceTest {
     private PolicyDocumentRepository policyDocumentRepository;
 
     @Mock
+    private PolicyRepository policyRepository;
+
+    @Mock
     private GuideLlmProvider guideLlmProvider;
 
     @Nested
@@ -51,7 +61,8 @@ class GuideGenerationServiceTest {
         @DisplayName("존재하는 가이드를 조회하면 결과를 반환한다")
         void exists_returnsGuideResult() {
             // given
-            Guide guide = createMockGuide(1L, 1L, "<p>요약</p>", "hash-v1");
+            GuideContent content = new GuideContent("요약", null, null, null, List.of());
+            Guide guide = createMockGuide(1L, 1L, content, "hash-v1");
             given(guideRepository.findByPolicyId(1L)).willReturn(Optional.of(guide));
 
             // when
@@ -60,7 +71,7 @@ class GuideGenerationServiceTest {
             // then
             assertThat(result).isPresent();
             assertThat(result.get().policyId()).isEqualTo(1L);
-            assertThat(result.get().summaryHtml()).isEqualTo("<p>요약</p>");
+            assertThat(result.get().content()).isEqualTo(content);
         }
 
         @Test
@@ -96,7 +107,7 @@ class GuideGenerationServiceTest {
             assertThat(result.policyId()).isEqualTo(1L);
             assertThat(result.generated()).isFalse();
             assertThat(result.reason()).contains("인덱싱된 문서가 없습니다");
-            verify(guideLlmProvider, never()).generateGuideSummary(anyString(), anyString());
+            verify(guideLlmProvider, never()).generateGuide(any(GuideGenerationInput.class));
         }
 
         @Test
@@ -108,7 +119,8 @@ class GuideGenerationServiceTest {
 
             // 실제 SHA-256 해시 계산 (GuideGenerationService.computeHash와 동일한 결과)
             String contentHash = computeSha256("청크 내용");
-            Guide existing = createMockGuide(1L, 1L, "<p>기존 요약</p>", contentHash);
+            GuideContent content = new GuideContent("요약", null, null, null, List.of());
+            Guide existing = createMockGuide(1L, 1L, content, contentHash);
 
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L))
                     .willReturn(List.of(chunk));
@@ -120,7 +132,7 @@ class GuideGenerationServiceTest {
             // then
             assertThat(result.generated()).isFalse();
             assertThat(result.reason()).contains("변경 없음");
-            verify(guideLlmProvider, never()).generateGuideSummary(anyString(), anyString());
+            verify(guideLlmProvider, never()).generateGuide(any(GuideGenerationInput.class));
         }
 
         @Test
@@ -129,12 +141,16 @@ class GuideGenerationServiceTest {
             // given
             GenerateGuideCommand command = new GenerateGuideCommand(1L, "청년 주거 지원", "내용");
             PolicyDocument chunk = createChunk(1L, 0, "주거 지원 상세 내용");
+            GuideContent content = new GuideContent("청년 주거 지원", null, null, null, List.of());
 
+            Policy policy = createMockPolicy(1L, "청년 주거 지원");
+
+            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L))
                     .willReturn(List.of(chunk));
             given(guideRepository.findByPolicyId(1L)).willReturn(Optional.empty());
-            given(guideLlmProvider.generateGuideSummary("청년 주거 지원", "주거 지원 상세 내용"))
-                    .willReturn("<h3>한줄 요약</h3><p>주거 지원 가이드</p>");
+            given(guideLlmProvider.generateGuide(any(GuideGenerationInput.class)))
+                    .willReturn(content);
             given(guideRepository.save(any(Guide.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -153,13 +169,18 @@ class GuideGenerationServiceTest {
             // given
             GenerateGuideCommand command = new GenerateGuideCommand(1L, "청년 주거 지원", "내용");
             PolicyDocument chunk = createChunk(1L, 0, "변경된 내용");
-            Guide existing = createMockGuide(1L, 1L, "<p>기존</p>", "old-hash");
+            GuideContent oldContent = new GuideContent("기존", null, null, null, List.of());
+            Guide existing = createMockGuide(1L, 1L, oldContent, "old-hash");
+            GuideContent newContent = new GuideContent("새로운 가이드", null, null, null, List.of());
 
+            Policy policy = createMockPolicy(1L, "청년 주거 지원");
+
+            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L))
                     .willReturn(List.of(chunk));
             given(guideRepository.findByPolicyId(1L)).willReturn(Optional.of(existing));
-            given(guideLlmProvider.generateGuideSummary("청년 주거 지원", "변경된 내용"))
-                    .willReturn("<h3>한줄 요약</h3><p>새로운 가이드</p>");
+            given(guideLlmProvider.generateGuide(any(GuideGenerationInput.class)))
+                    .willReturn(newContent);
             given(guideRepository.save(any(Guide.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -167,7 +188,7 @@ class GuideGenerationServiceTest {
 
             // then
             assertThat(result.generated()).isTrue();
-            assertThat(existing.getSummaryHtml()).isEqualTo("<h3>한줄 요약</h3><p>새로운 가이드</p>");
+            assertThat(existing.getContent()).isEqualTo(newContent);
             verify(guideRepository).save(existing);
         }
 
@@ -180,11 +201,15 @@ class GuideGenerationServiceTest {
                     createChunk(1L, 0, "첫 번째 청크"),
                     createChunk(1L, 1, "두 번째 청크")
             );
+            GuideContent content = new GuideContent("결합된 가이드", null, null, null, List.of());
 
+            Policy policy = createMockPolicy(1L, "정책");
+
+            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(chunks);
             given(guideRepository.findByPolicyId(1L)).willReturn(Optional.empty());
-            given(guideLlmProvider.generateGuideSummary("정책", "첫 번째 청크\n\n두 번째 청크"))
-                    .willReturn("<p>결합된 가이드</p>");
+            given(guideLlmProvider.generateGuide(any(GuideGenerationInput.class)))
+                    .willReturn(content);
             given(guideRepository.save(any(Guide.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -192,20 +217,30 @@ class GuideGenerationServiceTest {
 
             // then
             assertThat(result.generated()).isTrue();
-            verify(guideLlmProvider).generateGuideSummary("정책", "첫 번째 청크\n\n두 번째 청크");
+            verify(guideLlmProvider).generateGuide(any(GuideGenerationInput.class));
         }
     }
 
     // ── 헬퍼 메서드 ──
 
-    private Guide createMockGuide(Long id, Long policyId, String summaryHtml, String sourceHash) {
+    private Guide createMockGuide(Long id, Long policyId, GuideContent content, String sourceHash) {
         Guide guide = Guide.builder()
                 .policyId(policyId)
-                .summaryHtml(summaryHtml)
+                .content(content)
                 .sourceHash(sourceHash)
                 .build();
         ReflectionTestUtils.setField(guide, "id", id);
         return guide;
+    }
+
+    private Policy createMockPolicy(Long id, String title) {
+        Policy policy = Policy.builder()
+                .title(title)
+                .referenceYear(2025)
+                .body(title)
+                .build();
+        ReflectionTestUtils.setField(policy, "id", id);
+        return policy;
     }
 
     private PolicyDocument createChunk(Long policyId, int index, String content) {
