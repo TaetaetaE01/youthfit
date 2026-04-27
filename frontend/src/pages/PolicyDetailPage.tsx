@@ -16,9 +16,6 @@ import {
   Building2,
   Phone,
   FileText,
-  Users,
-  ClipboardCheck,
-  Gift,
   Paperclip,
   Repeat,
   Tag,
@@ -30,6 +27,9 @@ import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
 import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
 import NotificationPromptSheet from '@/components/policy/NotificationPromptSheet';
+import { OneLineSummaryCard } from '@/components/policy/OneLineSummaryCard';
+import { PairedSection } from '@/components/policy/PairedSection';
+import { PitfallsCard } from '@/components/policy/PitfallsCard';
 import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
@@ -160,26 +160,6 @@ function PolicyHeader({
   );
 }
 
-function DetailSection({
-  icon: Icon,
-  title,
-  content,
-}: {
-  icon: typeof FileText;
-  title: string;
-  content: string;
-}) {
-  return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
-        <Icon className="h-4 w-4 text-brand-800" />
-        {title}
-      </h2>
-      <FormattedPolicyText text={content} />
-    </section>
-  );
-}
-
 function PolicyTagList({ policy }: { policy: PolicyDetail }) {
   const tags = Array.from(
     new Set([
@@ -297,38 +277,6 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function GuideSummaryCard({ html, isLoading }: { html: string | null; isLoading: boolean }) {
-  if (isLoading) {
-    return (
-      <section className="mb-8 rounded-2xl border border-neutral-200 bg-white p-6">
-        <div className="animate-pulse">
-          <div className="mb-4 h-5 w-24 rounded-full bg-gray-200" />
-          <div className="h-4 w-full rounded bg-gray-200" />
-          <div className="mt-2 h-4 w-3/4 rounded bg-gray-200" />
-          <div className="mt-2 h-4 w-1/2 rounded bg-gray-200" />
-        </div>
-      </section>
-    );
-  }
-
-  if (!html) return null;
-
-  return (
-    <section className="mb-8 rounded-2xl border border-neutral-200 bg-white p-6">
-      <span className="mb-4 inline-block rounded-full bg-brand-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-600">
-        AI Summary
-      </span>
-      <div
-        className="prose prose-sm max-w-none text-neutral-700"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-      <p className="mt-4 text-xs text-neutral-500">
-        AI가 정리한 요약이에요. 정확한 내용은 공식 공고에서 확인해주세요.
-      </p>
     </section>
   );
 }
@@ -677,7 +625,7 @@ export default function PolicyDetailPage() {
 
   // --- Data fetching ---
   const { data: policy, isLoading: policyLoading, isError: policyError } = usePolicy(policyId);
-  const { data: guide, isLoading: guideLoading } = useGuide(policyId);
+  const { data: guide } = useGuide(policyId);
 
   // --- Bookmark state ---
   const [bookmarked, setBookmarked] = useState(false);
@@ -812,11 +760,14 @@ export default function PolicyDetailPage() {
             onBookmarkToggle={handleBookmarkToggle}
           />
 
-          {/* AI Guide Summary */}
-          <GuideSummaryCard html={guide?.summaryHtml ?? null} isLoading={guideLoading} />
+          {/* AI 한 줄 요약 — 가이드 있을 때만 */}
+          {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}
 
-          {/* Policy Summary */}
-          <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+          {/* Policy Summary (원문) */}
+          <section
+            id="policy-summary-section"
+            className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6"
+          >
             <h2 className="mb-3 text-lg font-semibold text-neutral-900">정책 요약</h2>
             <FormattedPolicyText text={policy.summary} />
           </section>
@@ -829,20 +780,38 @@ export default function PolicyDetailPage() {
             contact={policy.contact}
           />
 
-          {/* Structured Detail Sections */}
-          {policy.supportTarget && (
-            <DetailSection icon={Users} title="지원대상" content={policy.supportTarget} />
-          )}
-          {policy.selectionCriteria && (
-            <DetailSection
-              icon={ClipboardCheck}
-              title="선정기준"
-              content={policy.selectionCriteria}
-            />
-          )}
-          {policy.supportContent && (
-            <DetailSection icon={Gift} title="지원내용" content={policy.supportContent} />
-          )}
+          {/* Paired: 지원대상 */}
+          <PairedSection
+            id="paired-supportTarget"
+            easyTitle="누가 받을 수 있나요"
+            easyData={guide?.target ?? null}
+            originalTitle="지원대상"
+            originalContent={policy.supportTarget}
+            originalRenderer={(c) => <FormattedPolicyText text={c} />}
+          />
+
+          {/* Paired: 선정기준 */}
+          <PairedSection
+            id="paired-selectionCriteria"
+            easyTitle="어떻게 뽑히나요"
+            easyData={guide?.criteria ?? null}
+            originalTitle="선정기준"
+            originalContent={policy.selectionCriteria}
+            originalRenderer={(c) => <FormattedPolicyText text={c} />}
+          />
+
+          {/* Paired: 지원내용 */}
+          <PairedSection
+            id="paired-supportContent"
+            easyTitle="무엇을 받나요"
+            easyData={guide?.content ?? null}
+            originalTitle="지원내용"
+            originalContent={policy.supportContent}
+            originalRenderer={(c) => <FormattedPolicyText text={c} />}
+          />
+
+          {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
+          {guide && <PitfallsCard pitfalls={guide.pitfalls} />}
 
           {/* Reference Sites */}
           <ReferenceSiteSection referenceSites={policy.referenceSites} />
