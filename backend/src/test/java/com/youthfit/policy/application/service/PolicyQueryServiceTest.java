@@ -31,6 +31,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
 @DisplayName("PolicyQueryService")
 @ExtendWith(MockitoExtension.class)
@@ -174,6 +176,8 @@ class PolicyQueryServiceTest {
             assertThat(result.policies()).hasSize(1);
             assertThat(result.policies().getFirst().sourceType()).isEqualTo(SourceType.YOUTH_CENTER);
             assertThat(result.policies().getFirst().sourceLabel()).isEqualTo("온통청년");
+
+            then(policySourceRepository).should(times(1)).findFirstByPolicyIds(any());
         }
     }
 
