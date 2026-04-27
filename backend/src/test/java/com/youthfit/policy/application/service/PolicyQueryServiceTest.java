@@ -6,8 +6,9 @@ import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
-import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.PolicySource;
+import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -65,6 +67,28 @@ class PolicyQueryServiceTest {
         }
 
         @Test
+        @DisplayName("source 가 있으면 sourceType/sourceLabel/sourceUrl 이 채워진다")
+        void sourcePresent_returnsAllSourceFields() {
+            Policy policy = createMockPolicy();
+            PolicySource source = PolicySource.builder()
+                    .policy(policy)
+                    .sourceType(SourceType.BOKJIRO_CENTRAL)
+                    .externalId("ext-1")
+                    .sourceUrl("https://example.com/policy/1")
+                    .rawJson("{}")
+                    .sourceHash("hash")
+                    .build();
+            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
+            given(policySourceRepository.findFirstByPolicyId(1L)).willReturn(Optional.of(source));
+
+            PolicyDetailResult result = policyQueryService.findPolicyById(1L);
+
+            assertThat(result.sourceType()).isEqualTo(SourceType.BOKJIRO_CENTRAL);
+            assertThat(result.sourceLabel()).isEqualTo("복지로");
+            assertThat(result.sourceUrl()).isEqualTo("https://example.com/policy/1");
+        }
+
+        @Test
         @DisplayName("존재하지 않는 정책 ID로 조회하면 NOT_FOUND 예외가 발생한다")
         void notExists_throwsNotFoundException() {
             // given
@@ -94,6 +118,8 @@ class PolicyQueryServiceTest {
             given(policyRepository.findAllByFilters(
                     eq("11"), eq(Category.HOUSING), eq(PolicyStatus.OPEN), any(Pageable.class)))
                     .willReturn(mockPage);
+            given(policySourceRepository.findFirstByPolicyIds(anyList()))
+                    .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
@@ -113,6 +139,8 @@ class PolicyQueryServiceTest {
             given(policyRepository.findAllByFilters(
                     isNull(), isNull(), isNull(), any(Pageable.class)))
                     .willReturn(emptyPage);
+            given(policySourceRepository.findFirstByPolicyIds(anyList()))
+                    .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
@@ -121,6 +149,31 @@ class PolicyQueryServiceTest {
             // then
             assertThat(result.policies()).isEmpty();
             assertThat(result.totalCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("페이지 결과의 각 항목에 source 가 매핑된다")
+        void filterPage_mapsSourceToEachSummary() {
+            Policy policy = createMockPolicy();
+            Page<Policy> mockPage = new PageImpl<>(List.of(policy), Pageable.ofSize(20), 1);
+            PolicySource source = PolicySource.builder()
+                    .policy(policy)
+                    .sourceType(SourceType.YOUTH_CENTER)
+                    .externalId("ext-y")
+                    .sourceUrl("https://example.com/y")
+                    .rawJson("{}")
+                    .sourceHash("hash")
+                    .build();
+            given(policyRepository.findAllByFilters(any(), any(), any(), any(Pageable.class)))
+                    .willReturn(mockPage);
+            given(policySourceRepository.findFirstByPolicyIds(List.of(1L)))
+                    .willReturn(Map.of(1L, source));
+
+            PolicyPageResult result = policyQueryService.findPoliciesByFilters(null, null, null, 0, 20);
+
+            assertThat(result.policies()).hasSize(1);
+            assertThat(result.policies().getFirst().sourceType()).isEqualTo(SourceType.YOUTH_CENTER);
+            assertThat(result.policies().getFirst().sourceLabel()).isEqualTo("온통청년");
         }
     }
 
@@ -137,6 +190,8 @@ class PolicyQueryServiceTest {
                     Pageable.ofSize(20), 1);
             given(policyRepository.searchByKeyword(eq("주거"), eq(PolicyStatus.OPEN), any(Pageable.class)))
                     .willReturn(mockPage);
+            given(policySourceRepository.findFirstByPolicyIds(anyList()))
+                    .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.searchPoliciesByKeyword("주거", PolicyStatus.OPEN, 0, 20);
@@ -155,6 +210,8 @@ class PolicyQueryServiceTest {
                     Pageable.ofSize(20), 1);
             given(policyRepository.searchByKeyword(eq("주거"), isNull(), any(Pageable.class)))
                     .willReturn(mockPage);
+            given(policySourceRepository.findFirstByPolicyIds(anyList()))
+                    .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.searchPoliciesByKeyword("주거", null, 0, 20);

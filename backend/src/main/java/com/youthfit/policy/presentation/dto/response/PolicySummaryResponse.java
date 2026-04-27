@@ -4,6 +4,7 @@ import com.youthfit.policy.application.dto.result.PolicySummaryResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.SourceType;
 
 import java.time.LocalDate;
 
@@ -18,7 +19,9 @@ public record PolicySummaryResponse(
         Integer referenceYear,
         PolicyStatus status,
         DetailLevel detailLevel,
-        String organization
+        String organization,
+        SourceType sourceType,
+        String sourceLabel
 ) {
     public static PolicySummaryResponse from(PolicySummaryResult result) {
         return new PolicySummaryResponse(
@@ -32,7 +35,9 @@ public record PolicySummaryResponse(
                 result.referenceYear(),
                 result.status(),
                 result.detailLevel(),
-                result.organization()
+                result.organization(),
+                result.sourceType(),
+                result.sourceLabel()
         );
     }
 }

@@ -7,6 +7,7 @@ import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.dto.result.PolicySummaryResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
@@ -16,6 +17,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,32 +33,30 @@ public class PolicyQueryService {
                                                   PolicyStatus status,
                                                   int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-
         Page<Policy> policyPage = policyRepository.findAllByFilters(regionCode, category, status, pageable);
-
         return toPageResult(policyPage);
     }
 
     public PolicyDetailResult findPolicyById(Long policyId) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "정책을 찾을 수 없습니다: " + policyId));
-        String sourceUrl = policySourceRepository.findFirstByPolicyId(policyId)
-                .map(src -> src.getSourceUrl())
-                .orElse(null);
-        return PolicyDetailResult.from(policy, sourceUrl);
+        PolicySource source = policySourceRepository.findFirstByPolicyId(policyId).orElse(null);
+        return PolicyDetailResult.from(policy, source);
     }
 
     public PolicyPageResult searchPoliciesByKeyword(String keyword, PolicyStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-
         Page<Policy> policyPage = policyRepository.searchByKeyword(keyword, status, pageable);
-
         return toPageResult(policyPage);
     }
 
     private PolicyPageResult toPageResult(Page<Policy> policyPage) {
+        List<Long> ids = policyPage.getContent().stream().map(Policy::getId).toList();
+        Map<Long, PolicySource> sourceMap = policySourceRepository.findFirstByPolicyIds(ids);
         return new PolicyPageResult(
-                policyPage.getContent().stream().map(PolicySummaryResult::from).toList(),
+                policyPage.getContent().stream()
+                        .map(p -> PolicySummaryResult.from(p, sourceMap.get(p.getId())))
+                        .toList(),
                 policyPage.getTotalElements(),
                 policyPage.getNumber(),
                 policyPage.getSize(),

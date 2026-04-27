@@ -15,9 +15,13 @@ public record PolicySummaryResult(
         Integer referenceYear,
         PolicyStatus status,
         DetailLevel detailLevel,
-        String organization
+        String organization,
+        SourceType sourceType,
+        String sourceLabel
 ) {
-    public static PolicySummaryResult from(Policy policy) {
+    public static PolicySummaryResult from(Policy policy, PolicySource source) {
+        SourceType sourceType = source != null ? source.getSourceType() : null;
+        String sourceLabel = sourceType != null ? sourceType.getLabel() : null;
         return new PolicySummaryResult(
                 policy.getId(),
                 policy.getTitle(),
@@ -29,7 +33,9 @@ public record PolicySummaryResult(
                 policy.getReferenceYear(),
                 policy.getStatus(),
                 policy.getDetailLevel(),
-                policy.getOrganization()
+                policy.getOrganization(),
+                sourceType,
+                sourceLabel
         );
     }
 }

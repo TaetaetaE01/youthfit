@@ -4,6 +4,7 @@ import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.SourceType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +36,8 @@ public record PolicyDetailResponse(
         List<Attachment> attachments,
         List<ReferenceSite> referenceSites,
         List<ApplyMethod> applyMethods,
+        SourceType sourceType,
+        String sourceLabel,
         String sourceUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -83,6 +86,8 @@ public record PolicyDetailResponse(
                 result.attachments().stream().map(Attachment::from).toList(),
                 result.referenceSites().stream().map(ReferenceSite::from).toList(),
                 result.applyMethods().stream().map(ApplyMethod::from).toList(),
+                result.sourceType(),
+                result.sourceLabel(),
                 result.sourceUrl(),
                 result.createdAt(),
                 result.updatedAt()
