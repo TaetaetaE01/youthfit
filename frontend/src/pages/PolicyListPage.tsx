@@ -51,6 +51,12 @@ const STATUS_TABS: { value: PolicyStatus; label: string }[] = [
 
 const DEFAULT_STATUS: PolicyStatus = 'OPEN';
 
+const STATUS_VALUES = STATUS_TABS.map((t) => t.value) as readonly PolicyStatus[];
+
+function isPolicyStatus(value: string | null): value is PolicyStatus {
+  return value !== null && (STATUS_VALUES as readonly string[]).includes(value);
+}
+
 /* ──────────────────────────────────────────────
    MobileFilterSheet
    ────────────────────────────────────────────── */
@@ -172,6 +178,7 @@ function StatusTabBar({
         return (
           <button
             key={tab.value}
+            type="button"
             role="tab"
             aria-selected={active}
             onClick={() => onStatusChange(tab.value)}
@@ -311,11 +318,7 @@ export default function PolicyListPage() {
   const keyword = searchParams.get('keyword') ?? '';
   const category = (searchParams.get('category') ?? '') as PolicyCategory | '';
   const rawStatus = searchParams.get('status');
-  const status: PolicyStatus = (
-    rawStatus && ['OPEN', 'UPCOMING', 'CLOSED'].includes(rawStatus)
-      ? rawStatus
-      : DEFAULT_STATUS
-  ) as PolicyStatus;
+  const status: PolicyStatus = isPolicyStatus(rawStatus) ? rawStatus : DEFAULT_STATUS;
   const regionCode = searchParams.get('regionCode') ?? '';
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
 
@@ -349,7 +352,7 @@ export default function PolicyListPage() {
 
   const handleStatusTabChange = useCallback(
     (next: PolicyStatus) => {
-      updateParams({ status: next, page: '' });
+      updateParams({ status: next === DEFAULT_STATUS ? '' : next, page: '' });
     },
     [updateParams],
   );
@@ -387,7 +390,7 @@ export default function PolicyListPage() {
     updateParams({ keyword: inputValue, page: '' });
   };
 
-  const hasActiveQuery = Boolean(keyword || category || regionCode);
+  const hasActiveQuery = Boolean(keyword || category || regionCode || status !== DEFAULT_STATUS);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">

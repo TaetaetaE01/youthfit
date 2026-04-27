@@ -4,7 +4,7 @@ import type { PolicyPage, PolicyDetail, PolicyStatus } from '@/types/policy';
 interface PolicyListParams {
   category?: string;
   regionCode?: string;
-  status?: string;
+  status?: PolicyStatus;
   page?: number;
   size?: number;
 }
