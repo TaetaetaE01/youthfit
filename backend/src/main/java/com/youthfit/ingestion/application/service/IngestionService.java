@@ -2,16 +2,21 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
 import com.youthfit.ingestion.domain.model.PolicyPeriod;
 import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
+import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.SourceType;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -30,6 +35,8 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class IngestionService {
 
+    private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
+
     private static final Pattern SECTION_PATTERN = Pattern.compile(
             "\\[(개요|지원대상|선정기준|지원내용)]\\s*\\n([\\s\\S]*?)(?=\\n\\[(?:개요|지원대상|선정기준|지원내용)]|$)"
     );
@@ -38,6 +45,7 @@ public class IngestionService {
     private final ObjectMapper objectMapper;
     private final PolicyPeriodExtractor policyPeriodExtractor;
     private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
+    private final GuideGenerationService guideGenerationService;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Category category = mapCategory(command.category());
@@ -83,7 +91,8 @@ public class IngestionService {
                 sourceHash
         );
 
-        policyIngestionService.registerPolicy(registerCommand);
+        PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
+        triggerGuideGeneration(ingestionResult.policyId(), command.title());
 
         return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
     }
@@ -188,6 +197,16 @@ public class IngestionService {
     private record Sections(String supportTarget, String selectionCriteria, String supportContent) {
         static Sections empty() {
             return new Sections(null, null, null);
+        }
+    }
+
+    private void triggerGuideGeneration(Long policyId, String title) {
+        if (policyId == null) return;
+        try {
+            guideGenerationService.generateGuide(new GenerateGuideCommand(policyId, title, null));
+        } catch (Exception e) {
+            // ingestion 자체는 성공시킨다.
+            log.warn("가이드 생성 실패: policyId={}", policyId, e);
         }
     }
 }

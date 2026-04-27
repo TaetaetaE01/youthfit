@@ -2,6 +2,7 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
@@ -25,7 +26,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -41,6 +44,9 @@ class IngestionServiceTest {
 
     @Mock
     private PolicyPeriodLlmProvider policyPeriodLlmProvider;
+
+    @Mock
+    private GuideGenerationService guideGenerationService;
 
     @Spy
     private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();
@@ -166,6 +172,37 @@ class IngestionServiceTest {
 
             // then
             then(policyPeriodLlmProvider).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("정책 등록 후 가이드 생성을 호출한다")
+        void 정책_등록_후_가이드_생성을_호출한다() {
+            // Given
+            IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(new PolicyIngestionResult(42L, true));
+
+            // When
+            ingestionService.receivePolicy(command);
+
+            // Then
+            then(guideGenerationService).should()
+                    .generateGuide(argThat(cmd -> cmd.policyId().equals(42L)));
+        }
+
+        @Test
+        @DisplayName("가이드 생성 실패해도 ingestion은 성공")
+        void 가이드_생성_실패해도_ingestion은_성공() {
+            // Given
+            IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(new PolicyIngestionResult(42L, true));
+            given(guideGenerationService.generateGuide(any()))
+                    .willThrow(new RuntimeException("LLM 장애"));
+
+            // When & Then: 예외가 위로 전파되지 않아야 함
+            assertThatCode(() -> ingestionService.receivePolicy(command))
+                    .doesNotThrowAnyException();
         }
 
         private IngestPolicyCommand commandWithoutPeriod(String body) {
