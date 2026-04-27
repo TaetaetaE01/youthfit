@@ -51,6 +51,13 @@ GuideGenerationService 실행 시 자동으로 청크 결합 입력으로 들어
 
 ## 보조 후속 항목 (필요 시)
 
+- **다중 출처 정책 dedup (ingestion)**: 복지로와 온통청년에서 같은 정책이 들어왔을 때 정책 row 를 어떻게 식별/머지할지. 별도 brainstorming 1사이클 필요. 결정 포인트:
+  - dedup 키 (title 정규화? content hash? 자연키?)
+  - 머지 정책 (어느 출처를 정본으로? 우선순위? 신선도 기반?)
+  - 양쪽 source 보존 여부 (현재 PolicySource 1:N 구조라 가능)
+  - 갱신 시 재판정 정책
+  - 수동 오버라이드 출구 (잘못된 머지 풀기)
+  - 트리거 위치: 출처 뱃지 spec(`docs/superpowers/specs/2026-04-28-policy-source-badge-design.md`) 의 후속 작업으로 사용자 명시.
 - **사용자 lazy 트리거**: 미생성 정책에서 "AI 해석 받기" CTA 도입 여부 — 미생성 비율 메트릭 보고 결정. 현재는 카드 숨김.
 - **그룹 접기 UX (Accordion)**: 선정기준 7그룹처럼 길어지는 케이스에 대비. 사용자 반응 보고 도입.
 - **사용자 피드백 메커니즘**: "이 풀이 틀렸어요" 신고 — v1 범위.
