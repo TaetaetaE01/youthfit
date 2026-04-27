@@ -179,10 +179,15 @@ UPCOMING  →  OPEN  →  CLOSED
 | 레이어 | 주요 클래스 | 역할 |
 |--------|------------|------|
 | Presentation | `GuideController` | 가이드 조회, 생성 요청 |
-| Application | `GuideGenerationService` | RAG 청크 조합 → LLM 호출 → 가이드 저장 |
-| Application Port | `GuideLlmProvider` | LLM 호출 추상화 |
+| Application | `GuideGenerationService` | Policy 구조화 필드(필수) + PolicyDocument 청크(옵션) 결합 → LLM 호출 → 가이드 저장 |
+| Application Port | `GuideLlmProvider` | LLM 호출 추상화 (구조화 JSON 출력) |
 | Domain | `Guide` | 정책과 1:1, 소스 해시 기반 변경 감지 및 재생성 |
 | Infrastructure | `OpenAiChatClient` | OpenAI Chat API 호출 (gpt-4o-mini) |
+
+**입력 모델 — 하이브리드**
+- **필수**: `Policy` 구조화 필드 (`title`, `summary`, `body`, `supportTarget`, `selectionCriteria`, `supportContent` 등). 청크 인덱싱이 비어있어도 가이드는 동작한다.
+- **옵션 (보강)**: 동일 `policyId`의 `PolicyDocument` 청크가 있으면 입력에 합쳐진다. 첨부파일 텍스트가 RAG 인덱싱을 통해 들어오면 자동으로 가이드 입력이 풍부해진다.
+- 첨부파일 추출/임베딩은 별도 트랙(`ingestion` 모듈)에서 수행되며, 가이드 모듈은 이 트랙의 진행과 무관하게 동작한다.
 
 ### 4.6 rag
 
@@ -393,10 +398,14 @@ users ──1:N── bookmark ──N:1── policy
 
 ```
 가이드 생성 요청 → GuideGenerationService
-  → RagSearchService (관련 청크 조회)
-  → GuideLlmProvider (LLM 호출)
-  → Guide 엔티티 저장 (summaryHtml + sourceHash)
+  → 입력 결합:
+      [필수] Policy 구조화 필드 (supportTarget, selectionCriteria, supportContent 등)
+      [옵션] 동일 policyId의 PolicyDocument 청크 (있으면 보강)
+  → GuideLlmProvider (LLM 호출, 구조화 JSON 출력)
+  → Guide 엔티티 저장 (구조화 섹션 + sourceHash)
 ```
+
+가이드의 페어드 레이아웃(원문 ↔ 쉬운 해석)을 위해 출력은 원문 구조화 섹션과 1:1 매핑되는 형태로 생성된다. 정확한 스키마는 별도 spec에서 정의한다.
 
 ### Q&A 스트리밍
 
