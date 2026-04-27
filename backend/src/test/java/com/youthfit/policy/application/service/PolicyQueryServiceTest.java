@@ -85,19 +85,19 @@ class PolicyQueryServiceTest {
     class FindPoliciesByFilters {
 
         @Test
-        @DisplayName("필터 조건으로 정책 목록을 페이징 조회한다")
-        void withFilters_returnsFilteredPage() {
+        @DisplayName("status=OPEN 필터로 정책 목록을 페이징 조회한다")
+        void withOpenStatus_returnsFilteredPage() {
             // given
             Page<Policy> mockPage = new PageImpl<>(
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
             given(policyRepository.findAllByFilters(
-                    eq("11"), eq(Category.HOUSING), isNull(), any(), any(Pageable.class)))
+                    eq("11"), eq(Category.HOUSING), eq(PolicyStatus.OPEN), any(Pageable.class)))
                     .willReturn(mockPage);
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    "11", Category.HOUSING, null, null, 0, 20);
+                    "11", Category.HOUSING, PolicyStatus.OPEN, 0, 20);
 
             // then
             assertThat(result.policies()).hasSize(1);
@@ -106,17 +106,17 @@ class PolicyQueryServiceTest {
         }
 
         @Test
-        @DisplayName("결과가 없으면 빈 목록을 반환한다")
-        void noResults_returnsEmptyPage() {
+        @DisplayName("필터가 모두 null이어도 정상 동작한다")
+        void allNull_returnsPage() {
             // given
             Page<Policy> emptyPage = Page.empty();
             given(policyRepository.findAllByFilters(
-                    any(), any(), any(), any(), any(Pageable.class)))
+                    isNull(), isNull(), isNull(), any(Pageable.class)))
                     .willReturn(emptyPage);
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    null, null, null, null, 0, 20);
+                    null, null, null, 0, 20);
 
             // then
             assertThat(result.policies()).isEmpty();
@@ -129,21 +129,38 @@ class PolicyQueryServiceTest {
     class SearchPoliciesByKeyword {
 
         @Test
-        @DisplayName("키워드로 정책을 검색하면 매칭된 결과를 반환한다")
-        void withKeyword_returnsMatchingResults() {
+        @DisplayName("키워드 + status=OPEN으로 검색하면 status를 그대로 전달한다")
+        void withKeywordAndStatus_passesStatus() {
             // given
             Page<Policy> mockPage = new PageImpl<>(
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
-            given(policyRepository.searchByKeyword(eq("주거"), any(), any(Pageable.class)))
+            given(policyRepository.searchByKeyword(eq("주거"), eq(PolicyStatus.OPEN), any(Pageable.class)))
                     .willReturn(mockPage);
 
             // when
-            PolicyPageResult result = policyQueryService.searchPoliciesByKeyword("주거", 0, 20);
+            PolicyPageResult result = policyQueryService.searchPoliciesByKeyword("주거", PolicyStatus.OPEN, 0, 20);
 
             // then
             assertThat(result.policies()).hasSize(1);
             assertThat(result.policies().getFirst().title()).contains("주거");
+        }
+
+        @Test
+        @DisplayName("status가 null이어도 키워드 검색은 정상 동작한다")
+        void nullStatus_returnsResults() {
+            // given
+            Page<Policy> mockPage = new PageImpl<>(
+                    List.of(createMockPolicy()),
+                    Pageable.ofSize(20), 1);
+            given(policyRepository.searchByKeyword(eq("주거"), isNull(), any(Pageable.class)))
+                    .willReturn(mockPage);
+
+            // when
+            PolicyPageResult result = policyQueryService.searchPoliciesByKeyword("주거", null, 0, 20);
+
+            // then
+            assertThat(result.policies()).hasSize(1);
         }
     }
 

@@ -7,7 +7,6 @@ import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.dto.result.PolicySummaryResult;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
-import com.youthfit.policy.domain.model.PolicySortType;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
@@ -27,12 +26,11 @@ public class PolicyQueryService {
     private final PolicySourceRepository policySourceRepository;
 
     public PolicyPageResult findPoliciesByFilters(String regionCode, Category category,
-                                                  PolicyStatus status, PolicySortType sortType,
+                                                  PolicyStatus status,
                                                   int page, int size) {
-        PolicySortType effective = sortType == null ? PolicySortType.DEADLINE : sortType;
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Policy> policyPage = policyRepository.findAllByFilters(regionCode, category, status, effective, pageable);
+        Page<Policy> policyPage = policyRepository.findAllByFilters(regionCode, category, status, pageable);
 
         return toPageResult(policyPage);
     }
@@ -46,10 +44,10 @@ public class PolicyQueryService {
         return PolicyDetailResult.from(policy, sourceUrl);
     }
 
-    public PolicyPageResult searchPoliciesByKeyword(String keyword, int page, int size) {
+    public PolicyPageResult searchPoliciesByKeyword(String keyword, PolicyStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Policy> policyPage = policyRepository.searchByKeyword(keyword, PolicySortType.DEADLINE, pageable);
+        Page<Policy> policyPage = policyRepository.searchByKeyword(keyword, status, pageable);
 
         return toPageResult(policyPage);
     }

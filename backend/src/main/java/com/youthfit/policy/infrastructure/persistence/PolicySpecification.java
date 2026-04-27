@@ -2,10 +2,9 @@ package com.youthfit.policy.infrastructure.persistence;
 
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
-import com.youthfit.policy.domain.model.PolicySortType;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -18,12 +17,12 @@ import java.util.List;
 public final class PolicySpecification {
 
     private static final LocalDate FAR_FUTURE = LocalDate.of(9999, 12, 31);
+    private static final LocalDate FAR_PAST = LocalDate.of(1, 1, 1);
 
     private PolicySpecification() {
     }
 
-    public static Specification<Policy> withFiltersAndSort(String regionCode, Category category,
-                                                            PolicyStatus status, PolicySortType sortType) {
+    public static Specification<Policy> withFilters(String regionCode, Category category, PolicyStatus status) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -37,43 +36,48 @@ public final class PolicySpecification {
                 predicates.add(cb.equal(root.get("status"), status));
             }
 
-            applyOrder(root, query, cb, sortType);
+            applyOrder(root, query, cb, status);
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
-    public static Specification<Policy> withKeywordAndSort(String keyword, PolicySortType sortType) {
+    public static Specification<Policy> withKeyword(String keyword, PolicyStatus status) {
         return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
             String pattern = "%" + keyword.toLowerCase() + "%";
-            Predicate match = cb.or(
+            predicates.add(cb.or(
                     cb.like(cb.lower(root.get("title")), pattern),
                     cb.like(cb.lower(root.get("summary")), pattern)
-            );
+            ));
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
 
-            applyOrder(root, query, cb, sortType);
+            applyOrder(root, query, cb, status);
 
-            return match;
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
-    private static void applyOrder(Root<Policy> root, jakarta.persistence.criteria.CriteriaQuery<?> query,
-                                   CriteriaBuilder cb, PolicySortType sortType) {
-        if (sortType == null || query == null) {
+    private static void applyOrder(Root<Policy> root, CriteriaQuery<?> query,
+                                   CriteriaBuilder cb, PolicyStatus status) {
+        if (query == null) {
             return;
         }
         Class<?> resultType = query.getResultType();
         if (resultType == Long.class || resultType == long.class) {
             return; // count query
         }
-        query.orderBy(buildOrders(root, cb, sortType));
+        query.orderBy(buildOrders(root, cb, status));
     }
 
-    private static List<Order> buildOrders(Root<Policy> root, CriteriaBuilder cb, PolicySortType type) {
-        return switch (type) {
-            case LATEST -> List.of(cb.desc(root.get("createdAt")));
-            case DEADLINE -> List.of(
-                    cb.asc(statusWeight(root, cb)),
+    private static List<Order> buildOrders(Root<Policy> root, CriteriaBuilder cb, PolicyStatus status) {
+        if (status == null) {
+            return List.of(cb.desc(root.get("createdAt")));
+        }
+        return switch (status) {
+            case OPEN -> List.of(
                     cb.asc(cb.coalesce(root.get("applyEnd"), FAR_FUTURE)),
                     cb.desc(root.get("createdAt"))
             );
@@ -81,14 +85,10 @@ public final class PolicySpecification {
                     cb.asc(cb.coalesce(root.get("applyStart"), FAR_FUTURE)),
                     cb.desc(root.get("createdAt"))
             );
+            case CLOSED -> List.of(
+                    cb.desc(cb.coalesce(root.get("applyEnd"), FAR_PAST)),
+                    cb.desc(root.get("createdAt"))
+            );
         };
-    }
-
-    private static Expression<Integer> statusWeight(Root<Policy> root, CriteriaBuilder cb) {
-        return cb.<Integer>selectCase()
-                .when(cb.equal(root.get("status"), PolicyStatus.OPEN), 0)
-                .when(cb.equal(root.get("status"), PolicyStatus.UPCOMING), 1)
-                .otherwise(2)
-                .as(Integer.class);
     }
 }

@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,7 +55,7 @@ class PolicyControllerTest {
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
@@ -67,11 +68,11 @@ class PolicyControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/policies - 필터 파라미터를 전달할 수 있다")
+    @DisplayName("GET /api/v1/policies - 필터 파라미터(status 포함)를 전달할 수 있다")
     void findPolicies_withFilters_returns200() throws Exception {
         // given
         PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), any(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
@@ -83,6 +84,22 @@ class PolicyControllerTest {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
+
+        then(policyQueryService).should()
+                .findPoliciesByFilters(eq("11"), eq(Category.JOBS), eq(PolicyStatus.OPEN), eq(0), eq(10));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/policies - sortType 파라미터는 더 이상 사용되지 않으며 무시된다")
+    void findPolicies_legacySortTypeParam_isIgnored() throws Exception {
+        // given
+        PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
+        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
+                .willReturn(pageResult);
+
+        // when & then — sortType 파라미터가 있어도 200 응답
+        mockMvc.perform(get("/api/v1/policies").param("sortType", "DEADLINE"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -114,8 +131,8 @@ class PolicyControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/policies/search - 키워드로 검색한다")
-    void searchPolicies_returns200WithResults() throws Exception {
+    @DisplayName("GET /api/v1/policies/search - 키워드만 전달하면 status는 null로 위임된다")
+    void searchPolicies_keywordOnly_passesNullStatus() throws Exception {
         // given
         PolicySummaryResult summary = new PolicySummaryResult(
                 1L, "청년 취업 지원", "요약", Category.JOBS, "11",
@@ -123,13 +140,27 @@ class PolicyControllerTest {
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
-        given(policyQueryService.searchPoliciesByKeyword(eq("취업"), anyInt(), anyInt()))
+        given(policyQueryService.searchPoliciesByKeyword(eq("취업"), isNull(), anyInt(), anyInt()))
+                .willReturn(pageResult);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/policies/search").param("keyword", "취업"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("청년 취업 지원"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/policies/search - status를 함께 전달하면 그대로 서비스에 위임된다")
+    void searchPolicies_keywordWithStatus_passesStatus() throws Exception {
+        // given
+        PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
+        given(policyQueryService.searchPoliciesByKeyword(eq("취업"), eq(PolicyStatus.OPEN), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
         mockMvc.perform(get("/api/v1/policies/search")
-                        .param("keyword", "취업"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].title").value("청년 취업 지원"));
+                        .param("keyword", "취업")
+                        .param("status", "OPEN"))
+                .andExpect(status().isOk());
     }
 }
