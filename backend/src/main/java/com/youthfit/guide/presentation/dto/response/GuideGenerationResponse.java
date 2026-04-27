@@ -4,15 +4,15 @@ import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 
 public record GuideGenerationResponse(
         Long policyId,
-        boolean generated,
-        String reason
+        boolean regenerated,
+        String message
 ) {
 
     public static GuideGenerationResponse from(GuideGenerationResult result) {
         return new GuideGenerationResponse(
                 result.policyId(),
-                result.generated(),
-                result.reason()
+                result.regenerated(),
+                result.message()
         );
     }
 }

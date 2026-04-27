@@ -76,11 +76,33 @@ export interface PolicyPage {
 
 /* ── Guide ── */
 
+export type GuideSourceField =
+  | 'SUPPORT_TARGET'
+  | 'SELECTION_CRITERIA'
+  | 'SUPPORT_CONTENT'
+  | 'BODY';
+
+export interface GuideGroup {
+  label: string | null;
+  items: string[];
+}
+
+export interface GuidePairedSection {
+  groups: GuideGroup[];
+}
+
+export interface GuidePitfall {
+  text: string;
+  sourceField: GuideSourceField;
+}
+
 export interface Guide {
-  id: number;
   policyId: number;
-  summaryHtml: string;
-  createdAt: string;
+  oneLineSummary: string;
+  target: GuidePairedSection | null;
+  criteria: GuidePairedSection | null;
+  content: GuidePairedSection | null;
+  pitfalls: GuidePitfall[];
   updatedAt: string;
 }
 

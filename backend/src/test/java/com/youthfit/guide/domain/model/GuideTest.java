@@ -1,60 +1,59 @@
 package com.youthfit.guide.domain.model;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DisplayName("Guide Entity")
 class GuideTest {
 
-    @Nested
-    @DisplayName("hasChanged - 소스 변경 감지")
-    class HasChanged {
-
-        @Test
-        @DisplayName("해시가 다르면 변경된 것으로 판단한다")
-        void differentHash_returnsTrue() {
-            // given
-            Guide guide = createMockGuide("hash-v1");
-
-            // when & then
-            assertThat(guide.hasChanged("hash-v2")).isTrue();
-        }
-
-        @Test
-        @DisplayName("해시가 같으면 변경되지 않은 것으로 판단한다")
-        void sameHash_returnsFalse() {
-            // given
-            Guide guide = createMockGuide("hash-v1");
-
-            // when & then
-            assertThat(guide.hasChanged("hash-v1")).isFalse();
-        }
+    private GuideContent sampleContent(String summary) {
+        GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
+        return new GuideContent(
+                summary,
+                new GuidePairedSection(List.of(group)),
+                null, null, List.of());
     }
 
     @Test
-    @DisplayName("가이드를 재생성하면 내용과 해시가 갱신된다")
-    void regenerate_updatesContentAndHash() {
-        // given
-        Guide guide = createMockGuide("old-hash");
+    void 신규_가이드_생성() {
+        GuideContent content = sampleContent("청년 월세 지원");
+        Guide guide = Guide.builder()
+                .policyId(1L)
+                .content(content)
+                .sourceHash("hash1")
+                .build();
 
-        // when
-        guide.regenerate("<p>새로운 요약</p>", "new-hash");
-
-        // then
-        assertThat(guide.getSummaryHtml()).isEqualTo("<p>새로운 요약</p>");
-        assertThat(guide.getSourceHash()).isEqualTo("new-hash");
+        assertThat(guide.getPolicyId()).isEqualTo(1L);
+        assertThat(guide.getContent().oneLineSummary()).isEqualTo("청년 월세 지원");
+        assertThat(guide.getSourceHash()).isEqualTo("hash1");
     }
 
-    // ── 헬퍼 메서드 ──
-
-    private Guide createMockGuide(String sourceHash) {
-        return Guide.builder()
+    @Test
+    void hasChanged는_해시가_다르면_true() {
+        Guide guide = Guide.builder()
                 .policyId(1L)
-                .summaryHtml("<p>기존 요약</p>")
-                .sourceHash(sourceHash)
+                .content(sampleContent("요약"))
+                .sourceHash("hash1")
                 .build();
+
+        assertThat(guide.hasChanged("hash2")).isTrue();
+        assertThat(guide.hasChanged("hash1")).isFalse();
+    }
+
+    @Test
+    void regenerate는_콘텐츠와_해시를_갱신() {
+        Guide guide = Guide.builder()
+                .policyId(1L)
+                .content(sampleContent("이전"))
+                .sourceHash("oldHash")
+                .build();
+
+        GuideContent newContent = sampleContent("이후");
+        guide.regenerate(newContent, "newHash");
+
+        assertThat(guide.getContent().oneLineSummary()).isEqualTo("이후");
+        assertThat(guide.getSourceHash()).isEqualTo("newHash");
     }
 }

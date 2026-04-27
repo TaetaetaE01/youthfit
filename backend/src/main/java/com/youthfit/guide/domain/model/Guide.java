@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -20,16 +22,17 @@ public class Guide extends BaseTimeEntity {
     @Column(name = "policy_id", nullable = false, unique = true)
     private Long policyId;
 
-    @Column(name = "summary_html", nullable = false, columnDefinition = "TEXT")
-    private String summaryHtml;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "content", nullable = false, columnDefinition = "jsonb")
+    private GuideContent content;
 
     @Column(name = "source_hash", nullable = false, length = 64)
     private String sourceHash;
 
     @Builder
-    private Guide(Long policyId, String summaryHtml, String sourceHash) {
+    private Guide(Long policyId, GuideContent content, String sourceHash) {
         this.policyId = policyId;
-        this.summaryHtml = summaryHtml;
+        this.content = content;
         this.sourceHash = sourceHash;
     }
 
@@ -37,8 +40,8 @@ public class Guide extends BaseTimeEntity {
         return !this.sourceHash.equals(newHash);
     }
 
-    public void regenerate(String summaryHtml, String sourceHash) {
-        this.summaryHtml = summaryHtml;
+    public void regenerate(GuideContent content, String sourceHash) {
+        this.content = content;
         this.sourceHash = sourceHash;
     }
 }

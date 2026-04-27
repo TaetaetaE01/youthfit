@@ -1,6 +1,9 @@
 package com.youthfit.guide.application.port;
 
+import com.youthfit.guide.application.dto.command.GuideGenerationInput;
+import com.youthfit.guide.domain.model.GuideContent;
+
 public interface GuideLlmProvider {
 
-    String generateGuideSummary(String policyTitle, String documentContent);
+    GuideContent generateGuide(GuideGenerationInput input);
 }
