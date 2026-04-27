@@ -9,8 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +22,6 @@ import static org.mockito.Mockito.any;
 
 @DisplayName("PolicySourceRepositoryImpl.findFirstByPolicyIds")
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PolicySourceRepositoryImplTest {
 
     @Mock
@@ -36,10 +33,17 @@ class PolicySourceRepositoryImplTest {
     @Test
     @DisplayName("정책 N개 각각 source 1개 → Map 사이즈 N")
     void multiplePolicies_eachWithOneSource_returnsAllMapped() {
-        Policy p1 = policyWithId(1L);
-        Policy p2 = policyWithId(2L);
-        PolicySource s1 = sourceWithPolicy(10L, p1, SourceType.BOKJIRO_CENTRAL);
-        PolicySource s2 = sourceWithPolicy(20L, p2, SourceType.YOUTH_CENTER);
+        Policy p1 = mock(Policy.class);
+        Policy p2 = mock(Policy.class);
+        given(p1.getId()).willReturn(1L);
+        given(p2.getId()).willReturn(2L);
+
+        PolicySource s1 = mock(PolicySource.class);
+        PolicySource s2 = mock(PolicySource.class);
+        given(s1.getPolicy()).willReturn(p1);
+        given(s1.getSourceType()).willReturn(SourceType.BOKJIRO_CENTRAL);
+        given(s2.getPolicy()).willReturn(p2);
+        given(s2.getSourceType()).willReturn(SourceType.YOUTH_CENTER);
 
         given(jpaRepository.findAllByPolicyIdInOrderByIdAsc(List.of(1L, 2L)))
                 .willReturn(List.of(s1, s2));
@@ -54,9 +58,14 @@ class PolicySourceRepositoryImplTest {
     @Test
     @DisplayName("한 정책에 source 2개 → Map 에는 첫 번째(id 오름차순)만")
     void singlePolicyWithTwoSources_returnsFirstOnly() {
-        Policy p1 = policyWithId(1L);
-        PolicySource first = sourceWithPolicy(10L, p1, SourceType.BOKJIRO_CENTRAL);
-        PolicySource second = sourceWithPolicy(20L, p1, SourceType.YOUTH_CENTER);
+        Policy p1 = mock(Policy.class);
+        given(p1.getId()).willReturn(1L);
+
+        PolicySource first = mock(PolicySource.class);
+        PolicySource second = mock(PolicySource.class);
+        given(first.getId()).willReturn(10L);
+        given(first.getPolicy()).willReturn(p1);
+        given(second.getPolicy()).willReturn(p1);
 
         given(jpaRepository.findAllByPolicyIdInOrderByIdAsc(List.of(1L)))
                 .willReturn(List.of(first, second));
@@ -70,8 +79,11 @@ class PolicySourceRepositoryImplTest {
     @Test
     @DisplayName("source 없는 정책 ID는 Map 에서 누락")
     void policyWithoutSource_isMissingFromMap() {
-        Policy p1 = policyWithId(1L);
-        PolicySource s1 = sourceWithPolicy(10L, p1, SourceType.BOKJIRO_CENTRAL);
+        Policy p1 = mock(Policy.class);
+        given(p1.getId()).willReturn(1L);
+
+        PolicySource s1 = mock(PolicySource.class);
+        given(s1.getPolicy()).willReturn(p1);
 
         given(jpaRepository.findAllByPolicyIdInOrderByIdAsc(List.of(1L, 2L)))
                 .willReturn(List.of(s1));
@@ -92,19 +104,4 @@ class PolicySourceRepositoryImplTest {
         then(jpaRepository).should(never()).findAllByPolicyIdInOrderByIdAsc(any());
     }
 
-    // ── 테스트 헬퍼 ──
-
-    private Policy policyWithId(Long id) {
-        Policy policy = mock(Policy.class);
-        given(policy.getId()).willReturn(id);
-        return policy;
-    }
-
-    private PolicySource sourceWithPolicy(Long sourceId, Policy policy, SourceType sourceType) {
-        PolicySource source = mock(PolicySource.class);
-        given(source.getId()).willReturn(sourceId);
-        given(source.getPolicy()).willReturn(policy);
-        given(source.getSourceType()).willReturn(sourceType);
-        return source;
-    }
 }
