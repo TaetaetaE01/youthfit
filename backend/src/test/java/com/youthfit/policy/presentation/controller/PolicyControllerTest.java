@@ -97,9 +97,12 @@ class PolicyControllerTest {
         given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
-        // when & then — sortType 파라미터가 있어도 200 응답
+        // when & then — sortType 파라미터가 있어도 200 응답이며 서비스 호출에 새어 들어가지 않는다
         mockMvc.perform(get("/api/v1/policies").param("sortType", "DEADLINE"))
                 .andExpect(status().isOk());
+
+        then(policyQueryService).should()
+                .findPoliciesByFilters(isNull(), isNull(), isNull(), eq(0), eq(20));
     }
 
     @Test
