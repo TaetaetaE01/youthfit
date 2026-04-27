@@ -20,4 +20,14 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+    // Transform SVG imports to return a stable string so tests can compare inequality
+    transformMode: { web: [/\.[jt]sx?$/] },
+  },
 })
