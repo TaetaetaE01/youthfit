@@ -63,6 +63,11 @@ public class GuideValidator {
 
     private void appendSection(StringBuilder sb, GuidePairedSection section) {
         if (section == null) return;
-        section.items().forEach(item -> sb.append(item).append(" "));
+        section.groups().forEach(group -> {
+            if (group.label() != null) {
+                sb.append(group.label()).append(" ");
+            }
+            group.items().forEach(item -> sb.append(item).append(" "));
+        });
     }
 }

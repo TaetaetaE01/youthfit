@@ -82,8 +82,13 @@ export type GuideSourceField =
   | 'SUPPORT_CONTENT'
   | 'BODY';
 
-export interface GuidePairedSection {
+export interface GuideGroup {
+  label: string | null;
   items: string[];
+}
+
+export interface GuidePairedSection {
+  groups: GuideGroup[];
 }
 
 export interface GuidePitfall {

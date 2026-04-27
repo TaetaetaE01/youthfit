@@ -23,7 +23,7 @@ export function PairedSection({
 
   return (
     <section id={id} className="mb-6">
-      {easyData && <EasySectionBox title={easyTitle} items={easyData.items} />}
+      {easyData && <EasySectionBox title={easyTitle} groups={easyData.groups} />}
       <div
         className={
           easyData

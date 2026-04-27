@@ -5,6 +5,7 @@ import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
 import com.youthfit.guide.domain.model.GuideContent;
+import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.repository.GuideRepository;
 import com.youthfit.policy.domain.model.Category;
@@ -56,9 +57,10 @@ class GuideGenerationServiceTest {
     }
 
     private GuideContent sampleContent() {
+        GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
         return new GuideContent(
                 "청년 월세 지원",
-                new GuidePairedSection(List.of("만 19~34세")),
+                new GuidePairedSection(List.of(group)),
                 null, null, List.of());
     }
 

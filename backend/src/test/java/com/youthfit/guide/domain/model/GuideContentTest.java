@@ -38,7 +38,8 @@ class GuideContentTest {
 
     @Test
     void 정상_생성() {
-        GuidePairedSection target = new GuidePairedSection(List.of("만 19~34세"));
+        GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
+        GuidePairedSection target = new GuidePairedSection(List.of(group));
         GuidePitfall pitfall = new GuidePitfall("월세 60만원 초과 제외", GuideSourceField.SUPPORT_TARGET);
 
         GuideContent content = new GuideContent(
@@ -46,7 +47,7 @@ class GuideContentTest {
                 target, null, null,
                 List.of(pitfall));
 
-        assertThat(content.target().items()).containsExactly("만 19~34세");
+        assertThat(content.target().groups().get(0).items()).containsExactly("만 19~34세");
         assertThat(content.pitfalls()).hasSize(1);
     }
 }

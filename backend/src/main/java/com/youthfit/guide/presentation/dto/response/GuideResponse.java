@@ -2,8 +2,10 @@ package com.youthfit.guide.presentation.dto.response;
 
 import com.youthfit.guide.application.dto.result.GuideResult;
 import com.youthfit.guide.domain.model.GuideContent;
+import com.youthfit.guide.domain.model.GuidePairedSection;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record GuideResponse(
         Long policyId,
@@ -11,11 +13,13 @@ public record GuideResponse(
         PairedDto target,
         PairedDto criteria,
         PairedDto content,
-        java.util.List<PitfallDto> pitfalls,
+        List<PitfallDto> pitfalls,
         LocalDateTime updatedAt
 ) {
 
-    public record PairedDto(java.util.List<String> items) {}
+    public record PairedDto(List<GroupDto> groups) {}
+
+    public record GroupDto(String label, List<String> items) {}
 
     public record PitfallDto(String text, String sourceField) {}
 
@@ -24,13 +28,21 @@ public record GuideResponse(
         return new GuideResponse(
                 result.policyId(),
                 c.oneLineSummary(),
-                c.target() == null ? null : new PairedDto(c.target().items()),
-                c.criteria() == null ? null : new PairedDto(c.criteria().items()),
-                c.content() == null ? null : new PairedDto(c.content().items()),
+                toPairedDto(c.target()),
+                toPairedDto(c.criteria()),
+                toPairedDto(c.content()),
                 c.pitfalls().stream()
                         .map(p -> new PitfallDto(p.text(), p.sourceField().name()))
                         .toList(),
                 result.updatedAt()
         );
+    }
+
+    private static PairedDto toPairedDto(GuidePairedSection section) {
+        if (section == null) return null;
+        List<GroupDto> groups = section.groups().stream()
+                .map(g -> new GroupDto(g.label(), g.items()))
+                .toList();
+        return new PairedDto(groups);
     }
 }

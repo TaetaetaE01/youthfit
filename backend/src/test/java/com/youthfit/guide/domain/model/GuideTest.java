@@ -9,9 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GuideTest {
 
     private GuideContent sampleContent(String summary) {
+        GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
         return new GuideContent(
                 summary,
-                new GuidePairedSection(List.of("만 19~34세")),
+                new GuidePairedSection(List.of(group)),
                 null, null, List.of());
     }
 

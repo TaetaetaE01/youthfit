@@ -14,12 +14,16 @@ class OpenAiChatClientTest {
     @Mock OpenAiChatProperties properties;
 
     @Test
-    void parseResponse_정상_JSON을_파싱() {
+    void parseResponse_단일그룹_라벨없는_paired_파싱() {
         OpenAiChatClient client = new OpenAiChatClient(properties);
         String json = """
                 {
                   "oneLineSummary": "만 19~34세 청년 월세 지원",
-                  "target": { "items": ["만 19~34세", "본인 명의 계약자"] },
+                  "target": {
+                    "groups": [
+                      { "label": null, "items": ["만 19~34세", "본인 명의 계약자"] }
+                    ]
+                  },
                   "criteria": null,
                   "content": null,
                   "pitfalls": [
@@ -29,9 +33,35 @@ class OpenAiChatClientTest {
                 """;
         GuideContent content = client.parseResponse(json);
         assertThat(content.oneLineSummary()).isEqualTo("만 19~34세 청년 월세 지원");
-        assertThat(content.target().items()).containsExactly("만 19~34세", "본인 명의 계약자");
+        assertThat(content.target().groups()).hasSize(1);
+        assertThat(content.target().groups().get(0).label()).isNull();
+        assertThat(content.target().groups().get(0).items()).containsExactly("만 19~34세", "본인 명의 계약자");
         assertThat(content.criteria()).isNull();
         assertThat(content.pitfalls()).hasSize(1);
         assertThat(content.pitfalls().get(0).text()).isEqualTo("월세 60만원 초과 제외");
+    }
+
+    @Test
+    void parseResponse_라벨있는_여러그룹_paired_파싱() {
+        OpenAiChatClient client = new OpenAiChatClient(properties);
+        String json = """
+                {
+                  "oneLineSummary": "공공분양",
+                  "target": null,
+                  "criteria": {
+                    "groups": [
+                      { "label": "일반공급 - 소득 기준", "items": ["a", "b"] },
+                      { "label": "특별공급 - 소득 기준", "items": ["c"] }
+                    ]
+                  },
+                  "content": null,
+                  "pitfalls": []
+                }
+                """;
+        GuideContent content = client.parseResponse(json);
+        assertThat(content.criteria().groups()).hasSize(2);
+        assertThat(content.criteria().groups().get(0).label()).isEqualTo("일반공급 - 소득 기준");
+        assertThat(content.criteria().groups().get(0).items()).containsExactly("a", "b");
+        assertThat(content.criteria().groups().get(1).label()).isEqualTo("특별공급 - 소득 기준");
     }
 }
