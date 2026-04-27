@@ -32,6 +32,8 @@ public record PolicyDetailResult(
         List<Attachment> attachments,
         List<ReferenceSite> referenceSites,
         List<ApplyMethod> applyMethods,
+        SourceType sourceType,
+        String sourceLabel,
         String sourceUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -54,7 +56,10 @@ public record PolicyDetailResult(
         }
     }
 
-    public static PolicyDetailResult from(Policy policy, String sourceUrl) {
+    public static PolicyDetailResult from(Policy policy, PolicySource source) {
+        SourceType sourceType = source != null ? source.getSourceType() : null;
+        String sourceLabel = sourceType != null ? sourceType.getLabel() : null;
+        String sourceUrl = source != null ? source.getSourceUrl() : null;
         return new PolicyDetailResult(
                 policy.getId(),
                 policy.getTitle(),
@@ -80,6 +85,8 @@ public record PolicyDetailResult(
                 policy.getAttachments().stream().map(Attachment::from).toList(),
                 policy.getReferenceSites().stream().map(ReferenceSite::from).toList(),
                 policy.getApplyMethods().stream().map(ApplyMethod::from).toList(),
+                sourceType,
+                sourceLabel,
                 sourceUrl,
                 policy.getCreatedAt(),
                 policy.getUpdatedAt()

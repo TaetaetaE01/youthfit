@@ -5,6 +5,9 @@ import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -24,6 +27,19 @@ public class PolicySourceRepositoryImpl implements PolicySourceRepository {
     @Override
     public Optional<PolicySource> findFirstByPolicyId(Long policyId) {
         return jpaRepository.findFirstByPolicyIdOrderByIdAsc(policyId);
+    }
+
+    @Override
+    public Map<Long, PolicySource> findFirstByPolicyIds(List<Long> policyIds) {
+        if (policyIds == null || policyIds.isEmpty()) {
+            return Map.of();
+        }
+        List<PolicySource> all = jpaRepository.findAllByPolicyIdInOrderByIdAsc(policyIds);
+        Map<Long, PolicySource> result = new HashMap<>();
+        for (PolicySource source : all) {
+            result.putIfAbsent(source.getPolicy().getId(), source);
+        }
+        return result;
     }
 
     @Override

@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/cn';
 import { getEffectiveStatus, formatPolicyPeriod } from '@/lib/policyStatus';
 import { CategoryBadge, StatusBadge } from '@/components/policy/PolicyCard';
+import SourceBadge from '@/components/policy/SourceBadge';
 import FormattedPolicyText from '@/components/policy/FormattedPolicyText';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
 import NotificationPromptSheet from '@/components/policy/NotificationPromptSheet';
@@ -118,6 +119,7 @@ function PolicyHeader({
       <div className="mb-3 flex items-center gap-2">
         <CategoryBadge category={policy.category} />
         <StatusBadge status={getEffectiveStatus(policy)} />
+        <SourceBadge sourceType={policy.sourceType} sourceLabel={policy.sourceLabel} size="md" />
         <button
           onClick={onBookmarkToggle}
           className="ml-auto flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-50"

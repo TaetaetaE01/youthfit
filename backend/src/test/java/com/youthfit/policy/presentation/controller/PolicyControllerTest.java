@@ -10,6 +10,7 @@ import com.youthfit.policy.application.service.PolicyQueryService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.SourceType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,7 @@ class PolicyControllerTest {
         PolicySummaryResult summary = new PolicySummaryResult(
                 1L, "청년 취업 지원", "요약", Category.JOBS, "11",
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
-                2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시");
+                2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시", null, null);
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
@@ -120,6 +121,7 @@ class PolicyControllerTest {
                 java.util.List.of(),
                 java.util.List.of(),
                 java.util.List.of(),
+                null, null,
                 "https://youth.seoul.go.kr/policy/1",
                 now, now);
 
@@ -139,7 +141,7 @@ class PolicyControllerTest {
         // given
         PolicySummaryResult summary = new PolicySummaryResult(
                 1L, "청년 취업 지원", "요약", Category.JOBS, "11",
-                null, null, 2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시");
+                null, null, 2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시", null, null);
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
