@@ -4,17 +4,26 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import jakarta.persistence.criteria.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
 
 @DisplayName("PolicySpecification")
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PolicySpecificationTest {
 
     @SuppressWarnings("unchecked")
@@ -24,6 +33,27 @@ class PolicySpecificationTest {
     private final CriteriaQuery<Object> query = mock(CriteriaQuery.class);
 
     private final CriteriaBuilder cb = mock(CriteriaBuilder.class);
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @BeforeEach
+    void setUpSelectCaseChain() {
+        // selectCase chain (used by effectiveStatusExpr).
+        // Use RETURNS_SELF so Case.when()/otherwise() chain returns the same mock automatically.
+        CriteriaBuilder.Case caseExpr = mock(CriteriaBuilder.Case.class, RETURNS_SELF);
+        Expression<String> caseAs = mock(Expression.class);
+        doReturn(caseExpr).when(cb).selectCase();
+        doReturn(caseAs).when(caseExpr).as(String.class);
+        // status equality predicate (against the case expression)
+        given(cb.equal(eq(caseAs), anyString())).willReturn(mock(Predicate.class));
+
+        // predicates used inside selectCase WHEN clauses
+        given(cb.isNotNull(any(Expression.class))).willReturn(mock(Predicate.class));
+        given(cb.lessThan(any(Expression.class), any(java.time.LocalDate.class))).willReturn(mock(Predicate.class));
+        given(cb.greaterThan(any(Expression.class), any(java.time.LocalDate.class))).willReturn(mock(Predicate.class));
+        given(cb.lessThan(any(Expression.class), any(Integer.class))).willReturn(mock(Predicate.class));
+        given(cb.equal(any(Expression.class), any(Integer.class))).willReturn(mock(Predicate.class));
+        given(cb.and(any(Predicate.class), any(Predicate.class))).willReturn(mock(Predicate.class));
+    }
 
     @Test
     @DisplayName("withFilters: 모든 필터가 null이면 빈 조건으로 AND를 생성한다")
@@ -76,7 +106,6 @@ class PolicySpecificationTest {
     @DisplayName("withFilters: status가 OPEN이면 applyEnd asc + createdAt desc 정렬을 적용한다")
     void withFilters_open_appliesDeadlineAscOrdering() {
         // given
-        Path<Object> statusPath = mock(Path.class);
         Path<Object> applyEndPath = mock(Path.class);
         Path<Object> createdAtPath = mock(Path.class);
         Expression<Object> coalesced = mock(Expression.class);
@@ -85,10 +114,8 @@ class PolicySpecificationTest {
         Predicate combined = mock(Predicate.class);
 
         given(query.getResultType()).willReturn((Class) Policy.class);
-        given(root.get("status")).willReturn(statusPath);
         given(root.get("applyEnd")).willReturn(applyEndPath);
         given(root.get("createdAt")).willReturn(createdAtPath);
-        given(cb.equal(statusPath, PolicyStatus.OPEN)).willReturn(mock(Predicate.class));
         given(cb.coalesce(eq(applyEndPath), any(java.time.LocalDate.class))).willReturn(coalesced);
         given(cb.asc(coalesced)).willReturn(ascOrder);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
@@ -109,7 +136,6 @@ class PolicySpecificationTest {
     @DisplayName("withFilters: status가 UPCOMING이면 applyStart asc + createdAt desc 정렬을 적용한다")
     void withFilters_upcoming_appliesApplyStartAscOrdering() {
         // given
-        Path<Object> statusPath = mock(Path.class);
         Path<Object> applyStartPath = mock(Path.class);
         Path<Object> createdAtPath = mock(Path.class);
         Expression<Object> coalesced = mock(Expression.class);
@@ -117,10 +143,8 @@ class PolicySpecificationTest {
         Order descOrder = mock(Order.class);
 
         given(query.getResultType()).willReturn((Class) Policy.class);
-        given(root.get("status")).willReturn(statusPath);
         given(root.get("applyStart")).willReturn(applyStartPath);
         given(root.get("createdAt")).willReturn(createdAtPath);
-        given(cb.equal(statusPath, PolicyStatus.UPCOMING)).willReturn(mock(Predicate.class));
         given(cb.coalesce(eq(applyStartPath), any(java.time.LocalDate.class))).willReturn(coalesced);
         given(cb.asc(coalesced)).willReturn(ascOrder);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
@@ -140,7 +164,6 @@ class PolicySpecificationTest {
     @DisplayName("withFilters: status가 CLOSED이면 applyEnd desc + createdAt desc 정렬을 적용한다")
     void withFilters_closed_appliesApplyEndDescOrdering() {
         // given
-        Path<Object> statusPath = mock(Path.class);
         Path<Object> applyEndPath = mock(Path.class);
         Path<Object> createdAtPath = mock(Path.class);
         Expression<Object> coalesced = mock(Expression.class);
@@ -148,10 +171,8 @@ class PolicySpecificationTest {
         Order descCreatedOrder = mock(Order.class);
 
         given(query.getResultType()).willReturn((Class) Policy.class);
-        given(root.get("status")).willReturn(statusPath);
         given(root.get("applyEnd")).willReturn(applyEndPath);
         given(root.get("createdAt")).willReturn(createdAtPath);
-        given(cb.equal(statusPath, PolicyStatus.CLOSED)).willReturn(mock(Predicate.class));
         given(cb.coalesce(eq(applyEndPath), any(java.time.LocalDate.class))).willReturn(coalesced);
         given(cb.desc(coalesced)).willReturn(descEndOrder);
         given(cb.desc(createdAtPath)).willReturn(descCreatedOrder);
@@ -247,7 +268,6 @@ class PolicySpecificationTest {
         // given
         Path<String> titlePath = mock(Path.class);
         Path<String> summaryPath = mock(Path.class);
-        Path<Object> statusPath = mock(Path.class);
         Path<Object> applyEndPath = mock(Path.class);
         Path<Object> createdAtPath = mock(Path.class);
         Expression<Object> coalesced = mock(Expression.class);
@@ -257,13 +277,11 @@ class PolicySpecificationTest {
         given(query.getResultType()).willReturn((Class) Policy.class);
         given(root.<String>get("title")).willReturn(titlePath);
         given(root.<String>get("summary")).willReturn(summaryPath);
-        given(root.get("status")).willReturn(statusPath);
         given(root.get("applyEnd")).willReturn(applyEndPath);
         given(root.get("createdAt")).willReturn(createdAtPath);
         given(cb.lower(any())).willReturn(mock(Expression.class));
         given(cb.like(any(Expression.class), anyString())).willReturn(mock(Predicate.class));
         given(cb.or(any(Predicate.class), any(Predicate.class))).willReturn(mock(Predicate.class));
-        given(cb.equal(statusPath, PolicyStatus.OPEN)).willReturn(mock(Predicate.class));
         given(cb.coalesce(eq(applyEndPath), any(java.time.LocalDate.class))).willReturn(coalesced);
         given(cb.asc(coalesced)).willReturn(ascOrder);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
@@ -275,7 +293,6 @@ class PolicySpecificationTest {
         spec.toPredicate(root, query, cb);
 
         // then
-        then(cb).should().equal(statusPath, PolicyStatus.OPEN);
         then(cb).should().asc(coalesced);
         then(query).should().orderBy(java.util.List.of(ascOrder, descOrder));
     }

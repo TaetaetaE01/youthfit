@@ -5,7 +5,9 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Order;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,7 +35,7 @@ public final class PolicySpecification {
                 predicates.add(cb.equal(root.get("category"), category));
             }
             if (status != null) {
-                predicates.add(cb.equal(root.get("status"), status));
+                predicates.add(cb.equal(effectiveStatusExpr(root, cb), status.name()));
             }
 
             applyOrder(root, query, cb, status);
@@ -51,7 +53,7 @@ public final class PolicySpecification {
                     cb.like(cb.lower(root.get("summary")), pattern)
             ));
             if (status != null) {
-                predicates.add(cb.equal(root.get("status"), status));
+                predicates.add(cb.equal(effectiveStatusExpr(root, cb), status.name()));
             }
 
             applyOrder(root, query, cb, status);
@@ -90,5 +92,32 @@ public final class PolicySpecification {
                     cb.desc(root.get("createdAt"))
             );
         };
+    }
+
+    /**
+     * 정책의 신청기간(applyStart/applyEnd)과 기준연도(referenceYear)로부터 effective status를 도출하는 SQL CASE 식.
+     * frontend/src/lib/policyStatus.ts:23 의 getEffectiveStatus 와 동일한 우선순위.
+     */
+    private static Expression<String> effectiveStatusExpr(Root<Policy> root, CriteriaBuilder cb) {
+        LocalDate today = LocalDate.now();
+        int currentYear = today.getYear();
+
+        Path<LocalDate> applyStart = root.get("applyStart");
+        Path<LocalDate> applyEnd = root.get("applyEnd");
+        Path<Integer> referenceYear = root.get("referenceYear");
+
+        return cb.<String>selectCase()
+                .when(cb.and(cb.isNotNull(applyEnd), cb.lessThan(applyEnd, today)),
+                        PolicyStatus.CLOSED.name())
+                .when(cb.and(cb.isNotNull(applyStart), cb.greaterThan(applyStart, today)),
+                        PolicyStatus.UPCOMING.name())
+                .when(cb.and(cb.isNotNull(applyStart), cb.isNotNull(applyEnd)),
+                        PolicyStatus.OPEN.name())
+                .when(cb.and(cb.isNotNull(referenceYear), cb.lessThan(referenceYear, currentYear)),
+                        PolicyStatus.CLOSED.name())
+                .when(cb.and(cb.isNotNull(referenceYear), cb.equal(referenceYear, currentYear)),
+                        PolicyStatus.OPEN.name())
+                .otherwise(PolicyStatus.UPCOMING.name())
+                .as(String.class);
     }
 }
