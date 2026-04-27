@@ -11,6 +11,8 @@ export type PolicyStatus = 'UPCOMING' | 'OPEN' | 'CLOSED';
 
 export type DetailLevel = 'BASIC' | 'FULL';
 
+export type SourceType = 'YOUTH_SEOUL_CRAWL' | 'BOKJIRO_CENTRAL' | 'YOUTH_CENTER';
+
 export type EligibilityResult = 'LIKELY_ELIGIBLE' | 'UNCERTAIN' | 'LIKELY_INELIGIBLE';
 
 /* ── Policy ── */
@@ -27,6 +29,8 @@ export interface Policy {
   status: PolicyStatus;
   detailLevel: DetailLevel;
   organization: string | null;
+  sourceType: SourceType | null;
+  sourceLabel: string | null;
 }
 
 export interface PolicyAttachment {
