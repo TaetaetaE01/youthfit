@@ -144,15 +144,16 @@ YouthFit 백엔드의 JPA 엔티티 및 테이블 스키마 레퍼런스. 모듈
 ## 3. Guide 모듈 (`com.youthfit.guide.domain.model`)
 
 ### 3.1 Guide — `guide`
-LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개.
+LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아웃(원문 ↔ 쉬운 해석)을 위해 구조화된 JSON으로 저장.
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | policy_id | BIGINT | **unique** |
-| summary_html | TEXT NOT NULL | 구조화된 HTML 가이드 |
-| source_hash | VARCHAR(64) | 생성 시점 원본 해시 |
+| content | JSONB NOT NULL | `oneLineSummary`, `target/criteria/content` 페어드 섹션, `pitfalls` 배열 |
+| source_hash | VARCHAR(64) | Policy 구조화 필드 + referenceYear + 청크 결합 해시 |
 
-- `hasChanged(newHash)` + `regenerate(summaryHtml, newHash)` 로 원본이 바뀐 경우에만 재생성.
+- `hasChanged(newHash)` + `regenerate(content, newHash)` 로 원본이 바뀐 경우에만 재생성.
+- `content` JSON 스키마: `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md` 4.1 참조.
 
 ---
 
