@@ -54,11 +54,12 @@ export function formatPolicyPeriod(
   policy: PolicyLike,
   now: Date = new Date(),
 ): string {
-  const { applyStart, applyEnd } = policy;
+  const { applyStart, applyEnd, referenceYear } = policy;
   const fmt = (d: string) => d.slice(0, 10).replace(/-/g, '.');
   if (!applyStart && !applyEnd) {
     const status = getEffectiveStatus(policy, now);
-    return status === 'CLOSED' ? '마감' : '상시';
+    const label = status === 'CLOSED' ? '마감' : '상시';
+    return referenceYear != null ? `${label} (${referenceYear})` : label;
   }
   if (!applyStart) return `~${fmt(applyEnd!)}`;
   if (!applyEnd) return `${fmt(applyStart)}~`;
