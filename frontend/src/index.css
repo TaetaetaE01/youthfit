@@ -49,6 +49,14 @@
   from { opacity: 1; }
   to { opacity: 0; }
 }
+@keyframes highlight-fade {
+  0% { background-color: rgb(254 240 138); }
+  100% { background-color: transparent; }
+}
+
+.source-highlight {
+  animation: highlight-fade 1.5s ease-out;
+}
 
 @utility animate-float-slow {
   animation: float-slow 8s ease-in-out infinite;
