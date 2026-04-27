@@ -10,12 +10,10 @@ import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBo
 import { useAuthStore } from '@/stores/authStore';
 import type {
   PolicyCategory,
-  PolicySortType,
   PolicyStatus,
 } from '@/types/policy';
 import {
   CATEGORY_LABELS,
-  STATUS_LABELS,
   REGION_OPTIONS,
 } from '@/types/policy';
 
@@ -43,21 +41,15 @@ function SkeletonCard() {
 
 const PAGE_SIZE = 6;
 
-const SORT_OPTIONS: { value: PolicySortType; label: string }[] = [
-  { value: 'DEADLINE', label: '마감 임박순' },
-  { value: 'LATEST', label: '최신순' },
-  { value: 'UPCOMING', label: '모집 시작 임박순' },
+const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
+
+const STATUS_TABS: { value: PolicyStatus; label: string }[] = [
+  { value: 'OPEN', label: '진행중' },
+  { value: 'UPCOMING', label: '예정' },
+  { value: 'CLOSED', label: '마감' },
 ];
 
-const DEFAULT_SORT: PolicySortType = 'DEADLINE';
-const SORT_VALUES = SORT_OPTIONS.map((o) => o.value);
-
-function parseSortType(raw: string | null): PolicySortType {
-  return raw && (SORT_VALUES as string[]).includes(raw) ? (raw as PolicySortType) : DEFAULT_SORT;
-}
-
-const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
-const STATUS_ENTRIES = Object.entries(STATUS_LABELS) as [PolicyStatus, string][];
+const DEFAULT_STATUS: PolicyStatus = 'OPEN';
 
 /* ──────────────────────────────────────────────
    MobileFilterSheet
@@ -67,19 +59,15 @@ function MobileFilterSheet({
   isOpen,
   onClose,
   category,
-  status,
   regionCode,
   onCategoryChange,
-  onStatusChange,
   onRegionChange,
 }: {
   isOpen: boolean;
   onClose: () => void;
   category: PolicyCategory | '';
-  status: PolicyStatus | '';
   regionCode: string;
   onCategoryChange: (v: PolicyCategory | '') => void;
-  onStatusChange: (v: PolicyStatus | '') => void;
   onRegionChange: (v: string) => void;
 }) {
   useEffect(() => {
@@ -135,26 +123,6 @@ function MobileFilterSheet({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="mb-2 text-sm font-semibold text-gray-700">모집 상태</legend>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_ENTRIES.map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => onStatusChange(status === key ? '' : key)}
-                className={cn(
-                  'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
-                  status === key
-                    ? 'border-transparent bg-brand-100 text-indigo-600'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className="mt-5">
           <legend className="mb-2 text-sm font-semibold text-gray-700">지역</legend>
           <select
             value={regionCode}
@@ -178,6 +146,46 @@ function MobileFilterSheet({
           필터 적용
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   StatusTabBar
+   ────────────────────────────────────────────── */
+
+function StatusTabBar({
+  status,
+  onStatusChange,
+}: {
+  status: PolicyStatus;
+  onStatusChange: (next: PolicyStatus) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="정책 상태 필터"
+      className="mb-4 flex w-full gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1"
+    >
+      {STATUS_TABS.map((tab) => {
+        const active = status === tab.value;
+        return (
+          <button
+            key={tab.value}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onStatusChange(tab.value)}
+            className={cn(
+              'min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold transition-colors',
+              active
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900',
+            )}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -302,9 +310,13 @@ export default function PolicyListPage() {
   // Read URL params
   const keyword = searchParams.get('keyword') ?? '';
   const category = (searchParams.get('category') ?? '') as PolicyCategory | '';
-  const status = (searchParams.get('status') ?? '') as PolicyStatus | '';
+  const rawStatus = searchParams.get('status');
+  const status: PolicyStatus = (
+    rawStatus && ['OPEN', 'UPCOMING', 'CLOSED'].includes(rawStatus)
+      ? rawStatus
+      : DEFAULT_STATUS
+  ) as PolicyStatus;
   const regionCode = searchParams.get('regionCode') ?? '';
-  const sortType = parseSortType(searchParams.get('sortType'));
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
 
   // Fetch data via API
@@ -313,7 +325,6 @@ export default function PolicyListPage() {
     category,
     status,
     regionCode: regionCode || undefined,
-    sortType,
     page,
     size: PAGE_SIZE,
   });
@@ -334,6 +345,13 @@ export default function PolicyListPage() {
       });
     },
     [setSearchParams],
+  );
+
+  const handleStatusTabChange = useCallback(
+    (next: PolicyStatus) => {
+      updateParams({ status: next, page: '' });
+    },
+    [updateParams],
   );
 
   const resetFilters = useCallback(() => {
@@ -359,7 +377,6 @@ export default function PolicyListPage() {
   // Active filter badges
   const activeFilters: { key: string; label: string }[] = [];
   if (category) activeFilters.push({ key: 'category', label: CATEGORY_LABELS[category] });
-  if (status) activeFilters.push({ key: 'status', label: STATUS_LABELS[status] });
   if (regionCode) {
     const regionLabel = REGION_OPTIONS.find((r) => r.value === regionCode)?.label;
     if (regionLabel) activeFilters.push({ key: 'regionCode', label: regionLabel });
@@ -370,7 +387,7 @@ export default function PolicyListPage() {
     updateParams({ keyword: inputValue, page: '' });
   };
 
-  const hasActiveQuery = Boolean(keyword || category || status || regionCode);
+  const hasActiveQuery = Boolean(keyword || category || regionCode);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
@@ -406,6 +423,8 @@ export default function PolicyListPage() {
         </button>
       </form>
 
+      <StatusTabBar status={status} onStatusChange={handleStatusTabChange} />
+
       {/* ── Desktop Filters ── */}
       <div className="mb-4 hidden flex-wrap items-center gap-2 md:flex">
         {CATEGORY_ENTRIES.map(([key, label]) => (
@@ -415,23 +434,6 @@ export default function PolicyListPage() {
             className={cn(
               'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
               category === key
-                ? 'border-transparent bg-brand-100 text-indigo-600'
-                : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-
-        <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden="true" />
-
-        {STATUS_ENTRIES.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => updateParams({ status: status === key ? '' : key, page: '' })}
-            className={cn(
-              'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
-              status === key
                 ? 'border-transparent bg-brand-100 text-indigo-600'
                 : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
             )}
@@ -478,10 +480,8 @@ export default function PolicyListPage() {
         isOpen={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
         category={category}
-        status={status}
         regionCode={regionCode}
         onCategoryChange={(v) => updateParams({ category: v, page: '' })}
-        onStatusChange={(v) => updateParams({ status: v, page: '' })}
         onRegionChange={(v) => updateParams({ regionCode: v, page: '' })}
       />
 
@@ -506,7 +506,7 @@ export default function PolicyListPage() {
         </div>
       )}
 
-      {/* ── Result meta + sort ── */}
+      {/* ── Result meta ── */}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-gray-500">
           {data ? (
@@ -517,21 +517,6 @@ export default function PolicyListPage() {
             <span>&nbsp;</span>
           )}
         </p>
-        <select
-          value={sortType}
-          onChange={(e) => {
-            const next = e.target.value as PolicySortType;
-            updateParams({ sortType: next === DEFAULT_SORT ? '' : next, page: '' });
-          }}
-          className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-800 focus:outline-none focus:ring-1 focus:ring-brand-800"
-          aria-label="정렬 기준"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* ── Content area ── */}
