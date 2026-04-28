@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0, JPA + PostgreSQL JSONB, OpenAI Chat API (gpt-4o-mini, structured outputs), JUnit 5 + Mockito (백엔드 테스트), React 19 + TypeScript + TanStack Query + Tailwind (프론트), Vitest (프론트 테스트).
 
-**Spec:** `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-28-easy-policy-interpretation-design.md`
 
 ---
 
@@ -1648,7 +1648,7 @@ LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아
 | source_hash | VARCHAR(64) | Policy 구조화 필드 + referenceYear + 청크 결합 해시 |
 
 - `hasChanged(newHash)` + `regenerate(content, newHash)` 로 원본이 바뀐 경우에만 재생성.
-- `content` JSON 스키마: `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md` 4.1 참조.
+- `content` JSON 스키마: `docs/superpowers/specs/DONE_2026-04-28-easy-policy-interpretation-design.md` 4.1 참조.
 ```
 
 - [ ] **Step 2: 커밋**
@@ -2275,7 +2275,7 @@ psql -h localhost -U youthfit -d youthfit -c "DELETE FROM guide WHERE policy_id=
 
 ## 실행 옵션
 
-Plan 작성 완료. `docs/superpowers/plans/2026-04-28-easy-policy-interpretation.md` 에 저장됨.
+Plan 작성 완료. `docs/superpowers/plans/DONE_2026-04-28-easy-policy-interpretation.md` 에 저장됨.
 
 두 가지 실행 방식:
 

@@ -153,7 +153,7 @@ LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아
 | source_hash | VARCHAR(64) | Policy 구조화 필드 + referenceYear + 청크 결합 해시 |
 
 - `hasChanged(newHash)` + `regenerate(content, newHash)` 로 원본이 바뀐 경우에만 재생성.
-- `content` JSON 스키마: `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md` 4.1 참조.
+- `content` JSON 스키마: `docs/superpowers/specs/DONE_2026-04-28-easy-policy-interpretation-design.md` 4.1 참조.
 
 ---
 

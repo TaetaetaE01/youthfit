@@ -1,6 +1,6 @@
 # 가이드 환산값 결정적 후처리 (IncomeBracketAnnotator) 설계
 
-> 후속: `docs/superpowers/plans/2026-04-28-05-income-bracket-postprocess.md` (예정)
+> 후속: `docs/superpowers/plans/DONE_2026-04-28-05-income-bracket-postprocess.md` (예정)
 > 사이클 번호: `05` (2026-04-28 다섯 번째 사이클 — 네이밍 규칙은 `docs/superpowers/README.md` 참조)
 
 ## 1. 목표

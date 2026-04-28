@@ -1,7 +1,7 @@
 # 첨부 단위 출처 trace (sourceField=ATTACHMENT 확장) — Backlog
 
 > **상태**: backlog (브레인스토밍 전)
-> **연관 spec**: `docs/superpowers/specs/2026-04-28-guide-accuracy-income-bracket-design.md` §14 비범위 "청크-단위 attachment_id trace"
+> **연관 spec**: `docs/superpowers/specs/DONE_2026-04-28-guide-accuracy-income-bracket-design.md` §14 비범위 "청크-단위 attachment_id trace"
 > **연관 사이클**: 가이드 정확도 강화 (highlights/pitfalls 도입) — 이미 머지된 PR
 > **트리거**: 사용자 요청 (2026-04-28 manual smoke 후속)
 

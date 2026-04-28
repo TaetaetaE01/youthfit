@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, JUnit 5 + Mockito, slf4j + logback (테스트 시 `ListAppender` 로 로그 검증), Lombok `@Component` / `@RequiredArgsConstructor`. 신규 라이브러리 0.
 
-**Spec:** `docs/superpowers/specs/2026-04-28-05-income-bracket-postprocess-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-28-05-income-bracket-postprocess-design.md`
 
 ---
 
@@ -1113,8 +1113,8 @@ gh pr create --title "[BE] feat: 가이드 환산값 결정적 후처리 (Income
 - `computeHash` 에 `annotator:v1` 추가 → 기존 가이드 자동 재생성.
 
 ## Spec / Plan
-- spec: `docs/superpowers/specs/2026-04-28-05-income-bracket-postprocess-design.md`
-- plan: `docs/superpowers/plans/2026-04-28-05-income-bracket-postprocess.md`
+- spec: `docs/superpowers/specs/DONE_2026-04-28-05-income-bracket-postprocess-design.md`
+- plan: `docs/superpowers/plans/DONE_2026-04-28-05-income-bracket-postprocess.md`
 
 ## Test plan
 - [x] `IncomeBracketAnnotatorTest` 단위 테스트 15개 PASS

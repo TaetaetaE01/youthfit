@@ -10,7 +10,7 @@
 
 **Tech Stack:** Java 21 / Spring Boot 4 / JPA / JUnit 5 / Mockito / React 19 / TypeScript / Tailwind / Vitest
 
-**Spec:** `docs/superpowers/specs/2026-04-28-policy-source-badge-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-28-policy-source-badge-design.md`
 
 ---
 

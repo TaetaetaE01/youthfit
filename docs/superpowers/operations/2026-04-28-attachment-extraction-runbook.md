@@ -1,7 +1,7 @@
 # 첨부파일 추출 / 임베딩 파이프라인 운영 가이드
 
-> 관련 spec: `docs/superpowers/specs/2026-04-28-attachment-extraction-pipeline-design.md`
-> 관련 plan: `docs/superpowers/plans/2026-04-28-attachment-extraction-pipeline.md`
+> 관련 spec: `docs/superpowers/specs/DONE_2026-04-28-attachment-extraction-pipeline-design.md`
+> 관련 plan: `docs/superpowers/plans/DONE_2026-04-28-attachment-extraction-pipeline.md`
 
 ## 환경변수
 
