@@ -38,6 +38,7 @@ import java.util.Set;
 public class GuideGenerationService {
 
     static final String PROMPT_VERSION = "v3";  // 프롬프트 / 스키마 변경 시 증분
+    static final String ANNOTATOR_VERSION = "v1";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
@@ -47,6 +48,7 @@ public class GuideGenerationService {
     private final GuideLlmProvider guideLlmProvider;
     private final GuideValidator guideValidator;
     private final IncomeBracketReferenceLoader referenceLoader;
+    private final IncomeBracketAnnotator incomeBracketAnnotator;
     private final CostGuard costGuard;
 
     @Transactional(readOnly = true)
@@ -78,14 +80,14 @@ public class GuideGenerationService {
 
         GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, reference);
         GuideContent firstResponse = guideLlmProvider.generateGuide(input);
-        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse, input.combinedSourceText());
+        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse);
 
         GuideContent finalResponse;
         if (firstReport.hasRetryTrigger()) {
             log.info("가이드 검증 위반으로 재시도: policyId={}, violations={}",
                     command.policyId(), firstReport.feedbackMessages());
             GuideContent secondResponse = guideLlmProvider.regenerateWithFeedback(input, firstReport.feedbackMessages());
-            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse, input.combinedSourceText());
+            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse);
 
             if (secondReport.violationCount() < firstReport.violationCount()) {
                 finalResponse = secondResponse;
@@ -100,6 +102,9 @@ public class GuideGenerationService {
         } else {
             finalResponse = firstResponse;
         }
+
+        // 결정성 후처리: 중위소득/차상위 비율을 만원 기준 환산값으로 보강
+        finalResponse = incomeBracketAnnotator.annotate(finalResponse, reference, command.policyId());
 
         // 검증 4: sourceField 유효성 (해당 항목 폐기)
         finalResponse = filterInvalidSourceFields(finalResponse, policy);
@@ -157,7 +162,7 @@ public class GuideGenerationService {
 
     /** 테스트 노출용. computeHash는 주입된 의존성을 사용하지 않으므로 null 인자로 인스턴스 생성 안전. */
     static String computeHashForTest(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference reference) {
-        return new GuideGenerationService(null, null, null, null, null, null, null)
+        return new GuideGenerationService(null, null, null, null, null, null, null, null)
                 .computeHash(policy, chunks, reference);
     }
 
@@ -175,6 +180,7 @@ public class GuideGenerationService {
             sb.append("|ref:").append(reference.year()).append(":").append(reference.version());
         }
         sb.append("|prompt:").append(PROMPT_VERSION);
+        sb.append("|annotator:").append(ANNOTATOR_VERSION);
         return sha256(sb.toString());
     }
 

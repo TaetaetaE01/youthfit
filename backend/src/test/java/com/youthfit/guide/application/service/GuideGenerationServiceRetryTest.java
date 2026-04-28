@@ -28,7 +28,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +48,9 @@ class GuideGenerationServiceRetryTest {
         PolicyDocumentRepository docRepo = mock(PolicyDocumentRepository.class);
         GuideLlmProvider llm = mock(GuideLlmProvider.class);
         IncomeBracketReferenceLoader refLoader = mock(IncomeBracketReferenceLoader.class);
+        IncomeBracketAnnotator annotator = mock(IncomeBracketAnnotator.class);
+        when(annotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         Policy policy = Policy.builder()
                 .title("X")
@@ -68,7 +73,7 @@ class GuideGenerationServiceRetryTest {
         when(llm.regenerateWithFeedback(any(), any())).thenReturn(secondResponse);
 
         GuideGenerationService service = new GuideGenerationService(
-                guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, allowAllCostGuard());
+                guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard());
 
         service.generateGuide(new GenerateGuideCommand(1L, "X", "x"));
 
@@ -86,6 +91,9 @@ class GuideGenerationServiceRetryTest {
         PolicyDocumentRepository docRepo = mock(PolicyDocumentRepository.class);
         GuideLlmProvider llm = mock(GuideLlmProvider.class);
         IncomeBracketReferenceLoader refLoader = mock(IncomeBracketReferenceLoader.class);
+        IncomeBracketAnnotator annotator = mock(IncomeBracketAnnotator.class);
+        when(annotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         Policy policy = Policy.builder()
                 .title("X")
@@ -104,13 +112,49 @@ class GuideGenerationServiceRetryTest {
         when(llm.generateGuide(any())).thenReturn(first);
         when(llm.regenerateWithFeedback(any(), any())).thenReturn(second);
 
-        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, allowAllCostGuard())
+        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard())
                 .generateGuide(new GenerateGuideCommand(1L, "X", "x"));
 
         ArgumentCaptor<Guide> savedCaptor = ArgumentCaptor.forClass(Guide.class);
         verify(guideRepo).save(savedCaptor.capture());
         // 동률이거나 1차가 적으면 1차 우선 — first(highlights 1) 가 second(0) 보다 violation 적음
         assertThat(savedCaptor.getValue().getContent().highlights()).hasSize(1);
+    }
+
+    @Test
+    void retry_후_finalResponse에_annotate를_1회_호출한다() {
+        GuideRepository guideRepo = mock(GuideRepository.class);
+        PolicyRepository policyRepo = mock(PolicyRepository.class);
+        PolicyDocumentRepository docRepo = mock(PolicyDocumentRepository.class);
+        GuideLlmProvider llm = mock(GuideLlmProvider.class);
+        IncomeBracketReferenceLoader refLoader = mock(IncomeBracketReferenceLoader.class);
+        IncomeBracketAnnotator annotator = mock(IncomeBracketAnnotator.class);
+        when(annotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        Policy policy = Policy.builder()
+                .title("X")
+                .referenceYear(2025)
+                .body("정책 본문")
+                .build();
+        ReflectionTestUtils.setField(policy, "id", 1L);
+        when(policyRepo.findById(1L)).thenReturn(Optional.of(policy));
+        when(docRepo.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(refLoader.findByYear(2025)).thenReturn(Optional.of(refOf()));
+        when(guideRepo.findByPolicyId(1L)).thenReturn(Optional.empty());
+
+        // 1차 위반(highlights 1) → 2차 통과(highlights 3) 시나리오
+        GuideContent first = contentWithHighlights(1);
+        GuideContent second = contentWithHighlights(3);
+        when(llm.generateGuide(any())).thenReturn(first);
+        when(llm.regenerateWithFeedback(any(), any())).thenReturn(second);
+
+        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard())
+                .generateGuide(new GenerateGuideCommand(1L, "X", "x"));
+
+        // retry 발생해도 annotate 는 finalResponse 에 대해 단 1회 호출되어야 함
+        verify(annotator, times(1))
+                .annotate(any(GuideContent.class), any(IncomeBracketReference.class), anyLong());
     }
 
     private IncomeBracketReference refOf() {
