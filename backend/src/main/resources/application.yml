@@ -71,6 +71,26 @@ youthfit:
   internal:
     api-key: ${INTERNAL_API_KEY:}
 
+attachment:
+  storage:
+    type: ${ATTACHMENT_STORAGE_TYPE:local}
+    local-path: ${ATTACHMENT_STORAGE_LOCAL_PATH:/data/attachments}
+    s3:
+      bucket: ${ATTACHMENT_STORAGE_S3_BUCKET:}
+      region: ${ATTACHMENT_STORAGE_S3_REGION:ap-northeast-2}
+  download:
+    connect-timeout-seconds: ${ATTACHMENT_DOWNLOAD_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${ATTACHMENT_DOWNLOAD_READ_TIMEOUT_SECONDS:60}
+    max-size-mb: ${ATTACHMENT_DOWNLOAD_MAX_SIZE_MB:50}
+  extraction:
+    min-text-chars: ${ATTACHMENT_EXTRACTION_MIN_TEXT_CHARS:100}
+    retry-limit: ${ATTACHMENT_EXTRACTION_RETRY_LIMIT:3}
+  reindex:
+    max-content-kb: ${ATTACHMENT_REINDEX_MAX_CONTENT_KB:200}
+  scheduler:
+    fixed-delay-ms: ${ATTACHMENT_SCHEDULER_FIXED_DELAY_MS:60000}
+    batch-size: ${ATTACHMENT_SCHEDULER_BATCH_SIZE:20}
+
 ---
 spring:
   config:
@@ -89,6 +109,10 @@ logging:
   level:
     com.youthfit: DEBUG
     org.springframework.security: DEBUG
+
+attachment:
+  storage:
+    local-path: /tmp/youthfit-attachments
 
 ---
 spring:

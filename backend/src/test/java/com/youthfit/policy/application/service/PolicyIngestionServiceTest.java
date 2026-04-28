@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -35,6 +36,9 @@ class PolicyIngestionServiceTest {
 
     @Mock
     private PolicySourceRepository policySourceRepository;
+
+    @Mock
+    private PolicyAttachmentApplicationService policyAttachmentApplicationService;
 
     @Nested
     @DisplayName("registerPolicy - 신규 정책")
@@ -85,6 +89,7 @@ class PolicyIngestionServiceTest {
             assertThat(result.policyId()).isEqualTo(1L);
             assertThat(result.isNew()).isFalse();
             then(policyRepository).should(never()).save(any());
+            then(policyAttachmentApplicationService).should(never()).markPendingReextraction(any());
         }
 
         @Test
@@ -105,6 +110,7 @@ class PolicyIngestionServiceTest {
             assertThat(result.policyId()).isEqualTo(1L);
             assertThat(result.isNew()).isFalse();
             assertThat(existingPolicy.getTitle()).isEqualTo(command.title());
+            then(policyAttachmentApplicationService).should().markPendingReextraction(eq(1L));
         }
     }
 

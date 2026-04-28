@@ -1,0 +1,108 @@
+package com.youthfit.ingestion.application.service;
+
+import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
+import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
+import com.youthfit.rag.application.dto.result.IndexingResult;
+import com.youthfit.rag.application.service.RagIndexingService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class AttachmentReindexServiceTest {
+
+    @Mock private PolicyRepository policyRepository;
+    @Mock private PolicyAttachmentRepository attachmentRepository;
+    @Mock private RagIndexingService ragIndexingService;
+    @Mock private GuideGenerationService guideGenerationService;
+    @InjectMocks private AttachmentReindexService sut;
+
+    @BeforeEach
+    void setUp() {
+        sut.setMaxContentKb(200);
+    }
+
+    @Test
+    void reindex_정상_정책본문과_첨부텍스트를_합쳐_RagIndexing_호출() {
+        Policy policy = mock(Policy.class);
+        when(policy.getId()).thenReturn(1L);
+        when(policy.getBody()).thenReturn("정책 본문");
+        when(policy.getTitle()).thenReturn("title");
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+
+        PolicyAttachment a1 = pa("공고문.pdf", "내용 A");
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of(a1));
+        when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 5, true));
+
+        sut.reindex(1L);
+
+        ArgumentCaptor<IndexPolicyDocumentCommand> captor = ArgumentCaptor.forClass(IndexPolicyDocumentCommand.class);
+        verify(ragIndexingService).indexPolicyDocument(captor.capture());
+        String content = captor.getValue().content();
+        assertThat(content).contains("정책 본문");
+        assertThat(content).contains("공고문.pdf");
+        assertThat(content).contains("내용 A");
+
+        verify(guideGenerationService).generateGuide(any());
+    }
+
+    @Test
+    void reindex_updated_false_면_가이드_재생성_안함() {
+        Policy policy = mock(Policy.class);
+        when(policy.getId()).thenReturn(1L);
+        when(policy.getBody()).thenReturn("body");
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of());
+        when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 0, false));
+
+        sut.reindex(1L);
+
+        verify(guideGenerationService, never()).generateGuide(any());
+    }
+
+    @Test
+    void reindex_200KB_초과_시_초과분_첨부_생략() {
+        Policy policy = mock(Policy.class);
+        when(policy.getId()).thenReturn(1L);
+        when(policy.getBody()).thenReturn("본문");
+        when(policy.getTitle()).thenReturn("t");
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+
+        PolicyAttachment big1 = pa("a.pdf", "X".repeat(150_000));
+        PolicyAttachment big2 = pa("b.pdf", "Y".repeat(100_000));
+        PolicyAttachment skipped = pa("c.pdf", "Z".repeat(50_000));
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of(big1, big2, skipped));
+        when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 1, true));
+
+        sut.reindex(1L);
+
+        ArgumentCaptor<IndexPolicyDocumentCommand> captor = ArgumentCaptor.forClass(IndexPolicyDocumentCommand.class);
+        verify(ragIndexingService).indexPolicyDocument(captor.capture());
+        String content = captor.getValue().content();
+        // 200KB = 200 * 1024 = 204800
+        assertThat(content.length()).isLessThanOrEqualTo(204_800);
+        assertThat(content).contains("a.pdf");
+    }
+
+    private PolicyAttachment pa(String name, String text) {
+        PolicyAttachment a = mock(PolicyAttachment.class);
+        when(a.getName()).thenReturn(name);
+        when(a.getExtractedText()).thenReturn(text);
+        return a;
+    }
+}

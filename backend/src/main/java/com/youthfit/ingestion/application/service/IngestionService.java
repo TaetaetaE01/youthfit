@@ -46,6 +46,7 @@ public class IngestionService {
     private final PolicyPeriodExtractor policyPeriodExtractor;
     private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
     private final GuideGenerationService guideGenerationService;
+    private final AttachmentDownloadService attachmentDownloadService;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Category category = mapCategory(command.category());
@@ -93,6 +94,7 @@ public class IngestionService {
 
         PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
         triggerGuideGeneration(ingestionResult.policyId(), command.title());
+        triggerAttachmentDownload(ingestionResult.policyId());
 
         return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
     }
@@ -207,6 +209,15 @@ public class IngestionService {
         } catch (Exception e) {
             // ingestion 자체는 성공시킨다.
             log.warn("가이드 생성 실패: policyId={}", policyId, e);
+        }
+    }
+
+    private void triggerAttachmentDownload(Long policyId) {
+        if (policyId == null) return;
+        try {
+            attachmentDownloadService.downloadForPolicyAsync(policyId);
+        } catch (Exception e) {
+            log.warn("첨부 다운로드 트리거 실패: policyId={}", policyId, e);
         }
     }
 }
