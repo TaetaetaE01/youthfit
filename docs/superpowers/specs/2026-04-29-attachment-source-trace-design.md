@@ -34,7 +34,7 @@ HWP 첨부의 경우 페이지 deep link 가 표준에 없으므로 라벨이 `[
 | `ingestion` (TikaAttachmentExtractor) | 변경 | PDF 페이지별 SAX 이벤트로 텍스트+페이지 메타 추출 |
 | `ingestion` (AttachmentReindexService) | 변경 | mergedContent 마커 포맷 강화 (`=== 첨부 attachment-id=N ===`, `--- page=M ---`) |
 | `rag` (DocumentChunker) | 변경 | 본문/첨부 boundary 강제 분할 + 페이지 메타 추적 |
-| `rag` (PolicyDocument 엔티티 + Flyway) | 변경 | `attachment_id`, `page_start`, `page_end` 컬럼 (NULLable) |
+| `rag` (PolicyDocument 엔티티) | 변경 | `attachment_id`, `page_start`, `page_end` 컬럼 (NULLable). 본 프로젝트는 Flyway 미사용 — local 은 `ddl-auto=update` 가 자동 ALTER, prod 는 배포 전 SQL 수동 실행 또는 일시 `update` 전환 후 `validate` 복귀 |
 | `guide` (GuideSourceField, AttachmentRef) | 변경/신규 | enum `ATTACHMENT` 추가, `AttachmentRef` record 신규 |
 | `guide` (GuideHighlight, GuidePitfall) | 변경 | `attachmentRef` 옵셔널 필드 추가 |
 | `guide` (GuideGenerationInput.combinedSourceText) | 변경 | 청크 라벨에 attachment/pages 메타 박기 |
@@ -43,7 +43,7 @@ HWP 첨부의 경우 페이지 deep link 가 표준에 없으므로 라벨이 `[
 | `policy` (PolicyAttachmentController, 신규) | 신규 | 첨부 redirect endpoint |
 | `frontend` (AttachmentSourceLink, 신규) | 신규 | ATTACHMENT 항목 라벨 + 새 탭 링크 |
 | `frontend` (SourceLinkedListCard) | 변경 | sourceField 분기 |
-| `frontend` (Guide / PolicyAttachment 타입) | 변경 | `AttachmentRef` 타입 추가, enum `ATTACHMENT` 추가 |
+| `frontend` (Guide / PolicyAttachment 타입) | 변경 | `AttachmentRef` 타입 추가, enum `ATTACHMENT` 추가, `PolicyAttachment` 에 `id: number` 필드 추가, 기존 `SourceLinkedListCard` 내부의 `AttachmentRef` 는 의미 충돌 회피 위해 `AttachmentSummary` 로 rename |
 
 ## 4. 도메인 모델
 
@@ -112,6 +112,7 @@ public class PolicyDocument {
 ### 4.4 프론트엔드 타입
 
 ```typescript
+// frontend/src/types/policy.ts
 export type GuideSourceField =
   | 'SUPPORT_TARGET' | 'SELECTION_CRITERIA' | 'SUPPORT_CONTENT' | 'BODY'
   | 'ATTACHMENT';
@@ -128,7 +129,17 @@ export interface GuideHighlight {
   attachmentRef: AttachmentRef | null;
 }
 // GuidePitfall 동일 구조
+
+// PolicyAttachment 에 id 필드 추가 (현재는 name/url/mediaType 만 있음)
+export interface PolicyAttachment {
+  id: number;        // ← NEW
+  name: string;
+  url: string;
+  mediaType: string | null;
+}
 ```
+
+> **이름 충돌 회피**: 기존 `frontend/src/components/policy/SourceLinkedListCard.tsx` 에 컴포넌트 내부 타입 `AttachmentRef { id?, name, url }` 가 있음 (PR #48 의 첨부 바로가기 라벨용). 의미가 다르므로 본 사이클에서 그것을 `AttachmentSummary` 로 rename 하고, 새 전역 `AttachmentRef`(가이드 출처 trace) 를 `types/policy.ts` 에 추가한다.
 
 ## 5. 데이터 흐름
 
@@ -255,7 +266,7 @@ export interface GuideHighlight {
 
 ### 6.4 prompt.version 증분
 
-`youthfit.guide.prompt.version: 3 → 4`. sourceHash 자동 무효화 → CostGuard allowlist 정책 (7·30) 만 다음 호출 시 자동 재생성.
+`GuideGenerationService.java:40` 의 `static final String PROMPT_VERSION = "v3"` 상수를 `"v4"` 로 증분 (application.yml 아니라 코드 인라인). `computeHash()` 가 `|prompt:v4` 를 sha256 입력에 포함하므로 sourceHash 자동 무효화 → CostGuard allowlist 정책 (7·30) 만 다음 호출 시 자동 재생성.
 
 ### 6.5 GuideValidator 검증 5 — sourceField=ATTACHMENT 유효성
 
@@ -290,12 +301,14 @@ GET /api/policies/attachments/{attachmentId}/file
 | 항목 | 동작 |
 |---|---|
 | 권한 | 공개 (정책 본문/메타와 동일 민감도). 추후 abuse 발견 시 인증 추가 검토 |
-| storageKey 있음 | `AttachmentStorage.presign(key, TTL=15분)` → 302 redirect |
-| storageKey 없음 / presign 실패 | `attachment.url` (외부 원본) 으로 302 fallback |
-| 둘 다 없음 | 404 |
-| Fragment (`#page=N`) | HTTP 302 의 Location 에 안 박음. 브라우저가 요청 URL 의 fragment 를 final URL 에 자동 보존 (RFC 7231 표준) |
-| 로깅 | attachmentId, 사용한 fallback 종류, 요청 IP, timestamp |
-| 컨트롤러 | 신규 `PolicyAttachmentController` (`policy` 모듈) — 기존 `PolicyController` 와 분리 (SRP) |
+| Storage 추상화 | `AttachmentStorage` 인터페이스에 `Optional<String> presign(String key, Duration ttl)` default method 추가. `LocalAttachmentStorage` 는 default (Optional.empty), `S3AttachmentStorage` 만 override |
+| presign 가능 (S3) | `Optional` 채워짐 → presigned URL 로 302 redirect |
+| presign 불가 (Local 또는 S3 presign 실패) | `AttachmentStorage.get(key)` 으로 stream → `ResponseEntity<InputStreamResource>` 직접 응답 (Content-Type, Content-Disposition 부착) |
+| storageKey 없음 (캐시 안 됨) | `attachment.url` (외부 원본) 으로 302 fallback |
+| 셋 다 없음 | 404 |
+| Fragment (`#page=N`) | HTTP 302 의 Location 에 안 박음. 브라우저가 요청 URL 의 fragment 를 final URL 에 자동 보존 (RFC 7231 표준). Stream 응답 시에도 브라우저 PDF viewer 가 fragment 따라 페이지 점프 |
+| 로깅 | attachmentId, 사용한 응답 종류 (presign / stream / external), 요청 IP, timestamp |
+| 컨트롤러 | 신규 `PolicyAttachmentController` (`policy` 모듈 presentation/controller) — 기존 `PolicyController` 와 분리 (SRP). `PolicyAttachmentApi` 인터페이스에 Swagger 어노테이션 |
 
 ## 8. 프론트엔드 — AttachmentSourceLink 컴포넌트
 
@@ -334,10 +347,15 @@ const href =
 
 ## 9. 마이그레이션
 
+본 프로젝트는 **Flyway 미사용**, JPA `ddl-auto` 로 스키마 관리:
+- local profile: `ddl-auto: update` → 엔티티 변경 시 자동 ALTER TABLE
+- prod profile: `ddl-auto: validate` → 스키마 변경 거부
+
 | 단계 | 작업 |
 |---|---|
-| Flyway | `V{n}__add_attachment_meta_to_policy_document.sql` — `attachment_id`, `page_start`, `page_end` 컬럼 추가 + `idx_policy_document_attachment` 인덱스 |
-| prompt.version | `application.yml` 의 `youthfit.guide.prompt.version: 3 → 4` |
+| 스키마 변경 (local) | `PolicyDocument` 엔티티에 `attachment_id`/`page_start`/`page_end` 필드 + `@Column` 추가 → `ddl-auto=update` 가 자동 ALTER TABLE. 인덱스는 `@Table(indexes = @Index(name = "idx_policy_document_attachment", columnList = "attachment_id"))` |
+| 스키마 변경 (prod) | 배포 전 SQL 수동 실행 또는 일시 `update` 전환 후 `validate` 복귀. 운영 절차는 attachment-extraction-pipeline runbook 의 백필 절차와 동일 |
+| prompt.version | `GuideGenerationService.java:40` 의 `PROMPT_VERSION = "v3"` → `"v4"` |
 | AttachmentReindexService | mergedContent 포맷 변경 → 첨부 sourceHash 자동 무효화 → CostGuard allowlist 정책 (7·30) 의 첨부 청크 자동 재인덱싱 |
 | GuideGenerationService | 다음 호출 시 정책 7·30 가이드 자동 재생성 |
 | 기존 청크 row | `attachment_id`/`page_start`/`page_end` = NULL 유지. 재인덱싱 시 채움. |
