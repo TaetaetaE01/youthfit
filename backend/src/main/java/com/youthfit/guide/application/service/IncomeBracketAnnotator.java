@@ -63,6 +63,10 @@ public class IncomeBracketAnnotator {
             if (percentGroup != null) {
                 int percent = Integer.parseInt(percentGroup);
                 suffix = formatMedianSuffix(reference, percent);
+                if (suffix == null) {
+                    log.warn("unmapped median income percent: percent={}, year={}, policyId={}, snippet={}",
+                            percent, reference.year(), policyId, snippet(text, 60));
+                }
             } else {
                 suffix = formatNearPoorSuffix(reference);
             }
@@ -71,6 +75,10 @@ public class IncomeBracketAnnotator {
         }
         result.append(text, lastEnd, text.length());
         return result.toString();
+    }
+
+    private String snippet(String text, int maxLen) {
+        return text.length() <= maxLen ? text : text.substring(0, maxLen) + "...";
     }
 
     private String formatNearPoorSuffix(IncomeBracketReference reference) {

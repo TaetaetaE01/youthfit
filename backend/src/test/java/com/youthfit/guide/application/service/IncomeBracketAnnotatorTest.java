@@ -1,11 +1,18 @@
 package com.youthfit.guide.application.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.policy.domain.model.HouseholdSize;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -15,6 +22,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 class IncomeBracketAnnotatorTest {
 
     private final IncomeBracketAnnotator annotator = new IncomeBracketAnnotator();
+
+    private ListAppender<ILoggingEvent> appender;
+
+    @BeforeEach
+    void setupLogCapture() {
+        Logger logger = (Logger) LoggerFactory.getLogger(IncomeBracketAnnotator.class);
+        appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+    }
+
+    @AfterEach
+    void teardownLogCapture() {
+        Logger logger = (Logger) LoggerFactory.getLogger(IncomeBracketAnnotator.class);
+        logger.detachAppender(appender);
+    }
 
     private IncomeBracketReference reference2026() {
         return new IncomeBracketReference(
@@ -69,5 +92,17 @@ class IncomeBracketAnnotatorTest {
         GuideContent result = annotator.annotate(content, reference2026(), 1L);
         assertThat(result.criteria().groups().get(0).items().get(0))
                 .isEqualTo("중위소득 60% 이하 (정책 본문 기준 월 138만원, 230만원)인 자");
+    }
+
+    @Test
+    void yaml_미등록_비율은_텍스트_보존하고_WARN_로그를_남긴다() {
+        GuideContent content = contentWithCriteriaItem("중위소득 75% 이하 청년");
+        GuideContent result = annotator.annotate(content, reference2026(), 7L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("중위소득 75% 이하 청년");
+        assertThat(appender.list)
+                .anyMatch(e -> e.getLevel() == Level.WARN
+                        && e.getFormattedMessage().contains("percent=75")
+                        && e.getFormattedMessage().contains("policyId=7"));
     }
 }
