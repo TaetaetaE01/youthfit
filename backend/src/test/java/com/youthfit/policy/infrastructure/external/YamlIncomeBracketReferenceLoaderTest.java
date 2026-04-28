@@ -24,6 +24,23 @@ class YamlIncomeBracketReferenceLoaderTest {
     }
 
     @Test
+    void findByYear_2026_yaml도_로드() {
+        YamlIncomeBracketReferenceLoader loader = new YamlIncomeBracketReferenceLoader();
+        loader.load();
+
+        Optional<IncomeBracketReference> ref = loader.findByYear(2026);
+
+        assertThat(ref).isPresent();
+        assertThat(ref.get().year()).isEqualTo(2026);
+        assertThat(ref.get().version()).isEqualTo(1);
+        assertThat(ref.get().findAmount(HouseholdSize.ONE, 100)).contains(2_564_238L);
+        assertThat(ref.get().findAmount(HouseholdSize.TWO, 100)).contains(4_199_292L);
+        assertThat(ref.get().findAmount(HouseholdSize.ONE, 60)).contains(1_538_543L);
+        assertThat(ref.get().nearPoor().get(HouseholdSize.ONE)).isEqualTo(1_282_119L);
+        assertThat(ref.get().nearPoor().get(HouseholdSize.TWO)).isEqualTo(2_099_646L);
+    }
+
+    @Test
     void findByYear_미존재면_빈_옵셔널() {
         YamlIncomeBracketReferenceLoader loader = new YamlIncomeBracketReferenceLoader();
         loader.load();
@@ -32,12 +49,12 @@ class YamlIncomeBracketReferenceLoaderTest {
     }
 
     @Test
-    void findLatest_가장_최근_연도_반환() {
+    void findLatest_2026이_최신() {
         YamlIncomeBracketReferenceLoader loader = new YamlIncomeBracketReferenceLoader();
         loader.load();
 
         IncomeBracketReference latest = loader.findLatest();
 
-        assertThat(latest.year()).isEqualTo(2025);
+        assertThat(latest.year()).isEqualTo(2026);
     }
 }
