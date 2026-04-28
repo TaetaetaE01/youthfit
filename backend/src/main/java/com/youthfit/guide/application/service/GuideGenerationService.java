@@ -7,6 +7,9 @@ import com.youthfit.guide.application.dto.result.GuideResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
 import com.youthfit.guide.domain.model.GuideContent;
+import com.youthfit.guide.domain.model.GuideHighlight;
+import com.youthfit.guide.domain.model.GuidePitfall;
+import com.youthfit.guide.domain.model.GuideSourceField;
 import com.youthfit.guide.domain.repository.GuideRepository;
 import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
@@ -23,9 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -66,29 +71,73 @@ public class GuideGenerationService {
         }
 
         GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, reference);
-        GuideContent content = guideLlmProvider.generateGuide(input);
+        GuideContent firstResponse = guideLlmProvider.generateGuide(input);
+        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse, input.combinedSourceText());
+
+        GuideContent finalResponse;
+        if (firstReport.hasRetryTrigger()) {
+            log.info("가이드 검증 위반으로 재시도: policyId={}, violations={}",
+                    command.policyId(), firstReport.feedbackMessages());
+            GuideContent secondResponse = guideLlmProvider.regenerateWithFeedback(input, firstReport.feedbackMessages());
+            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse, input.combinedSourceText());
+
+            if (secondReport.violationCount() < firstReport.violationCount()) {
+                finalResponse = secondResponse;
+                if (secondReport.hasRetryTrigger()) {
+                    log.warn("재시도 후에도 검증 위반 (감소): policyId={}, violations={}",
+                            command.policyId(), secondReport.feedbackMessages());
+                }
+            } else {
+                finalResponse = firstResponse;
+                log.warn("재시도가 개선되지 않음, 1차 응답 저장: policyId={}", command.policyId());
+            }
+        } else {
+            finalResponse = firstResponse;
+        }
+
+        // 검증 4: sourceField 유효성 (해당 항목 폐기)
+        finalResponse = filterInvalidSourceFields(finalResponse, policy);
 
         // 후처리 검증 (로그 위주)
-        List<String> missing = guideValidator.findMissingNumericTokens(input.combinedSourceText(), content);
+        List<String> missing = guideValidator.findMissingNumericTokens(input.combinedSourceText(), finalResponse);
         if (!missing.isEmpty()) {
             log.warn("가이드 풀이에 원문 숫자 토큰 누락: policyId={}, missing={}", command.policyId(), missing);
         }
-        if (guideValidator.containsFriendlyTone(content)) {
+        if (guideValidator.containsFriendlyTone(finalResponse)) {
             log.warn("가이드 풀이에 친근체 출현: policyId={}", command.policyId());
         }
 
         if (existing.isPresent()) {
-            existing.get().regenerate(content, hash);
+            existing.get().regenerate(finalResponse, hash);
             guideRepository.save(existing.get());
         } else {
             guideRepository.save(Guide.builder()
                     .policyId(command.policyId())
-                    .content(content)
+                    .content(finalResponse)
                     .sourceHash(hash)
                     .build());
         }
         log.info("가이드 생성 완료: policyId={}", command.policyId());
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
+    }
+
+    private GuideContent filterInvalidSourceFields(GuideContent c, Policy p) {
+        Set<GuideSourceField> nonEmpty = new HashSet<>();
+        if (notBlank(p.getSupportTarget())) nonEmpty.add(GuideSourceField.SUPPORT_TARGET);
+        if (notBlank(p.getSelectionCriteria())) nonEmpty.add(GuideSourceField.SELECTION_CRITERIA);
+        if (notBlank(p.getSupportContent())) nonEmpty.add(GuideSourceField.SUPPORT_CONTENT);
+        if (notBlank(p.getBody())) nonEmpty.add(GuideSourceField.BODY);
+
+        List<GuideHighlight> hs = guideValidator.filterInvalidSourceFields(
+                c.highlights(), nonEmpty, GuideHighlight::sourceField);
+        List<GuidePitfall> ps = guideValidator.filterInvalidSourceFields(
+                c.pitfalls(), nonEmpty, GuidePitfall::sourceField);
+
+        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+    }
+
+    private boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     private IncomeBracketReference resolveReference(Integer policyYear) {

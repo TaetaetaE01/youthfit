@@ -171,6 +171,43 @@ public class OpenAiChatClient implements GuideLlmProvider {
         return parseResponse(json);
     }
 
+    @Override
+    public GuideContent regenerateWithFeedback(GuideGenerationInput input, List<String> feedbackMessages) {
+        Map<String, Object> requestBody = Map.of(
+                "model", properties.getModel(),
+                "max_tokens", properties.getMaxTokens(),
+                "messages", List.of(
+                        Map.of("role", "system", "content", SYSTEM_PROMPT),
+                        Map.of("role", "user", "content", buildUserMessageWithFeedback(input, feedbackMessages))
+                ),
+                "response_format", buildResponseFormat()
+        );
+
+        JsonNode response = restClient.post()
+                .uri(CHAT_COMPLETIONS_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + properties.getApiKey())
+                .body(requestBody)
+                .retrieve()
+                .body(JsonNode.class);
+
+        if (response == null || !response.has("choices") || response.get("choices").isEmpty()) {
+            log.error("OpenAI Chat API 재시도 실패: policyId={}", input.policyId());
+            throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 재생성 실패");
+        }
+        String json = response.get("choices").get(0).get("message").get("content").asText();
+        log.info("가이드 재생성 완료: policyId={}, 응답 길이={}", input.policyId(), json.length());
+        return parseResponse(json);
+    }
+
+    private String buildUserMessageWithFeedback(GuideGenerationInput input, List<String> feedback) {
+        String base = buildUserMessage(input);
+        StringBuilder sb = new StringBuilder(base);
+        sb.append("\n[이전 응답 검증 실패 — 다음을 고쳐서 다시 작성할 것]\n");
+        feedback.forEach(f -> sb.append("- ").append(f).append("\n"));
+        return sb.toString();
+    }
+
     GuideContent parseResponse(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
