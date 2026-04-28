@@ -79,7 +79,7 @@ class GuideValidatorTest {
         ));
         GuideContent content = content(criteria);
 
-        ValidationReport report = validator.validate(content, "");
+        ValidationReport report = validator.validate(content);
 
         assertThat(report.hasGroupMixViolation()).isTrue();
     }
@@ -94,7 +94,7 @@ class GuideValidatorTest {
                 ),
                 null, null, null, List.of());
 
-        ValidationReport report = validator.validate(content, "");
+        ValidationReport report = validator.validate(content);
 
         assertThat(report.hasInsufficientHighlights()).isTrue();
     }
@@ -110,7 +110,7 @@ class GuideValidatorTest {
                 ),
                 null, null, null, List.of());
 
-        ValidationReport report = validator.validate(content, "");
+        ValidationReport report = validator.validate(content);
 
         assertThat(report.hasInsufficientHighlights()).isFalse();
     }

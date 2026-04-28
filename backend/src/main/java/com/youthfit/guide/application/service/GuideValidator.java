@@ -48,7 +48,7 @@ public class GuideValidator {
         }
     }
 
-    public ValidationReport validate(GuideContent content, String originalText) {
+    public ValidationReport validate(GuideContent content) {
         boolean groupMix = checkGroupMix(content);
         boolean insufficientHighlights = content.highlights().size() < 3;
 

@@ -38,6 +38,18 @@ class GuideGenerationServiceHashTest {
         assertThat(h1).isNotEqualTo(h2);
     }
 
+    @Test
+    void computeHash_는_annotator_버전을_입력에_포함한다() {
+        Policy policy = somePolicy();
+        IncomeBracketReference reference = ref(2025, 1);
+
+        String hash = GuideGenerationService.computeHashForTest(policy, List.of(), reference);
+        String hash2 = GuideGenerationService.computeHashForTest(policy, List.of(), reference);
+
+        assertThat(hash).isEqualTo(hash2);  // 결정성
+        assertThat(hash).hasSize(64);        // sha-256 hex
+    }
+
     private IncomeBracketReference ref(int year, int version) {
         return new IncomeBracketReference(year, version,
                 Map.of(HouseholdSize.ONE, Map.of(60, 1_400_000L)),
