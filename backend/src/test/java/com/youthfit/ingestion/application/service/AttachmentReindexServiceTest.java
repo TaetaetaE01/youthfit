@@ -1,5 +1,7 @@
 package com.youthfit.ingestion.application.service;
 
+import com.youthfit.common.config.CostGuard;
+import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -30,6 +33,7 @@ class AttachmentReindexServiceTest {
     @Mock private PolicyAttachmentRepository attachmentRepository;
     @Mock private RagIndexingService ragIndexingService;
     @Mock private GuideGenerationService guideGenerationService;
+    @Spy private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
     @InjectMocks private AttachmentReindexService sut;
 
     @BeforeEach

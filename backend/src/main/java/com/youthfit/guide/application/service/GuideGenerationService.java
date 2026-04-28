@@ -1,5 +1,6 @@
 package com.youthfit.guide.application.service;
 
+import com.youthfit.common.config.CostGuard;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.dto.command.GuideGenerationInput;
 import com.youthfit.guide.application.dto.result.GuideGenerationResult;
@@ -48,6 +49,7 @@ public class GuideGenerationService {
     private final GuideValidator guideValidator;
     private final IncomeBracketReferenceLoader referenceLoader;
     private final IncomeBracketAnnotator incomeBracketAnnotator;
+    private final CostGuard costGuard;
 
     @Transactional(readOnly = true)
     public Optional<GuideResult> findGuideByPolicyId(Long policyId) {
@@ -56,6 +58,10 @@ public class GuideGenerationService {
 
     @Transactional
     public GuideGenerationResult generateGuide(GenerateGuideCommand command) {
+        if (!costGuard.allows(command.policyId())) {
+            costGuard.logSkip("generateGuide", command.policyId());
+            return new GuideGenerationResult(command.policyId(), false, "cost-guard: allowlist 외 정책");
+        }
         Optional<Policy> policyOpt = policyRepository.findById(command.policyId());
         if (policyOpt.isEmpty()) {
             return new GuideGenerationResult(command.policyId(), false, "정책을 찾을 수 없습니다");
@@ -156,7 +162,7 @@ public class GuideGenerationService {
 
     /** 테스트 노출용. computeHash는 주입된 의존성을 사용하지 않으므로 null 인자로 인스턴스 생성 안전. */
     static String computeHashForTest(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference reference) {
-        return new GuideGenerationService(null, null, null, null, null, null, null)
+        return new GuideGenerationService(null, null, null, null, null, null, null, null)
                 .computeHash(policy, chunks, reference);
     }
 

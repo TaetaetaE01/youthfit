@@ -70,6 +70,9 @@ openai:
 youthfit:
   internal:
     api-key: ${INTERNAL_API_KEY:}
+  cost-guard:
+    # 빈 값이면 전체 허용 (prod default). 채우면 해당 정책만 LLM/임베딩 호출 허용.
+    policy-allowlist: ${POLICY_ALLOWLIST:}
 
 attachment:
   storage:
@@ -115,6 +118,11 @@ logging:
 attachment:
   storage:
     local-path: /tmp/youthfit-attachments
+
+youthfit:
+  cost-guard:
+    # local 기본: 토큰 절약을 위해 정책 7·30 만 LLM/임베딩 호출 허용. shell 또는 .env 의 POLICY_ALLOWLIST 로 override 가능.
+    policy-allowlist: ${POLICY_ALLOWLIST:7,30}
 
 ---
 spring:

@@ -2,6 +2,8 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import com.youthfit.common.config.CostGuard;
+import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
@@ -56,6 +58,9 @@ class IngestionServiceTest {
 
     @Spy
     private ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
+
+    @Spy
+    private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
 
     @Nested
     @DisplayName("receivePolicy")

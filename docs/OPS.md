@@ -29,6 +29,12 @@
 - 가능하면 수집, 인덱싱, 사용자 응답 제공 책임을 분리한다.
 - 실패 경로는 로그와 메트릭으로 관측 가능해야 한다.
 
+## 토큰 비용 가드 (cost-guard) — 🚨 local 활성 중
+- **현재 상태**: local profile 에 `POLICY_ALLOWLIST=7,30` default. 정책 7·30 외 ingestion 자동 LLM/임베딩 호출 모두 skip.
+- **prod 영향**: 0 (prod default 빈 값 = 전체 허용).
+- **해제 절차 + 체크리스트**: `docs/superpowers/operations/2026-04-29-cost-guard-active.md`
+- 환경변수 override: `POLICY_ALLOWLIST=` (빈 값 → 전체 허용) 또는 `POLICY_ALLOWLIST=7,30,42` (추가).
+
 ## 수집 운영 원칙
 - 공공 API(복지로·온통청년) 호출은 rate limit과 스펙 가이드라인을 준수한다.
 - 식별 가능한 User-Agent를 사용하고, 서비스 키·토큰은 절대 커밋하지 않는다.
