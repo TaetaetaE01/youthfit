@@ -23,6 +23,7 @@ public class PolicyIngestionService {
 
     private final PolicyRepository policyRepository;
     private final PolicySourceRepository policySourceRepository;
+    private final PolicyAttachmentApplicationService policyAttachmentApplicationService;
 
     public PolicyIngestionResult registerPolicy(RegisterPolicyCommand command) {
         Optional<PolicySource> existingSource = policySourceRepository
@@ -54,6 +55,7 @@ public class PolicyIngestionService {
                 policy.replaceAttachments(toAttachments(command.attachments()));
                 policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
                 policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
+                policyAttachmentApplicationService.markPendingReextraction(policy.getId());
             }
             return new PolicyIngestionResult(source.getPolicy().getId(), false);
         }
