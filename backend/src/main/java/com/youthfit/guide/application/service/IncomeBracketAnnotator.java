@@ -30,6 +30,12 @@ public class IncomeBracketAnnotator {
     private static final Pattern EXISTING_AMOUNT_PATTERN = Pattern.compile("\\d+\\s*만원");
 
     public GuideContent annotate(GuideContent content, IncomeBracketReference reference, Long policyId) {
+        if (reference == null
+                || (reference.medianIncome().isEmpty() && reference.nearPoor().isEmpty())) {
+            log.info("empty income bracket reference, skipping annotation: policyId={}, year={}",
+                    policyId, reference == null ? "null" : reference.year());
+            return content;
+        }
         String oneLine = annotateText(content.oneLineSummary(), reference, policyId);
         List<GuideHighlight> highlights = content.highlights().stream()
                 .map(h -> new GuideHighlight(annotateText(h.text(), reference, policyId), h.sourceField()))

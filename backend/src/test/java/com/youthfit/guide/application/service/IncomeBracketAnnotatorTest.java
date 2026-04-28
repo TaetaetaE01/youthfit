@@ -141,6 +141,35 @@ class IncomeBracketAnnotatorTest {
     }
 
     @Test
+    void 빈_reference이면_모든_패턴_skip하고_INFO_로그_1회_남긴다() {
+        IncomeBracketReference empty = new IncomeBracketReference(2026, 1, Map.of(), Map.of());
+        GuideContent content = contentWithCriteriaItem("중위소득 60% 이하 청년");
+        GuideContent result = annotator.annotate(content, empty, 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("중위소득 60% 이하 청년");
+        long infoCount = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.INFO
+                        && e.getFormattedMessage().contains("empty income bracket reference"))
+                .count();
+        assertThat(infoCount).isEqualTo(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "기준중위소득 60%",
+            "중위소득의 60%",
+            "중위소득 60% 이내",
+            "중위소득 60% 까지",
+            "중위소득 60%"
+    })
+    void 중위소득_표현_변형도_모두_매칭한다(String variation) {
+        GuideContent content = contentWithCriteriaItem(variation + " 청년");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .contains("(2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)");
+    }
+
+    @Test
     void oneLineSummary_highlights_target_content_pitfalls_모두_적용된다() {
         GuideContent content = new GuideContent(
                 "중위소득 60% 이하 청년에게 월세 지원",
