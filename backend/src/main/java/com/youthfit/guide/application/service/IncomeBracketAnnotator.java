@@ -57,7 +57,7 @@ public class IncomeBracketAnnotator {
         if (EXISTING_AMOUNT_PATTERN.matcher(text).find()) return text;
 
         Set<Integer> processedPercents = new HashSet<>();
-        boolean[] nearPoorProcessed = {false};
+        boolean nearPoorProcessed = false;
 
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
@@ -75,11 +75,9 @@ public class IncomeBracketAnnotator {
                                 percent, reference.year(), policyId, snippet(text, 60));
                     }
                 }
-            } else {
-                if (!nearPoorProcessed[0]) {
-                    nearPoorProcessed[0] = true;
-                    suffix = formatNearPoorSuffix(reference);
-                }
+            } else if (!nearPoorProcessed) {
+                nearPoorProcessed = true;
+                suffix = formatNearPoorSuffix(reference);
             }
             if (suffix != null) result.append(suffix);
             lastEnd = m.end();

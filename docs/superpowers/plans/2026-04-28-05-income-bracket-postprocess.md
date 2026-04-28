@@ -527,11 +527,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
                         HouseholdSize.TWO, Map.of(50, 2099646L, 60, 2519575L)),
                 Map.of(HouseholdSize.ONE, 1282119L)
         );
-        GuideContent content = contentWithCriteriaItem("중위소득 50% 또는 60% 이하");
+        GuideContent content = contentWithCriteriaItem("중위소득 50% 또는 중위소득 60% 이하");
         GuideContent result = annotator.annotate(content, ref, 1L);
         assertThat(result.criteria().groups().get(0).items().get(0))
                 .contains("중위소득 50% (2026년 기준 1인 가구 월 약 128만원, 2인 가구 월 약 210만원)")
-                .contains("60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)");
+                .contains("중위소득 60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)");
     }
 ```
 
