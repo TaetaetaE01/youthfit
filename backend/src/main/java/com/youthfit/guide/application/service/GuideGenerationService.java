@@ -8,6 +8,8 @@ import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.repository.GuideRepository;
+import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
+import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.model.PolicyDocument;
@@ -29,6 +31,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GuideGenerationService {
 
+    static final String PROMPT_VERSION = "v2";  // 프롬프트 / 스키마 변경 시 증분
+
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
     private final GuideRepository guideRepository;
@@ -36,6 +40,7 @@ public class GuideGenerationService {
     private final PolicyDocumentRepository policyDocumentRepository;
     private final GuideLlmProvider guideLlmProvider;
     private final GuideValidator guideValidator;
+    private final IncomeBracketReferenceLoader referenceLoader;
 
     @Transactional(readOnly = true)
     public Optional<GuideResult> findGuideByPolicyId(Long policyId) {
@@ -51,14 +56,16 @@ public class GuideGenerationService {
         Policy policy = policyOpt.get();
         List<PolicyDocument> chunks = policyDocumentRepository.findByPolicyIdOrderByChunkIndex(command.policyId());
 
-        String hash = computeHash(policy, chunks);
+        IncomeBracketReference reference = resolveReference(policy.getReferenceYear());
+
+        String hash = computeHash(policy, chunks, reference);
         Optional<Guide> existing = guideRepository.findByPolicyId(command.policyId());
         if (existing.isPresent() && !existing.get().hasChanged(hash)) {
             log.info("가이드 변경 없음, 재생성 스킵: policyId={}", command.policyId());
             return new GuideGenerationResult(command.policyId(), false, "변경 없음");
         }
 
-        GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, null);
+        GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, reference);
         GuideContent content = guideLlmProvider.generateGuide(input);
 
         // 후처리 검증 (로그 위주)
@@ -84,12 +91,22 @@ public class GuideGenerationService {
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
     }
 
-    /** 테스트 노출용. */
-    String computeHashForTest(Policy policy, List<PolicyDocument> chunks) {
-        return computeHash(policy, chunks);
+    private IncomeBracketReference resolveReference(Integer policyYear) {
+        if (policyYear != null) {
+            Optional<IncomeBracketReference> byYear = referenceLoader.findByYear(policyYear);
+            if (byYear.isPresent()) return byYear.get();
+            log.warn("referenceYear={} 에 매칭되는 yaml 없음 → findLatest() 사용", policyYear);
+        }
+        return referenceLoader.findLatest();
     }
 
-    private String computeHash(Policy policy, List<PolicyDocument> chunks) {
+    /** 테스트 노출용. computeHash는 주입된 의존성을 사용하지 않으므로 null 인자로 인스턴스 생성 안전. */
+    static String computeHashForTest(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference reference) {
+        return new GuideGenerationService(null, null, null, null, null, null)
+                .computeHash(policy, chunks, reference);
+    }
+
+    private String computeHash(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference reference) {
         StringBuilder sb = new StringBuilder();
         sb.append(safe(policy.getTitle()));
         sb.append(safe(policy.getSummary()));
@@ -99,6 +116,10 @@ public class GuideGenerationService {
         sb.append(safe(policy.getSupportContent()));
         sb.append(policy.getReferenceYear());
         chunks.forEach(c -> sb.append(c.getContent()));
+        if (reference != null) {
+            sb.append("|ref:").append(reference.year()).append(":").append(reference.version());
+        }
+        sb.append("|prompt:").append(PROMPT_VERSION);
         return sha256(sb.toString());
     }
 

@@ -8,7 +8,10 @@ import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.repository.GuideRepository;
+import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.HouseholdSize;
+import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
@@ -20,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,8 +41,16 @@ class GuideGenerationServiceTest {
     @Mock PolicyDocumentRepository policyDocumentRepository;
     @Mock GuideLlmProvider guideLlmProvider;
     @Mock GuideValidator guideValidator;
+    @Mock IncomeBracketReferenceLoader referenceLoader;
 
     @InjectMocks GuideGenerationService service;
+
+    private IncomeBracketReference sampleReference() {
+        return new IncomeBracketReference(
+                2025, 1,
+                Map.of(HouseholdSize.ONE, Map.of(60, 1_435_000L)),
+                Map.of(HouseholdSize.ONE, 1_196_000L));
+    }
 
     private Policy samplePolicy() {
         Policy policy = Policy.builder()
@@ -81,6 +93,7 @@ class GuideGenerationServiceTest {
         Policy policy = samplePolicy();
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
         when(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(referenceLoader.findByYear(2025)).thenReturn(Optional.of(sampleReference()));
         when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.empty());
         when(guideLlmProvider.generateGuide(any())).thenReturn(sampleContent());
         when(guideValidator.findMissingNumericTokens(any(), any())).thenReturn(List.of());
@@ -95,14 +108,16 @@ class GuideGenerationServiceTest {
     @Test
     void sourceHash_동일하면_재생성_스킵() {
         Policy policy = samplePolicy();
+        IncomeBracketReference reference = sampleReference();
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
         when(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(referenceLoader.findByYear(2025)).thenReturn(Optional.of(reference));
 
         // 첫 호출에서 같은 hash가 이미 존재한다고 가정
         Guide existing = Guide.builder()
                 .policyId(1L)
                 .content(sampleContent())
-                .sourceHash(service.computeHashForTest(policy, List.of()))
+                .sourceHash(GuideGenerationService.computeHashForTest(policy, List.of(), reference))
                 .build();
         when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.of(existing));
 

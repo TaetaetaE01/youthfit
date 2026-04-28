@@ -33,4 +33,20 @@ class IncomeBracketReferenceTest {
 
         assertThat(ref.findAmount(HouseholdSize.ONE, 60)).isEmpty();
     }
+
+    @Test
+    void toContextText_사람이_읽을_수_있는_포맷_생성() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2025, 1,
+                Map.of(HouseholdSize.ONE, Map.of(60, 1_435_208L, 100, 2_392_013L)),
+                Map.of(HouseholdSize.ONE, 1_196_007L, HouseholdSize.TWO, 1_966_329L));
+
+        String ctx = ref.toContextText();
+
+        assertThat(ctx).contains("[참고 - 환산표 (2025년 기준)]");
+        assertThat(ctx).contains("60%=143.5만");
+        assertThat(ctx).contains("100%=239.2만");
+        assertThat(ctx).contains("차상위계층");
+        assertThat(ctx).contains("1인=119.6만");
+    }
 }
