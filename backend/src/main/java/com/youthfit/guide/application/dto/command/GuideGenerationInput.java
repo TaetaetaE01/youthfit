@@ -1,5 +1,6 @@
 package com.youthfit.guide.application.dto.command;
 
+import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.rag.domain.model.PolicyDocument;
 
@@ -17,7 +18,8 @@ public record GuideGenerationInput(
         String supportContent,
         String contact,
         String organization,
-        List<String> chunkContents
+        List<String> chunkContents,
+        IncomeBracketReference referenceData
 ) {
 
     public GuideGenerationInput {
@@ -28,9 +30,10 @@ public record GuideGenerationInput(
             throw new IllegalArgumentException("title은 비어있을 수 없습니다");
         }
         chunkContents = chunkContents == null ? List.of() : List.copyOf(chunkContents);
+        // referenceData는 nullable 허용 (yaml 누락 시 호출부에서 fallback 처리)
     }
 
-    public static GuideGenerationInput of(Policy policy, List<PolicyDocument> chunks) {
+    public static GuideGenerationInput of(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference referenceData) {
         List<String> chunkTexts = chunks == null
                 ? List.of()
                 : chunks.stream().map(PolicyDocument::getContent).collect(Collectors.toList());
@@ -46,7 +49,8 @@ public record GuideGenerationInput(
                 policy.getSupportContent(),
                 policy.getContact(),
                 policy.getOrganization(),
-                chunkTexts
+                chunkTexts,
+                referenceData
         );
     }
 

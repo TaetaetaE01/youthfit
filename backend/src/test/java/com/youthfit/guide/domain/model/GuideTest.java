@@ -12,6 +12,7 @@ class GuideTest {
         GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
         return new GuideContent(
                 summary,
+                List.of(),
                 new GuidePairedSection(List.of(group)),
                 null, null, List.of());
     }

@@ -4,6 +4,7 @@ import java.util.List;
 
 public record GuideContent(
         String oneLineSummary,
+        List<GuideHighlight> highlights,
         GuidePairedSection target,
         GuidePairedSection criteria,
         GuidePairedSection content,
@@ -13,6 +14,7 @@ public record GuideContent(
         if (oneLineSummary == null || oneLineSummary.isBlank()) {
             throw new IllegalArgumentException("oneLineSummary는 비어있을 수 없습니다");
         }
+        highlights = highlights == null ? List.of() : List.copyOf(highlights);
         pitfalls = pitfalls == null ? List.of() : List.copyOf(pitfalls);
     }
 }

@@ -31,6 +31,7 @@ import NotificationPromptSheet from '@/components/policy/NotificationPromptSheet
 import { OneLineSummaryCard } from '@/components/policy/OneLineSummaryCard';
 import { PairedSection } from '@/components/policy/PairedSection';
 import { PitfallsCard } from '@/components/policy/PitfallsCard';
+import { HighlightsCard } from '@/components/policy/HighlightsCard';
 import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
@@ -258,7 +259,10 @@ function ReferenceSiteSection({
 function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachments'] }) {
   if (!attachments || attachments.length === 0) return null;
   return (
-    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+    <section
+      id="attachment-section"
+      className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6"
+    >
       <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
         <Paperclip className="h-4 w-4 text-brand-800" />
         첨부파일
@@ -765,6 +769,14 @@ export default function PolicyDetailPage() {
           {/* AI 한 줄 요약 — 가이드 있을 때만 */}
           {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}
 
+          {/* 이 정책의 특징 — 가이드 있고 highlights 있을 때만 */}
+          {guide && (
+            <HighlightsCard
+              highlights={guide.highlights ?? []}
+              attachments={policy.attachments ?? []}
+            />
+          )}
+
           {/* Policy Summary (원문) */}
           <section
             id="policy-summary-section"
@@ -813,7 +825,9 @@ export default function PolicyDetailPage() {
           />
 
           {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
-          {guide && <PitfallsCard pitfalls={guide.pitfalls} />}
+          {guide && (
+            <PitfallsCard pitfalls={guide.pitfalls} attachments={policy.attachments ?? []} />
+          )}
 
           {/* Reference Sites */}
           <ReferenceSiteSection referenceSites={policy.referenceSites} />

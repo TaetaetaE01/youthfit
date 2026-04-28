@@ -100,9 +100,15 @@ export interface GuidePitfall {
   sourceField: GuideSourceField;
 }
 
+export interface GuideHighlight {
+  text: string;
+  sourceField: GuideSourceField;
+}
+
 export interface Guide {
   policyId: number;
   oneLineSummary: string;
+  highlights: GuideHighlight[];
   target: GuidePairedSection | null;
   criteria: GuidePairedSection | null;
   content: GuidePairedSection | null;

@@ -13,6 +13,7 @@ class GuideContentTest {
     void oneLineSummary가_빈문자열이면_예외() {
         assertThatThrownBy(() -> new GuideContent(
                 "  ",
+                List.of(),
                 null, null, null,
                 List.of()))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -21,14 +22,14 @@ class GuideContentTest {
     @Test
     void pitfalls가_null이면_빈리스트로_저장() {
         GuideContent content = new GuideContent(
-                "한 줄 요약", null, null, null, null);
+                "한 줄 요약", List.of(), null, null, null, null);
         assertThat(content.pitfalls()).isEmpty();
     }
 
     @Test
     void 모든_paired가_null이고_pitfalls도_비어있으면_허용() {
         GuideContent content = new GuideContent(
-                "한 줄 요약", null, null, null, List.of());
+                "한 줄 요약", List.of(), null, null, null, List.of());
         assertThat(content.oneLineSummary()).isEqualTo("한 줄 요약");
         assertThat(content.target()).isNull();
         assertThat(content.criteria()).isNull();
@@ -44,10 +45,25 @@ class GuideContentTest {
 
         GuideContent content = new GuideContent(
                 "만 19~34세 청년 월세 지원",
+                List.of(),
                 target, null, null,
                 List.of(pitfall));
 
         assertThat(content.target().groups().get(0).items()).containsExactly("만 19~34세");
         assertThat(content.pitfalls()).hasSize(1);
+    }
+
+    @Test
+    void highlights_null이면_빈_리스트() {
+        GuideContent c = new GuideContent("요약", null, null, null, null, List.of());
+        assertThat(c.highlights()).isEmpty();
+    }
+
+    @Test
+    void highlights_정상_수용() {
+        GuideHighlight h = new GuideHighlight("월 20만원 지원", GuideSourceField.SUPPORT_CONTENT);
+        GuideContent c = new GuideContent("요약", List.of(h), null, null, null, List.of());
+        assertThat(c.highlights()).hasSize(1);
+        assertThat(c.highlights().get(0).text()).isEqualTo("월 20만원 지원");
     }
 }
