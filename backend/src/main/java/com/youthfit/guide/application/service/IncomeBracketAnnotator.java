@@ -19,8 +19,9 @@ public class IncomeBracketAnnotator {
 
     private static final Logger log = LoggerFactory.getLogger(IncomeBracketAnnotator.class);
 
-    private static final Pattern MEDIAN_INCOME_PATTERN = Pattern.compile(
-            "(?:기준\\s*)?중위소득(?:의)?\\s*(\\d+)\\s*%(?:\\s*이내|\\s*이하|\\s*까지)?");
+    private static final Pattern COMBINED_PATTERN = Pattern.compile(
+            "(?:(?:기준\\s*)?중위소득(?:의)?\\s*(\\d+)\\s*%(?:\\s*이내|\\s*이하|\\s*까지)?)" +
+            "|(?:차상위(?:계층)?(?:\\s*이하|\\s*이내)?)");
 
     public GuideContent annotate(GuideContent content, IncomeBracketReference reference, Long policyId) {
         GuidePairedSection criteria = annotatePaired(content.criteria(), reference, policyId);
@@ -51,16 +52,29 @@ public class IncomeBracketAnnotator {
         if (text == null || text.isEmpty()) return text;
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
-        Matcher m = MEDIAN_INCOME_PATTERN.matcher(text);
+        Matcher m = COMBINED_PATTERN.matcher(text);
         while (m.find()) {
             result.append(text, lastEnd, m.end());
-            int percent = Integer.parseInt(m.group(1));
-            String suffix = formatMedianSuffix(reference, percent);
+            String percentGroup = m.group(1);
+            String suffix;
+            if (percentGroup != null) {
+                int percent = Integer.parseInt(percentGroup);
+                suffix = formatMedianSuffix(reference, percent);
+            } else {
+                suffix = formatNearPoorSuffix(reference);
+            }
             if (suffix != null) result.append(suffix);
             lastEnd = m.end();
         }
         result.append(text, lastEnd, text.length());
         return result.toString();
+    }
+
+    private String formatNearPoorSuffix(IncomeBracketReference reference) {
+        Long one = reference.nearPoor().get(HouseholdSize.ONE);
+        if (one == null) return null;
+        return String.format(" (%d년 기준 1인 가구 월 약 %d만원 이하)",
+                reference.year(), toManwon(one));
     }
 
     private String formatMedianSuffix(IncomeBracketReference reference, int percent) {

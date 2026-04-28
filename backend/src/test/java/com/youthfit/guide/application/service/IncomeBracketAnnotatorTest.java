@@ -45,4 +45,20 @@ class IncomeBracketAnnotatorTest {
         assertThat(result.criteria().groups().get(0).items().get(0))
                 .isEqualTo("중위소득 60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)인 자");
     }
+
+    @Test
+    void 차상위계층_패턴이_있으면_1인_가구만_환산값을_삽입한다() {
+        GuideContent content = contentWithCriteriaItem("차상위계층 이하의 청년");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("차상위계층 이하 (2026년 기준 1인 가구 월 약 128만원 이하)의 청년");
+    }
+
+    @Test
+    void 차상위_단독_표기도_매칭한다() {
+        GuideContent content = contentWithCriteriaItem("차상위 청년");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("차상위 (2026년 기준 1인 가구 월 약 128만원 이하) 청년");
+    }
 }
