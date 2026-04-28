@@ -2,7 +2,9 @@ package com.youthfit.guide.application.service;
 
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
+import com.youthfit.guide.domain.model.GuideHighlight;
 import com.youthfit.guide.domain.model.GuidePairedSection;
+import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.policy.domain.model.HouseholdSize;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
 import org.slf4j.Logger;
@@ -28,15 +30,17 @@ public class IncomeBracketAnnotator {
     private static final Pattern EXISTING_AMOUNT_PATTERN = Pattern.compile("\\d+\\s*만원");
 
     public GuideContent annotate(GuideContent content, IncomeBracketReference reference, Long policyId) {
+        String oneLine = annotateText(content.oneLineSummary(), reference, policyId);
+        List<GuideHighlight> highlights = content.highlights().stream()
+                .map(h -> new GuideHighlight(annotateText(h.text(), reference, policyId), h.sourceField()))
+                .toList();
+        GuidePairedSection target = annotatePaired(content.target(), reference, policyId);
         GuidePairedSection criteria = annotatePaired(content.criteria(), reference, policyId);
-        return new GuideContent(
-                content.oneLineSummary(),
-                content.highlights(),
-                content.target(),
-                criteria,
-                content.content(),
-                content.pitfalls()
-        );
+        GuidePairedSection contentSection = annotatePaired(content.content(), reference, policyId);
+        List<GuidePitfall> pitfalls = content.pitfalls().stream()
+                .map(p -> new GuidePitfall(annotateText(p.text(), reference, policyId), p.sourceField()))
+                .toList();
+        return new GuideContent(oneLine, highlights, target, criteria, contentSection, pitfalls);
     }
 
     private GuidePairedSection annotatePaired(GuidePairedSection section,

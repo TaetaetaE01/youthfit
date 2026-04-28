@@ -139,4 +139,28 @@ class IncomeBracketAnnotatorTest {
                 .contains("중위소득 50% (2026년 기준 1인 가구 월 약 128만원, 2인 가구 월 약 210만원)")
                 .contains("중위소득 60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)");
     }
+
+    @Test
+    void oneLineSummary_highlights_target_content_pitfalls_모두_적용된다() {
+        GuideContent content = new GuideContent(
+                "중위소득 60% 이하 청년에게 월세 지원",
+                List.of(
+                        new com.youthfit.guide.domain.model.GuideHighlight(
+                                "중위소득 60% 이하 우선 공급",
+                                com.youthfit.guide.domain.model.GuideSourceField.SUPPORT_TARGET)),
+                new GuidePairedSection(List.of(new GuideGroup(null, List.of("중위소득 60% 이하 무주택자")))),
+                new GuidePairedSection(List.of(new GuideGroup(null, List.of("선정기준 무관")))),
+                new GuidePairedSection(List.of(new GuideGroup(null, List.of("중위소득 60% 이하만 지급")))),
+                List.of(
+                        new com.youthfit.guide.domain.model.GuidePitfall(
+                                "중위소득 60% 초과 시 환수",
+                                com.youthfit.guide.domain.model.GuideSourceField.SUPPORT_CONTENT))
+        );
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.oneLineSummary()).contains("(2026년 기준 1인 가구 월 약 154만원");
+        assertThat(result.highlights().get(0).text()).contains("(2026년 기준");
+        assertThat(result.target().groups().get(0).items().get(0)).contains("(2026년 기준");
+        assertThat(result.content().groups().get(0).items().get(0)).contains("(2026년 기준");
+        assertThat(result.pitfalls().get(0).text()).contains("(2026년 기준");
+    }
 }
