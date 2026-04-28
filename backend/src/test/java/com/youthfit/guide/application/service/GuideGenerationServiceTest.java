@@ -28,6 +28,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,6 +44,7 @@ class GuideGenerationServiceTest {
     @Mock GuideLlmProvider guideLlmProvider;
     @Mock GuideValidator guideValidator;
     @Mock IncomeBracketReferenceLoader referenceLoader;
+    @Mock IncomeBracketAnnotator incomeBracketAnnotator;
 
     @InjectMocks GuideGenerationService service;
 
@@ -96,17 +99,42 @@ class GuideGenerationServiceTest {
         when(referenceLoader.findByYear(2025)).thenReturn(Optional.of(sampleReference()));
         when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.empty());
         when(guideLlmProvider.generateGuide(any())).thenReturn(sampleContent());
-        when(guideValidator.validate(any(), any()))
-                .thenReturn(new GuideValidator.ValidationReport(false, false, false, List.of()));
+        when(guideValidator.validate(any()))
+                .thenReturn(new GuideValidator.ValidationReport(false, false, List.of()));
         when(guideValidator.filterInvalidSourceFields(any(), any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(guideValidator.findMissingNumericTokens(any(), any())).thenReturn(List.of());
         when(guideValidator.containsFriendlyTone(any())).thenReturn(false);
+        when(incomeBracketAnnotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         GuideGenerationResult result = service.generateGuide(new GenerateGuideCommand(1L, "청년 월세 지원", "x"));
 
         assertThat(result.regenerated()).isTrue();
         verify(guideRepository, times(1)).save(any(Guide.class));
+    }
+
+    @Test
+    void generateGuide_가_finalResponse에_annotate를_1회_호출한다() {
+        Policy policy = samplePolicy();
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(referenceLoader.findByYear(2025)).thenReturn(Optional.of(sampleReference()));
+        when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.empty());
+        when(guideLlmProvider.generateGuide(any())).thenReturn(sampleContent());
+        when(guideValidator.validate(any()))
+                .thenReturn(new GuideValidator.ValidationReport(false, false, List.of()));
+        when(guideValidator.filterInvalidSourceFields(any(), any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(guideValidator.findMissingNumericTokens(any(), any())).thenReturn(List.of());
+        when(guideValidator.containsFriendlyTone(any())).thenReturn(false);
+        when(incomeBracketAnnotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        service.generateGuide(new GenerateGuideCommand(1L, "청년 월세 지원", "x"));
+
+        verify(incomeBracketAnnotator, times(1))
+                .annotate(any(GuideContent.class), any(IncomeBracketReference.class), eq(1L));
     }
 
     @Test
