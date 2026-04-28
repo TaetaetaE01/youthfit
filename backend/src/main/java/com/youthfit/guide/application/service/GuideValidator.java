@@ -116,14 +116,9 @@ public class GuideValidator {
         return Stream.of(content.target(), content.criteria(), content.content())
                 .filter(s -> s != null)
                 .flatMap(s -> s.groups().stream())
-                .anyMatch(g -> {
-                    String joined = String.join(" ", g.items());
-                    if (g.label() != null) joined = g.label() + " " + joined;
-                    if (PERCENT_PATTERN.matcher(joined).find()) {
-                        return !AMOUNT_PATTERN.matcher(joined).find();
-                    }
-                    return false;
-                });
+                .flatMap(g -> g.items().stream())
+                .anyMatch(item -> PERCENT_PATTERN.matcher(item).find()
+                        && !AMOUNT_PATTERN.matcher(item).find());
     }
 
     private Set<String> extractTokens(String text) {

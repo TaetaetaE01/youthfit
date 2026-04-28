@@ -36,7 +36,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class GuideGenerationService {
 
-    static final String PROMPT_VERSION = "v2";  // 프롬프트 / 스키마 변경 시 증분
+    static final String PROMPT_VERSION = "v3";  // 프롬프트 / 스키마 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
