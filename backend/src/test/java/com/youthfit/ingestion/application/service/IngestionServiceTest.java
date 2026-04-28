@@ -48,6 +48,9 @@ class IngestionServiceTest {
     @Mock
     private GuideGenerationService guideGenerationService;
 
+    @Mock
+    private AttachmentDownloadService attachmentDownloadService;
+
     @Spy
     private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();
 
