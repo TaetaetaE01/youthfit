@@ -9,8 +9,10 @@
 |---|---|---|
 | `ATTACHMENT_STORAGE_TYPE` | `local` | `local` 또는 `s3` |
 | `ATTACHMENT_STORAGE_LOCAL_PATH` | `/data/attachments` (local) / `/tmp/youthfit-attachments` (local profile) | 로컬 저장 디렉토리 |
-| `ATTACHMENT_STORAGE_S3_BUCKET` | (빈 값) | S3 버킷명. type=s3 일 때 필수 |
-| `ATTACHMENT_STORAGE_S3_REGION` | `ap-northeast-2` | S3 리전 |
+| `S3_BUCKET` | (빈 값) | S3 버킷명. type=s3 일 때 필수 |
+| `S3_REGION` | `ap-northeast-2` | S3 리전 |
+| `S3_ACCESS_KEY_ID` | (빈 값) | S3 전용 IAM 액세스 키. 비우면 IAM role/credentials 체인 사용 |
+| `S3_SECRET_ACCESS_KEY` | (빈 값) | S3 전용 IAM 시크릿 키. 비우면 IAM role/credentials 체인 사용 |
 | `ATTACHMENT_DOWNLOAD_CONNECT_TIMEOUT_SECONDS` | `10` | HTTP connect timeout |
 | `ATTACHMENT_DOWNLOAD_READ_TIMEOUT_SECONDS` | `60` | HTTP read timeout |
 | `ATTACHMENT_DOWNLOAD_MAX_SIZE_MB` | `50` | 단일 첨부 최대 크기 |
@@ -85,13 +87,43 @@ WHERE extraction_status IN ('DOWNLOADING','EXTRACTING')
 
 S3 버킷/IAM 키를 받은 시점에 다음을 적용:
 
-1. AWS 자격증명을 백엔드 컨테이너에 주입 (env 또는 IAM role)
-2. 환경변수 변경:
-   ```
-   ATTACHMENT_STORAGE_TYPE=s3
-   ATTACHMENT_STORAGE_S3_BUCKET=<버킷명>
-   ATTACHMENT_STORAGE_S3_REGION=<리전>
-   ```
+### IAM 키 발급 정책 (루트 키 금지)
+
+- **루트 계정 액세스 키 사용 금지**. 항상 서비스 전용 IAM 사용자로 발급
+- **최소 권한**: 해당 버킷 한정 정책 권장
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["s3:PutObject", "s3:GetObject", "s3:HeadObject"],
+        "Resource": "arn:aws:s3:::youthfit-attachments/*"
+      }
+    ]
+  }
+  ```
+- 발급된 키는 S3 외 다른 AWS 서비스 (EC2/RDS/IAM) 권한 없어야 함
+
+### 환경변수 변경
+
+```
+ATTACHMENT_STORAGE_TYPE=s3
+S3_BUCKET=<버킷명>
+S3_REGION=<리전>
+S3_ACCESS_KEY_ID=<발급받은 IAM 액세스 키>
+S3_SECRET_ACCESS_KEY=<발급받은 IAM 시크릿 키>
+```
+
+### 키 vs IAM Role
+
+- **로컬/dev**: `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` 직접 주입 (.env)
+- **운영 (EC2/ECS)**: `S3_ACCESS_KEY_ID` 비워두고 IAM role 사용 → DefaultCredentialsProvider 체인이 instance metadata 에서 자동 획득
+
+### 절차
+
+1. IAM 사용자 + 정책 발급
+2. 환경변수 위처럼 설정
 3. 백엔드 재기동
 4. 기존 로컬 저장본은 그대로 두되, 신규 다운로드는 S3 로 감
 5. (선택) 기존 EXTRACTED 첨부의 storageKey 는 로컬 경로 그대로 → 재추출 트리거하면 S3 로 옮겨짐
