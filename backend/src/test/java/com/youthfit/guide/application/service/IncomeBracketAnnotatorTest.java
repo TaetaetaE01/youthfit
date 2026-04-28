@@ -61,4 +61,13 @@ class IncomeBracketAnnotatorTest {
         assertThat(result.criteria().groups().get(0).items().get(0))
                 .isEqualTo("차상위 (2026년 기준 1인 가구 월 약 128만원 이하) 청년");
     }
+
+    @Test
+    void 이미_만원_표기가_같은_bullet에_있으면_그_bullet은_전체_skip한다() {
+        GuideContent content = contentWithCriteriaItem(
+                "중위소득 60% 이하 (정책 본문 기준 월 138만원, 230만원)인 자");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("중위소득 60% 이하 (정책 본문 기준 월 138만원, 230만원)인 자");
+    }
 }

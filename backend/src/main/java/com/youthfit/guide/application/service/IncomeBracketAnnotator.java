@@ -23,6 +23,8 @@ public class IncomeBracketAnnotator {
             "(?:(?:기준\\s*)?중위소득(?:의)?\\s*(\\d+)\\s*%(?:\\s*이내|\\s*이하|\\s*까지)?)" +
             "|(?:차상위(?:계층)?(?:\\s*이하|\\s*이내)?)");
 
+    private static final Pattern EXISTING_AMOUNT_PATTERN = Pattern.compile("\\d+\\s*만원");
+
     public GuideContent annotate(GuideContent content, IncomeBracketReference reference, Long policyId) {
         GuidePairedSection criteria = annotatePaired(content.criteria(), reference, policyId);
         return new GuideContent(
@@ -50,6 +52,7 @@ public class IncomeBracketAnnotator {
 
     private String annotateText(String text, IncomeBracketReference reference, Long policyId) {
         if (text == null || text.isEmpty()) return text;
+        if (EXISTING_AMOUNT_PATTERN.matcher(text).find()) return text;
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
         Matcher m = COMBINED_PATTERN.matcher(text);
