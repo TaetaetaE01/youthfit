@@ -76,8 +76,10 @@ attachment:
     type: ${ATTACHMENT_STORAGE_TYPE:local}
     local-path: ${ATTACHMENT_STORAGE_LOCAL_PATH:/data/attachments}
     s3:
-      bucket: ${ATTACHMENT_STORAGE_S3_BUCKET:}
-      region: ${ATTACHMENT_STORAGE_S3_REGION:ap-northeast-2}
+      bucket: ${S3_BUCKET:}
+      region: ${S3_REGION:ap-northeast-2}
+      access-key-id: ${S3_ACCESS_KEY_ID:}
+      secret-access-key: ${S3_SECRET_ACCESS_KEY:}
   download:
     connect-timeout-seconds: ${ATTACHMENT_DOWNLOAD_CONNECT_TIMEOUT_SECONDS:10}
     read-timeout-seconds: ${ATTACHMENT_DOWNLOAD_READ_TIMEOUT_SECONDS:60}
