@@ -9,8 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,22 +55,31 @@ public class IncomeBracketAnnotator {
     private String annotateText(String text, IncomeBracketReference reference, Long policyId) {
         if (text == null || text.isEmpty()) return text;
         if (EXISTING_AMOUNT_PATTERN.matcher(text).find()) return text;
+
+        Set<Integer> processedPercents = new HashSet<>();
+        boolean[] nearPoorProcessed = {false};
+
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
         Matcher m = COMBINED_PATTERN.matcher(text);
         while (m.find()) {
             result.append(text, lastEnd, m.end());
             String percentGroup = m.group(1);
-            String suffix;
+            String suffix = null;
             if (percentGroup != null) {
                 int percent = Integer.parseInt(percentGroup);
-                suffix = formatMedianSuffix(reference, percent);
-                if (suffix == null) {
-                    log.warn("unmapped median income percent: percent={}, year={}, policyId={}, snippet={}",
-                            percent, reference.year(), policyId, snippet(text, 60));
+                if (processedPercents.add(percent)) {
+                    suffix = formatMedianSuffix(reference, percent);
+                    if (suffix == null) {
+                        log.warn("unmapped median income percent: percent={}, year={}, policyId={}, snippet={}",
+                                percent, reference.year(), policyId, snippet(text, 60));
+                    }
                 }
             } else {
-                suffix = formatNearPoorSuffix(reference);
+                if (!nearPoorProcessed[0]) {
+                    nearPoorProcessed[0] = true;
+                    suffix = formatNearPoorSuffix(reference);
+                }
             }
             if (suffix != null) result.append(suffix);
             lastEnd = m.end();

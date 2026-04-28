@@ -105,4 +105,38 @@ class IncomeBracketAnnotatorTest {
                         && e.getFormattedMessage().contains("percent=75")
                         && e.getFormattedMessage().contains("policyId=7"));
     }
+
+    @Test
+    void 같은_텍스트_안에_동일_비율_반복시_첫_등장에만_환산값을_삽입한다() {
+        GuideContent content = contentWithCriteriaItem(
+                "중위소득 60% 이하인 자로서 중위소득 60% 이하 가구");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("중위소득 60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)인 자로서 중위소득 60% 이하 가구");
+    }
+
+    @Test
+    void 같은_텍스트_안에_차상위_반복시_첫_등장에만_환산값을_삽입한다() {
+        GuideContent content = contentWithCriteriaItem(
+                "차상위계층 이하 청년 또는 차상위 가구");
+        GuideContent result = annotator.annotate(content, reference2026(), 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .isEqualTo("차상위계층 이하 (2026년 기준 1인 가구 월 약 128만원 이하) 청년 또는 차상위 가구");
+    }
+
+    @Test
+    void 다른_비율_여러개는_각각_한번씩_삽입한다() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2026, 1,
+                Map.of(
+                        HouseholdSize.ONE, Map.of(50, 1282119L, 60, 1538543L),
+                        HouseholdSize.TWO, Map.of(50, 2099646L, 60, 2519575L)),
+                Map.of(HouseholdSize.ONE, 1282119L)
+        );
+        GuideContent content = contentWithCriteriaItem("중위소득 50% 또는 중위소득 60% 이하");
+        GuideContent result = annotator.annotate(content, ref, 1L);
+        assertThat(result.criteria().groups().get(0).items().get(0))
+                .contains("중위소득 50% (2026년 기준 1인 가구 월 약 128만원, 2인 가구 월 약 210만원)")
+                .contains("중위소득 60% 이하 (2026년 기준 1인 가구 월 약 154만원, 2인 가구 월 약 252만원)");
+    }
 }
