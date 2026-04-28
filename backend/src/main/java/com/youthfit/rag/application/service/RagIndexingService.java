@@ -1,5 +1,6 @@
 package com.youthfit.rag.application.service;
 
+import com.youthfit.common.config.CostGuard;
 import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
@@ -23,9 +24,14 @@ public class RagIndexingService {
     private final PolicyDocumentRepository policyDocumentRepository;
     private final DocumentChunker documentChunker;
     private final EmbeddingProvider embeddingProvider;
+    private final CostGuard costGuard;
 
     @Transactional
     public IndexingResult indexPolicyDocument(IndexPolicyDocumentCommand command) {
+        if (!costGuard.allows(command.policyId())) {
+            costGuard.logSkip("indexPolicyDocument", command.policyId());
+            return new IndexingResult(command.policyId(), 0, false);
+        }
         String newHash = documentChunker.computeHash(command.content());
 
         List<PolicyDocument> existing = policyDocumentRepository.findByPolicyId(command.policyId());

@@ -1,5 +1,7 @@
 package com.youthfit.rag.application.service;
 
+import com.youthfit.common.config.CostGuard;
+import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -37,6 +40,9 @@ class RagIndexingServiceTest {
 
     @Mock
     private EmbeddingProvider embeddingProvider;
+
+    @Spy
+    private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
 
     @Nested
     @DisplayName("indexPolicyDocument - 정책 문서 인덱싱")

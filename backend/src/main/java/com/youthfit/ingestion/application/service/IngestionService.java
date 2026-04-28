@@ -2,6 +2,7 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.youthfit.common.config.CostGuard;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
@@ -47,6 +48,7 @@ public class IngestionService {
     private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
     private final GuideGenerationService guideGenerationService;
     private final AttachmentDownloadService attachmentDownloadService;
+    private final CostGuard costGuard;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Category category = mapCategory(command.category());
@@ -129,6 +131,10 @@ public class IngestionService {
         PolicyPeriod regexPeriod = policyPeriodExtractor.extract(command.body());
         if (!regexPeriod.isEmpty()) {
             return regexPeriod;
+        }
+        if (costGuard.enabled()) {
+            log.info("cost-guard: skipping period LLM extraction (allowlist 모드, externalId={})", command.externalId());
+            return PolicyPeriod.empty();
         }
         return policyPeriodLlmProvider.extractPeriod(command.title(), command.body());
     }

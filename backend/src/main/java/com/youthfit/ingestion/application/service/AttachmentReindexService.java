@@ -1,5 +1,6 @@
 package com.youthfit.ingestion.application.service;
 
+import com.youthfit.common.config.CostGuard;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.policy.domain.model.Policy;
@@ -29,12 +30,17 @@ public class AttachmentReindexService {
     private final PolicyAttachmentRepository attachmentRepository;
     private final RagIndexingService ragIndexingService;
     private final GuideGenerationService guideGenerationService;
+    private final CostGuard costGuard;
 
     @Setter
     @Value("${attachment.reindex.max-content-kb:200}")
     private int maxContentKb;
 
     public void reindex(Long policyId) {
+        if (!costGuard.allows(policyId)) {
+            costGuard.logSkip("attachment-reindex", policyId);
+            return;
+        }
         Optional<Policy> policyOpt = policyRepository.findById(policyId);
         if (policyOpt.isEmpty()) {
             log.warn("policy not found for reindex: {}", policyId);
