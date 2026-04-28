@@ -97,7 +97,7 @@ class GuideGenerationServiceTest {
         when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.empty());
         when(guideLlmProvider.generateGuide(any())).thenReturn(sampleContent());
         when(guideValidator.validate(any(), any()))
-                .thenReturn(new GuideValidator.ValidationReport(false, false, false, List.of()));
+                .thenReturn(new GuideValidator.ValidationReport(false, false, List.of()));
         when(guideValidator.filterInvalidSourceFields(any(), any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(guideValidator.findMissingNumericTokens(any(), any())).thenReturn(List.of());

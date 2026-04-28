@@ -30,24 +30,19 @@ public class GuideValidator {
             "생애최초", "맞벌이", "다자녀", "기혼", "미혼"
     );
 
-    private static final Pattern PERCENT_PATTERN = Pattern.compile("중위소득\\s*\\d+\\s*%|차상위");
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("\\d+\\s*만원");
-
     public record ValidationReport(
             boolean hasGroupMixViolation,
-            boolean hasMissingAmount,
             boolean hasInsufficientHighlights,
             List<String> feedbackMessages
     ) {
 
         public boolean hasRetryTrigger() {
-            return hasGroupMixViolation || hasMissingAmount || hasInsufficientHighlights;
+            return hasGroupMixViolation || hasInsufficientHighlights;
         }
 
         public int violationCount() {
             int n = 0;
             if (hasGroupMixViolation) n++;
-            if (hasMissingAmount) n++;
             if (hasInsufficientHighlights) n++;
             return n;
         }
@@ -55,21 +50,17 @@ public class GuideValidator {
 
     public ValidationReport validate(GuideContent content, String originalText) {
         boolean groupMix = checkGroupMix(content);
-        boolean missingAmount = checkMissingAmount(content);
         boolean insufficientHighlights = content.highlights().size() < 3;
 
         List<String> feedback = new ArrayList<>();
         if (groupMix) {
             feedback.add("일부 group의 items에 분류 키워드(차상위/일반공급/특별공급/신혼부부 등)가 2종 이상 섞여 있다. group을 분리하고 label에 분류명을 명시할 것.");
         }
-        if (missingAmount) {
-            feedback.add("'중위소득 N%' 또는 '차상위' 표기에 환산 금액(만원)이 병기되어 있지 않다. [참고 - 환산표]를 사용해 1·2인 가구 환산값을 병기할 것.");
-        }
         if (insufficientHighlights) {
             feedback.add("highlights가 " + content.highlights().size() + "개. 최소 3개 이상 작성할 것 (긍정·중립·차별점).");
         }
 
-        return new ValidationReport(groupMix, missingAmount, insufficientHighlights, feedback);
+        return new ValidationReport(groupMix, insufficientHighlights, feedback);
     }
 
     public <T> List<T> filterInvalidSourceFields(
@@ -110,15 +101,6 @@ public class GuideValidator {
                     long count = CATEGORY_KEYWORDS.stream().filter(joined::contains).count();
                     return count >= 2;
                 });
-    }
-
-    private boolean checkMissingAmount(GuideContent content) {
-        return Stream.of(content.target(), content.criteria(), content.content())
-                .filter(s -> s != null)
-                .flatMap(s -> s.groups().stream())
-                .flatMap(g -> g.items().stream())
-                .anyMatch(item -> PERCENT_PATTERN.matcher(item).find()
-                        && !AMOUNT_PATTERN.matcher(item).find());
     }
 
     private Set<String> extractTokens(String text) {

@@ -85,45 +85,6 @@ class GuideValidatorTest {
     }
 
     @Test
-    void 환산값_누락_중위소득60_단독() {
-        GuidePairedSection criteria = pairedSingleGroup(null, List.of(
-                "중위소득 60% 이하 가구"
-        ));
-        GuideContent content = content(criteria);
-
-        ValidationReport report = validator.validate(content, "");
-
-        assertThat(report.hasMissingAmount()).isTrue();
-    }
-
-    @Test
-    void 환산값_누락_없음_만원_병기() {
-        GuidePairedSection criteria = pairedSingleGroup(null, List.of(
-                "중위소득 60% 이하 (2025년 1인 가구 월 약 143만원) 가구"
-        ));
-        GuideContent content = content(criteria);
-
-        ValidationReport report = validator.validate(content, "");
-
-        assertThat(report.hasMissingAmount()).isFalse();
-    }
-
-    @Test
-    void 환산값_누락_같은_group_다른_bullet의_만원은_별개로_본다() {
-        // 한 group에 "중위소득 100%"가 있는 bullet 과 별개로 "10만원" 이 있는 bullet 이 존재.
-        // bullet 단위 검사라 "중위소득 100%" bullet 자체에 만원이 없으면 위반.
-        GuidePairedSection criteria = pairedSingleGroup(null, List.of(
-                "월 근로·사업소득이 10만원 이상 발생할 것",
-                "기준 중위소득 100% 이하일 것"
-        ));
-        GuideContent content = content(criteria);
-
-        ValidationReport report = validator.validate(content, "");
-
-        assertThat(report.hasMissingAmount()).isTrue();
-    }
-
-    @Test
     void highlights_부족_2개() {
         GuideContent content = new GuideContent(
                 "요약",
