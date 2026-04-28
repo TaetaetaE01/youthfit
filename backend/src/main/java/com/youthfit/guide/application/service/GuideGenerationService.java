@@ -58,7 +58,7 @@ public class GuideGenerationService {
             return new GuideGenerationResult(command.policyId(), false, "변경 없음");
         }
 
-        GuideGenerationInput input = GuideGenerationInput.of(policy, chunks);
+        GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, null);
         GuideContent content = guideLlmProvider.generateGuide(input);
 
         // 후처리 검증 (로그 위주)

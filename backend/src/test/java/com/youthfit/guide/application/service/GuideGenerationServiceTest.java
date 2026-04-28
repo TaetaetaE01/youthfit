@@ -60,6 +60,7 @@ class GuideGenerationServiceTest {
         GuideGroup group = new GuideGroup(null, List.of("만 19~34세"));
         return new GuideContent(
                 "청년 월세 지원",
+                List.of(),
                 new GuidePairedSection(List.of(group)),
                 null, null, List.of());
     }

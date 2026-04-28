@@ -22,6 +22,7 @@ class GuideValidatorTest {
         String originalText = "월세 60만원 이하 주택 거주 청년";
         GuideContent content = new GuideContent(
                 "월세 지원",
+                List.of(),
                 flat("월세 60만원 이하 주택 거주자"),
                 null, null, List.of());
 
@@ -33,6 +34,7 @@ class GuideValidatorTest {
         String originalText = "월세 60만원 이하 주택, 만 19세 이상";
         GuideContent content = new GuideContent(
                 "월세 지원",
+                List.of(),
                 flat("청년 월세 지원"),
                 null, null, List.of());
 
@@ -44,6 +46,7 @@ class GuideValidatorTest {
     void 친근체_검출() {
         GuideContent content = new GuideContent(
                 "이 정책은 청년에게 도움이 돼요.",
+                List.of(),
                 flat("받을 수 있어요"),
                 null, null, List.of());
 
@@ -54,6 +57,7 @@ class GuideValidatorTest {
     void 명사형_단정형은_친근체_아님() {
         GuideContent content = new GuideContent(
                 "만 19~34세 청년 월세 지원",
+                List.of(),
                 flat("본인 명의 계약자"),
                 null, null, List.of());
 

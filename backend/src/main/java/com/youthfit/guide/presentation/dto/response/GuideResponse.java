@@ -10,6 +10,7 @@ import java.util.List;
 public record GuideResponse(
         Long policyId,
         String oneLineSummary,
+        List<HighlightDto> highlights,
         PairedDto target,
         PairedDto criteria,
         PairedDto content,
@@ -23,11 +24,16 @@ public record GuideResponse(
 
     public record PitfallDto(String text, String sourceField) {}
 
+    public record HighlightDto(String text, String sourceField) {}
+
     public static GuideResponse from(GuideResult result) {
         GuideContent c = result.content();
         return new GuideResponse(
                 result.policyId(),
                 c.oneLineSummary(),
+                c.highlights().stream()
+                        .map(h -> new HighlightDto(h.text(), h.sourceField().name()))
+                        .toList(),
                 toPairedDto(c.target()),
                 toPairedDto(c.criteria()),
                 toPairedDto(c.content()),

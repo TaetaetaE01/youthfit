@@ -6,6 +6,7 @@ import com.youthfit.guide.application.dto.command.GuideGenerationInput;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
+import com.youthfit.guide.domain.model.GuideHighlight;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
@@ -167,15 +168,27 @@ public class OpenAiChatClient implements GuideLlmProvider {
         try {
             JsonNode node = objectMapper.readTree(json);
             String oneLine = node.get("oneLineSummary").asText();
+            List<GuideHighlight> highlights = parseHighlights(node.get("highlights"));
             GuidePairedSection target = parsePaired(node.get("target"));
             GuidePairedSection criteria = parsePaired(node.get("criteria"));
             GuidePairedSection content = parsePaired(node.get("content"));
             List<GuidePitfall> pitfalls = parsePitfalls(node.get("pitfalls"));
-            return new GuideContent(oneLine, target, criteria, content, pitfalls);
+            return new GuideContent(oneLine, highlights, target, criteria, content, pitfalls);
         } catch (Exception e) {
             log.error("가이드 응답 JSON 파싱 실패: {}", json, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 응답 파싱 실패");
         }
+    }
+
+    private List<GuideHighlight> parseHighlights(JsonNode node) {
+        List<GuideHighlight> highlights = new ArrayList<>();
+        if (node == null || !node.isArray()) return highlights;
+        node.forEach(n -> {
+            String text = n.get("text").asText();
+            String sourceFieldStr = n.get("sourceField").asText();
+            highlights.add(new GuideHighlight(text, GuideSourceField.valueOf(sourceFieldStr)));
+        });
+        return highlights;
     }
 
     private GuidePairedSection parsePaired(JsonNode node) {
