@@ -160,7 +160,7 @@ LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아
 ## 4. RAG 모듈 (`com.youthfit.rag.domain.model`)
 
 ### 4.1 PolicyDocument — `policy_document`
-정책 본문의 청크 + 임베딩. **pgvector 확장** 사용.
+정책 본문 + 첨부 추출 텍스트의 청크 + 임베딩. **pgvector 확장** 사용.
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -169,9 +169,14 @@ LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아
 | content | TEXT | 청크 본문 |
 | source_hash | VARCHAR(64) | 원본 해시(변경 시 재임베딩) |
 | embedding | vector(1536) | OpenAI `text-embedding-3-small` 차원 |
+| attachment_id | BIGINT NULL | 첨부 청크인 경우 `PolicyAttachment.id`, 정책 본문 청크는 NULL |
+| page_start | INT NULL | 청크가 걸친 PDF 시작 페이지 (1-based). HWP/본문/페이지 메타 없는 경우 NULL |
+| page_end | INT NULL | 청크가 걸친 PDF 끝 페이지. 단일 페이지 청크면 `page_start == page_end` |
 
 - Hibernate 6 `@JdbcTypeCode(SqlTypes.VECTOR)` + `@Array(length = 1536)` 로 pgvector 매핑.
 - `updateEmbedding(float[])`, `hasEmbedding()` 제공.
+- 인덱스: `idx_policy_document_attachment` on `attachment_id` (가이드 검증 시 정책별 청크의 첨부 매핑 빠른 조회).
+- `DocumentChunker` 가 mergedContent 의 본문/첨부 boundary (`=== 정책 본문 ===` / `=== 첨부 attachment-id=N ===`) 에서 청크 강제 분할 → 한 청크 = 단일 출처 보장. 첨부 segment 안의 페이지 마커 (`--- page=N ---`) 로 청크별 페이지 range 추적.
 
 ---
 
