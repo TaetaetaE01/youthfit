@@ -323,6 +323,18 @@ public class OpenAiChatClient implements GuideLlmProvider {
         if (input.referenceYear() != null) sb.append("referenceYear: ").append(input.referenceYear()).append("\n");
         if (input.organization() != null) sb.append("organization: ").append(input.organization()).append("\n");
         if (input.contact() != null) sb.append("contact: ").append(input.contact()).append("\n");
+
+        // 이 정책의 첨부 ID 화이트리스트 — LLM 이 attachmentRef.attachmentId 를 이 목록에서만 고르도록 강제
+        java.util.LinkedHashSet<Long> attachmentIds = new java.util.LinkedHashSet<>();
+        for (var c : input.chunks()) {
+            if (c.attachmentId() != null) attachmentIds.add(c.attachmentId());
+        }
+        if (!attachmentIds.isEmpty()) {
+            sb.append("attachmentIds: ").append(attachmentIds).append("\n");
+            sb.append("(sourceField=ATTACHMENT 일 때 attachmentRef.attachmentId 는 위 목록에서만 사용. ")
+              .append("few-shot 예시의 attachmentId=12 는 단순 형식 예시이며 실제 값으로 사용 금지.)\n");
+        }
+
         sb.append("\n[원문]\n");
         sb.append(input.combinedSourceText());
         if (input.referenceData() != null) {

@@ -68,8 +68,9 @@ public class GuideValidator {
         if (invalidAttachmentRef) {
             feedback.add(
                     "highlights/pitfalls 항목의 sourceField 가 ATTACHMENT 인 경우 attachmentRef 가 정확해야 합니다. "
-                            + "정책의 첨부 ID 목록에 없는 attachmentId 를 박거나, sourceField 가 ATTACHMENT 가 아닌데 "
-                            + "attachmentRef 를 박지 마세요.");
+                            + "사용 가능한 attachmentId 목록: " + validAttachmentIds + ". "
+                            + "이 목록에 없는 ID 는 사용 금지 (few-shot 예시의 12 는 형식 예시일 뿐). "
+                            + "sourceField 가 ATTACHMENT 가 아닌데 attachmentRef 를 박지 마세요.");
         }
 
         return new ValidationReport(groupMix, insufficientHighlights, invalidAttachmentRef, feedback);
