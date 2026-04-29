@@ -111,6 +111,9 @@ public class GuideGenerationService {
         // 결정성 후처리: 중위소득/차상위 비율을 만원 기준 환산값으로 보강
         finalResponse = incomeBracketAnnotator.annotate(finalResponse, reference, command.policyId());
 
+        // attachmentRef 가 있으면 sourceField=ATTACHMENT 로 자동 보정 (LLM 이 라벨만 잘못 박는 케이스)
+        finalResponse = enforceAttachmentSourceField(finalResponse);
+
         // 검증 4: sourceField 유효성 (해당 항목 폐기)
         finalResponse = filterInvalidSourceFields(finalResponse, policy);
 
@@ -135,6 +138,25 @@ public class GuideGenerationService {
         }
         log.info("가이드 생성 완료: policyId={}", command.policyId());
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
+    }
+
+    /**
+     * attachmentRef 가 not-null 인 항목은 sourceField 를 ATTACHMENT 로 강제 보정한다.
+     * LLM (gpt-4o-mini) 이 attachmentRef 메타는 정확히 박지만 sourceField 라벨을
+     * SUPPORT_CONTENT 등으로 잘못 분류하는 케이스 대응.
+     */
+    private GuideContent enforceAttachmentSourceField(GuideContent c) {
+        List<GuideHighlight> hs = c.highlights().stream()
+                .map(h -> h.attachmentRef() != null && h.sourceField() != GuideSourceField.ATTACHMENT
+                        ? new GuideHighlight(h.text(), GuideSourceField.ATTACHMENT, h.attachmentRef())
+                        : h)
+                .toList();
+        List<GuidePitfall> ps = c.pitfalls().stream()
+                .map(p -> p.attachmentRef() != null && p.sourceField() != GuideSourceField.ATTACHMENT
+                        ? new GuidePitfall(p.text(), GuideSourceField.ATTACHMENT, p.attachmentRef())
+                        : p)
+                .toList();
+        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
     }
 
     private GuideContent filterInvalidSourceFields(GuideContent c, Policy p) {
