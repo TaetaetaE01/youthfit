@@ -15,6 +15,7 @@ import com.youthfit.guide.domain.repository.GuideRepository;
 import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
@@ -32,6 +33,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -79,15 +81,18 @@ public class GuideGenerationService {
         }
 
         GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, reference);
+        Set<Long> validAttachmentIds = policy.getAttachments().stream()
+                .map(PolicyAttachment::getId)
+                .collect(Collectors.toSet());
         GuideContent firstResponse = guideLlmProvider.generateGuide(input);
-        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse);
+        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse, validAttachmentIds);
 
         GuideContent finalResponse;
         if (firstReport.hasRetryTrigger()) {
             log.info("가이드 검증 위반으로 재시도: policyId={}, violations={}",
                     command.policyId(), firstReport.feedbackMessages());
             GuideContent secondResponse = guideLlmProvider.regenerateWithFeedback(input, firstReport.feedbackMessages());
-            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse);
+            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse, validAttachmentIds);
 
             if (secondReport.violationCount() < firstReport.violationCount()) {
                 finalResponse = secondResponse;
