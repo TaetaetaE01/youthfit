@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GuideGenerationService {
 
-    static final String PROMPT_VERSION = "v3";  // 프롬프트 / 스키마 변경 시 증분
+    static final String PROMPT_VERSION = "v4";  // 프롬프트 / 스키마 변경 시 증분
     static final String ANNOTATOR_VERSION = "v1";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
