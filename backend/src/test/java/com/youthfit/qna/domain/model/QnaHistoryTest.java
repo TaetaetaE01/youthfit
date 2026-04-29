@@ -82,4 +82,15 @@ class QnaHistoryTest {
         assertThatThrownBy(() -> history.markFailed(QnaFailedReason.LLM_ERROR))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    @DisplayName("FAILED 후 markCompleted 호출도 IllegalStateException")
+    void markCompleted_afterFailed_throws() {
+        QnaHistory history = QnaHistory.builder()
+                .userId(1L).policyId(10L).question("질문").build();
+        history.markFailed(QnaFailedReason.LLM_ERROR);
+
+        assertThatThrownBy(() -> history.markCompleted("답변", "[]"))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }
