@@ -30,7 +30,7 @@ class PageAwareContentHandlerTest {
     }
 
     @Test
-    void givenPlainText_whenParse_thenSinglePageNullPage() throws Exception {
+    void givenContentWithoutPageMarkers_whenParse_thenSinglePageNullPage() throws Exception {
         InputStream txt = new ByteArrayInputStream("hello world".getBytes());
 
         PageAwareContentHandler handler = new PageAwareContentHandler();
