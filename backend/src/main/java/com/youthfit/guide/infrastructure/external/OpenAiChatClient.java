@@ -61,6 +61,21 @@ public class OpenAiChatClient implements GuideLlmProvider {
                - 차상위계층 표기: "차상위계층 이하 (2025년 기준 1인 가구 월 약 119만원 이하)"
                - [참고 - 환산표]에도 없으면 비율만 표기 (만들어내지 않는다).
                - 같은 풀이 안에서 동일 비율이 반복 등장하면 환산값은 첫 등장에만 병기 (가독성).
+            10. 출처 라벨 정확성 (첨부 trace):
+                - highlights / pitfalls 의 sourceField 는 정보가 발견된 청크 라벨의 source 값을 그대로 쓴다.
+                - source=ATTACHMENT 인 청크에서 가져온 정보:
+                  · attachmentRef.attachmentId = 청크 라벨의 attachment-id 그대로
+                  · attachmentRef.pageStart / pageEnd = 청크 라벨의 pages= 범위 그대로
+                  · 청크 라벨에 pages 가 없으면 pageStart / pageEnd = null (HWP 등)
+                  · 라벨에 없는 페이지를 추측해서 박지 말 것
+                - sourceField != ATTACHMENT 일 때 attachmentRef = null
+                - 여러 청크에 걸친 정보면 가장 핵심 정보가 있는 청크 1개를 선택해 그 라벨 메타를 박는다.
+
+            [변환 예시 6] 첨부 trace:
+            입력 청크: `[chunk-1 source=ATTACHMENT attachment-id=12 pages=35-35]\n배우자 명의 자가 주택이 있는 경우도 본 사업의 중복 수혜 제한 대상에 포함된다.`
+            → pitfalls 출력:
+            { "text": "배우자 명의 자가 주택이 있어도 신청 제외", "sourceField": "ATTACHMENT",
+              "attachmentRef": { "attachmentId": 12, "pageStart": 35, "pageEnd": 35 } }
 
             [출력 단위 — JSON]
             - oneLineSummary: 정책 정체를 누가/무엇을/얼마나 받는지 1~2문장.
@@ -311,16 +326,44 @@ public class OpenAiChatClient implements GuideLlmProvider {
                 )
         );
 
+        Map<String, Object> attachmentRefSchema = Map.of(
+                "anyOf", List.of(
+                        Map.of(
+                                "type", "object",
+                                "additionalProperties", false,
+                                "required", List.of("attachmentId", "pageStart", "pageEnd"),
+                                "properties", Map.of(
+                                        "attachmentId", Map.of("type", "integer"),
+                                        "pageStart", Map.of("anyOf", List.of(
+                                                Map.of("type", "integer"),
+                                                Map.of("type", "null")
+                                        )),
+                                        "pageEnd", Map.of("anyOf", List.of(
+                                                Map.of("type", "integer"),
+                                                Map.of("type", "null")
+                                        ))
+                                )
+                        ),
+                        Map.of("type", "null")
+                )
+        );
+
         Map<String, Object> pitfallSchema = Map.of(
                 "type", "object",
                 "additionalProperties", false,
-                "required", List.of("text", "sourceField"),
+                "required", List.of("text", "sourceField", "attachmentRef"),
                 "properties", Map.of(
                         "text", Map.of("type", "string"),
                         "sourceField", Map.of(
                                 "type", "string",
-                                "enum", List.of("SUPPORT_TARGET", "SELECTION_CRITERIA", "SUPPORT_CONTENT", "BODY")
-                        )
+                                "enum", List.of(
+                                        "SUPPORT_TARGET",
+                                        "SELECTION_CRITERIA",
+                                        "SUPPORT_CONTENT",
+                                        "BODY",
+                                        "ATTACHMENT")
+                        ),
+                        "attachmentRef", attachmentRefSchema
                 )
         );
 
