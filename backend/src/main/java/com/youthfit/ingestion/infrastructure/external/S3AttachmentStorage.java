@@ -3,6 +3,7 @@ package com.youthfit.ingestion.infrastructure.external;
 import com.youthfit.ingestion.application.port.AttachmentStorage;
 import com.youthfit.ingestion.application.port.StorageReference;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -12,19 +13,26 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.HexFormat;
+import java.util.Optional;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(name = "attachment.storage.type", havingValue = "s3")
 @RequiredArgsConstructor
 public class S3AttachmentStorage implements AttachmentStorage {
 
     private final S3Client s3;
+    private final S3Presigner presigner;
 
     @Value("${attachment.storage.s3.bucket}")
     private String bucket;
@@ -58,6 +66,25 @@ public class S3AttachmentStorage implements AttachmentStorage {
             return true;
         } catch (NoSuchKeyException e) {
             return false;
+        }
+    }
+
+    @Override
+    public Optional<String> presign(String key, Duration ttl) {
+        try {
+            GetObjectRequest getReq = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+            GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
+                    .signatureDuration(ttl)
+                    .getObjectRequest(getReq)
+                    .build();
+            URL url = presigner.presignGetObject(presignReq).url();
+            return Optional.of(url.toString());
+        } catch (Exception e) {
+            log.warn("presign failed: key={}, err={}", key, e.getMessage());
+            return Optional.empty();
         }
     }
 
