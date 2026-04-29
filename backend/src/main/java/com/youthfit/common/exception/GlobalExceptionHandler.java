@@ -1,9 +1,11 @@
 package com.youthfit.common.exception;
 
 import com.youthfit.common.response.ApiResponse;
+import com.youthfit.policy.domain.exception.AttachmentNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +23,13 @@ public class GlobalExceptionHandler {
         ErrorCode code = e.getErrorCode();
         return ResponseEntity.status(code.getStatus())
                 .body(ApiResponse.error(code.getCode(), e.getMessage()));
+    }
+
+    @ExceptionHandler(AttachmentNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAttachmentNotFound(AttachmentNotFoundException e) {
+        log.warn("attachment not found: id={}", e.getAttachmentId());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("ATTACHMENT_NOT_FOUND", "첨부 파일을 찾을 수 없습니다."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
