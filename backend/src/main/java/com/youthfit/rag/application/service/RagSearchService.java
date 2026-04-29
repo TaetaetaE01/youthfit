@@ -3,7 +3,7 @@ package com.youthfit.rag.application.service;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
-import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ public class RagSearchService {
         }
 
         float[] queryEmbedding = embeddingProvider.embed(command.query());
-        List<PolicyDocument> similar = policyDocumentRepository.findSimilarByEmbedding(
+        List<SimilarChunk> similar = policyDocumentRepository.findSimilarByEmbedding(
                 command.policyId(), queryEmbedding, DEFAULT_TOP_K);
 
         if (similar.isEmpty()) {
