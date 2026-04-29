@@ -15,6 +15,7 @@ import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.service.RagSearchService;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +88,13 @@ public class QnaService {
 
     private void processQuestion(SseEmitter emitter, AskQuestionCommand command, Policy policy, Long historyId)
             throws IOException {
-        Optional<CachedAnswer> cached = qnaAnswerCache.get(command.policyId(), command.question());
+        Optional<CachedAnswer> cached;
+        try {
+            cached = qnaAnswerCache.get(command.policyId(), command.question());
+        } catch (Exception e) {
+            log.warn("Q&A 캐시 get 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
+            cached = Optional.empty();
+        }
         if (cached.isPresent()) {
             sendCachedAnswer(emitter, cached.get(), historyId);
             return;
@@ -224,5 +231,10 @@ public class QnaService {
         } catch (IOException e) {
             log.warn("SSE ERROR 이벤트 전송 실패", e);
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
     }
 }
