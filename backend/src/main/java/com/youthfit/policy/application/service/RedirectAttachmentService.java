@@ -37,7 +37,9 @@ public class RedirectAttachmentService {
                 .orElseThrow(() -> new AttachmentNotFoundException(attachmentId));
 
         String storageKey = attachment.getStorageKey();
-        if (storageKey != null) {
+        // storage 에 실제 파일이 있을 때만 presign/stream 시도. 컨테이너 재기동 등으로 local
+        // 파일이 휘발되면 storageKey 만 남아있으니 storage.exists() 로 가드.
+        if (storageKey != null && storage.exists(storageKey)) {
             Optional<String> presigned = storage.presign(storageKey, PRESIGN_TTL);
             if (presigned.isPresent()) {
                 log.info("attachment-redirect presign id={} key={}", attachmentId, storageKey);
@@ -55,7 +57,8 @@ public class RedirectAttachmentService {
 
         String externalUrl = attachment.getUrl();
         if (externalUrl != null && !externalUrl.isBlank()) {
-            log.info("attachment-redirect external id={} url={}", attachmentId, externalUrl);
+            log.info("attachment-redirect external id={} url={} (storageKey={}, missing local file)",
+                    attachmentId, externalUrl, storageKey);
             return new AttachmentRedirectResult.ExternalRedirect(externalUrl);
         }
 

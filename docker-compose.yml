@@ -77,8 +77,11 @@ services:
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-key-minimum-32-bytes!!}
+      ATTACHMENT_STORAGE_LOCAL_PATH: /data/attachments
     ports:
       - "8080:8080"
+    volumes:
+      - youthfit-attachments:/data/attachments
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,3 +105,4 @@ volumes:
   postgres-data:
   redis-data:
   n8n-data:
+  youthfit-attachments:
