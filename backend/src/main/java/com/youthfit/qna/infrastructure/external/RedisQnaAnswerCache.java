@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
@@ -33,7 +32,7 @@ public class RedisQnaAnswerCache implements QnaAnswerCache {
             String json = redisTemplate.opsForValue().get(key);
             if (json == null) return Optional.empty();
             return Optional.of(objectMapper.readValue(json, CachedAnswer.class));
-        } catch (JacksonException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("Q&A 캐시 read 실패 (정상 흐름 진행): policyId={}, error={}", policyId, e.toString());
             return Optional.empty();
         }
@@ -45,7 +44,7 @@ public class RedisQnaAnswerCache implements QnaAnswerCache {
         try {
             String json = objectMapper.writeValueAsString(value);
             redisTemplate.opsForValue().set(key, json, Duration.ofHours(properties.cacheTtlHours()));
-        } catch (JacksonException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("Q&A 캐시 write 실패 (사용자 응답엔 영향 없음): policyId={}, error={}", policyId, e.toString());
         }
     }

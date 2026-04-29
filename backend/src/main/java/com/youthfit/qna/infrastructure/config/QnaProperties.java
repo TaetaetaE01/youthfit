@@ -1,0 +1,15 @@
+package com.youthfit.qna.infrastructure.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@ConfigurationProperties(prefix = "youthfit.qna")
+public record QnaProperties(
+        long cacheTtlHours,
+        double relevanceDistanceThreshold
+) {
+
+    public QnaProperties {
+        if (cacheTtlHours <= 0) cacheTtlHours = 24;
+        if (relevanceDistanceThreshold <= 0) relevanceDistanceThreshold = 0.4;
+    }
+}

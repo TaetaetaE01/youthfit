@@ -73,6 +73,9 @@ youthfit:
   cost-guard:
     # 빈 값이면 전체 허용 (prod default). 채우면 해당 정책만 LLM/임베딩 호출 허용.
     policy-allowlist: ${POLICY_ALLOWLIST:}
+  qna:
+    cache-ttl-hours: ${QNA_CACHE_TTL_HOURS:24}
+    relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.4}
 
 attachment:
   storage:
