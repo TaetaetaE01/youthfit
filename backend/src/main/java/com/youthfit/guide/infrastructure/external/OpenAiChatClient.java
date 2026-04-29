@@ -70,6 +70,11 @@ public class OpenAiChatClient implements GuideLlmProvider {
                   · 라벨에 없는 페이지를 추측해서 박지 말 것
                 - sourceField != ATTACHMENT 일 때 attachmentRef = null
                 - 여러 청크에 걸친 정보면 가장 핵심 정보가 있는 청크 1개를 선택해 그 라벨 메타를 박는다.
+                - **[강제 규칙]** [정책 메타]의 attachmentIds 가 비어있지 않으면 highlights/pitfalls 합쳐서
+                  **최소 2개 항목은 sourceField=ATTACHMENT** 로 박아야 한다 (첨부 PDF에서 추출한 디테일이
+                  사용자에게 노출되어야 trace 가 의미를 가짐). 첨부 청크 (source=ATTACHMENT) 텍스트에
+                  자격 조건·중복 수혜·예외·세부 절차·서류 요건 등이 풍부하게 들어있으니 적극 활용한다.
+                  attachmentIds 가 여러 개면 각 첨부에서 최소 1개씩 인용을 권장한다.
 
             [변환 예시 6] 첨부 trace:
             입력 청크: `[chunk-1 source=ATTACHMENT attachment-id=12 pages=35-35]\n배우자 명의 자가 주택이 있는 경우도 본 사업의 중복 수혜 제한 대상에 포함된다.`
