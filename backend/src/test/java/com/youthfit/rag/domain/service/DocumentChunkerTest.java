@@ -172,4 +172,83 @@ class DocumentChunkerTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("attachment boundary 분할 + 페이지 추적")
+    class AttachmentBoundary {
+
+        @Test
+        @DisplayName("정책 본문/첨부 boundary 에서 청크가 강제 분할된다")
+        void givenBodyAndAttachmentBoundary_whenChunk_thenSplitsAtBoundary() {
+            String content = """
+                    === 정책 본문 ===
+                    정책 본문 짧은 텍스트입니다.
+
+                    === 첨부 attachment-id=12 name="시행규칙.pdf" ===
+                    --- page=1 ---
+                    첨부 1페이지 텍스트.
+                    --- page=2 ---
+                    첨부 2페이지 텍스트.
+                    """;
+
+            List<PolicyDocument> chunks = chunker.chunk(7L, content);
+
+            assertThat(chunks).isNotEmpty();
+
+            PolicyDocument bodyChunk = chunks.stream()
+                    .filter(c -> c.getAttachmentId() == null)
+                    .findFirst().orElseThrow();
+            assertThat(bodyChunk.getContent()).contains("정책 본문 짧은 텍스트");
+            assertThat(bodyChunk.getPageStart()).isNull();
+            assertThat(bodyChunk.getPageEnd()).isNull();
+
+            PolicyDocument attChunk = chunks.stream()
+                    .filter(c -> c.getAttachmentId() != null && c.getAttachmentId() == 12L)
+                    .findFirst().orElseThrow();
+            assertThat(attChunk.getContent()).contains("첨부 1페이지 텍스트");
+            assertThat(attChunk.getPageStart()).isEqualTo(1);
+            assertThat(attChunk.getPageEnd()).isGreaterThanOrEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("여러 페이지에 걸친 청크는 pageStart/pageEnd 가 추적된다")
+        void givenMultiplePages_whenChunkSpansPages_thenPageRangeTracked() {
+            String content = """
+                    === 첨부 attachment-id=12 name="x.pdf" ===
+                    --- page=1 ---
+                    짧은 1페이지.
+                    --- page=2 ---
+                    짧은 2페이지.
+                    --- page=3 ---
+                    짧은 3페이지.
+                    """;
+
+            List<PolicyDocument> chunks = chunker.chunk(7L, content);
+
+            assertThat(chunks).allSatisfy(c -> {
+                assertThat(c.getAttachmentId()).isEqualTo(12L);
+                assertThat(c.getPageStart()).isNotNull();
+                assertThat(c.getPageEnd()).isNotNull();
+                assertThat(c.getPageStart()).isLessThanOrEqualTo(c.getPageEnd());
+            });
+        }
+
+        @Test
+        @DisplayName("HWP 등 페이지 메타 없는 첨부는 attachmentId 만 설정되고 page 는 null 이다")
+        void givenHwpWithoutPageMeta_whenChunk_thenAttachmentIdSetPagesNull() {
+            String content = """
+                    === 첨부 attachment-id=13 name="안내문.hwp" ===
+                    --- page=null ---
+                    HWP 전체 텍스트입니다. 페이지 메타 없음.
+                    """;
+
+            List<PolicyDocument> chunks = chunker.chunk(7L, content);
+
+            assertThat(chunks).allSatisfy(c -> {
+                assertThat(c.getAttachmentId()).isEqualTo(13L);
+                assertThat(c.getPageStart()).isNull();
+                assertThat(c.getPageEnd()).isNull();
+            });
+        }
+    }
 }

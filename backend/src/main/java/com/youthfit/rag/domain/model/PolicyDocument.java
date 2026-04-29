@@ -13,7 +13,12 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "policy_document")
+@Table(
+        name = "policy_document",
+        indexes = {
+                @Index(name = "idx_policy_document_attachment", columnList = "attachment_id")
+        }
+)
 public class PolicyDocument extends BaseTimeEntity {
 
     @Id
@@ -37,12 +42,30 @@ public class PolicyDocument extends BaseTimeEntity {
     @Column(name = "embedding", columnDefinition = "vector(1536)")
     private float[] embedding;
 
+    @Column(name = "attachment_id")
+    private Long attachmentId;
+
+    @Column(name = "page_start")
+    private Integer pageStart;
+
+    @Column(name = "page_end")
+    private Integer pageEnd;
+
     @Builder
-    private PolicyDocument(Long policyId, int chunkIndex, String content, String sourceHash) {
+    private PolicyDocument(Long policyId,
+                           int chunkIndex,
+                           String content,
+                           String sourceHash,
+                           Long attachmentId,
+                           Integer pageStart,
+                           Integer pageEnd) {
         this.policyId = policyId;
         this.chunkIndex = chunkIndex;
         this.content = content;
         this.sourceHash = sourceHash;
+        this.attachmentId = attachmentId;
+        this.pageStart = pageStart;
+        this.pageEnd = pageEnd;
     }
 
     public void updateEmbedding(float[] embedding) {

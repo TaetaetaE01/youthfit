@@ -1,6 +1,9 @@
 package com.youthfit.guide.domain.model;
 
-public record GuidePitfall(String text, GuideSourceField sourceField) {
+public record GuidePitfall(
+        String text,
+        GuideSourceField sourceField,
+        AttachmentRef attachmentRef) {
 
     public GuidePitfall {
         if (text == null || text.isBlank()) {
@@ -9,5 +12,9 @@ public record GuidePitfall(String text, GuideSourceField sourceField) {
         if (sourceField == null) {
             throw new IllegalArgumentException("sourceField는 null일 수 없습니다");
         }
+    }
+
+    public GuidePitfall(String text, GuideSourceField sourceField) {
+        this(text, sourceField, null);
     }
 }

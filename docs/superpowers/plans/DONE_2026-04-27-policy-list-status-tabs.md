@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21 / Spring Boot 4.0.5 / JPA Specification, React 19 / TypeScript / TanStack Query / React Router v7 / Tailwind CSS
 
-**Spec:** `docs/superpowers/specs/2026-04-27-policy-list-status-tabs-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-27-policy-list-status-tabs-design.md`
 
 ---
 
@@ -1546,7 +1546,7 @@ gh pr create --title "feat(policy): 정책 목록 상태 탭 개편" --body "$(c
 - 키워드 검색 API에 status 파라미터 추가
 
 ## Design
-docs/superpowers/specs/2026-04-27-policy-list-status-tabs-design.md
+docs/superpowers/specs/DONE_2026-04-27-policy-list-status-tabs-design.md
 
 ## Test plan
 - [x] 백엔드 단위 테스트 (PolicySpecificationTest, PolicyQueryServiceTest, PolicyControllerTest) PASS

@@ -5,8 +5,8 @@
 ## 직전 작업
 
 - PR #44: `[FE/BE] feat: 정책 상세 쉬운 해석 가이드 도입 (페어드 레이아웃)` — 사용자 머지 예정
-- spec: `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md`
-- plan: `docs/superpowers/plans/2026-04-28-easy-policy-interpretation.md`
+- spec: `docs/superpowers/specs/DONE_2026-04-28-easy-policy-interpretation-design.md`
+- plan: `docs/superpowers/plans/DONE_2026-04-28-easy-policy-interpretation.md`
 
 ---
 
@@ -57,7 +57,7 @@ GuideGenerationService 실행 시 자동으로 청크 결합 입력으로 들어
   - 양쪽 source 보존 여부 (현재 PolicySource 1:N 구조라 가능)
   - 갱신 시 재판정 정책
   - 수동 오버라이드 출구 (잘못된 머지 풀기)
-  - 트리거 위치: 출처 뱃지 spec(`docs/superpowers/specs/2026-04-28-policy-source-badge-design.md`) 의 후속 작업으로 사용자 명시.
+  - 트리거 위치: 출처 뱃지 spec(`docs/superpowers/specs/DONE_2026-04-28-policy-source-badge-design.md`) 의 후속 작업으로 사용자 명시.
 - **사용자 lazy 트리거**: 미생성 정책에서 "AI 해석 받기" CTA 도입 여부 — 미생성 비율 메트릭 보고 결정. 현재는 카드 숨김.
 - **그룹 접기 UX (Accordion)**: 선정기준 7그룹처럼 길어지는 케이스에 대비. 사용자 반응 보고 도입.
 - **사용자 피드백 메커니즘**: "이 풀이 틀렸어요" 신고 — v1 범위.

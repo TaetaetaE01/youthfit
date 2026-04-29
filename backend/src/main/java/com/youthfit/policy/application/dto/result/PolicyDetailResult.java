@@ -38,9 +38,13 @@ public record PolicyDetailResult(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public record Attachment(String name, String url, String mediaType) {
+    public record Attachment(Long id, String name, String url, String mediaType) {
         public static Attachment from(PolicyAttachment attachment) {
-            return new Attachment(attachment.getName(), attachment.getUrl(), attachment.getMediaType());
+            return new Attachment(
+                    attachment.getId(),
+                    attachment.getName(),
+                    attachment.getUrl(),
+                    attachment.getMediaType());
         }
     }
 

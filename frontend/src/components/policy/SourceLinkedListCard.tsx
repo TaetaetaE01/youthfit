@@ -1,14 +1,17 @@
 import { scrollAndHighlight } from '@/lib/scrollHighlight';
-import type { GuideSourceField } from '@/types/policy';
+import type { GuideSourceField, AttachmentRef, PolicyAttachment } from '@/types/policy';
+import { AttachmentSourceLink } from './AttachmentSourceLink';
 
-const SOURCE_LABELS: Record<GuideSourceField, string> = {
+type NonAttachmentSource = Exclude<GuideSourceField, 'ATTACHMENT'>;
+
+const SOURCE_LABELS: Record<NonAttachmentSource, string> = {
   SUPPORT_TARGET: '지원대상',
   SELECTION_CRITERIA: '선정기준',
   SUPPORT_CONTENT: '지원내용',
   BODY: '정책 본문',
 };
 
-const SCROLL_TARGETS: Record<GuideSourceField, string> = {
+const SCROLL_TARGETS: Record<NonAttachmentSource, string> = {
   SUPPORT_TARGET: 'paired-supportTarget',
   SELECTION_CRITERIA: 'paired-selectionCriteria',
   SUPPORT_CONTENT: 'paired-supportContent',
@@ -31,9 +34,10 @@ const TONE_CLASSES = {
 interface Item {
   text: string;
   sourceField: GuideSourceField;
+  attachmentRef: AttachmentRef | null;
 }
 
-export interface AttachmentRef {
+export interface AttachmentSummary {
   id?: number;
   name: string;
   url: string;
@@ -44,10 +48,18 @@ interface Props {
   emoji: string;
   tone: keyof typeof TONE_CLASSES;
   items: Item[];
-  attachments: AttachmentRef[];
+  attachments: AttachmentSummary[];
+  policyAttachments: PolicyAttachment[];
 }
 
-export function SourceLinkedListCard({ title, emoji, tone, items, attachments }: Props) {
+export function SourceLinkedListCard({
+  title,
+  emoji,
+  tone,
+  items,
+  attachments,
+  policyAttachments,
+}: Props) {
   if (!items.length) return null;
   const t = TONE_CLASSES[tone];
 
@@ -89,13 +101,23 @@ export function SourceLinkedListCard({ title, emoji, tone, items, attachments }:
         {items.map((it, i) => (
           <li key={i} className="text-sm text-neutral-800">
             <p className="mb-1">• {it.text}</p>
-            <button
-              type="button"
-              onClick={() => scrollAndHighlight(SCROLL_TARGETS[it.sourceField])}
-              className={`ml-3 inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs ${t.button}`}
-            >
-              {SOURCE_LABELS[it.sourceField]} ↗
-            </button>
+            {it.sourceField === 'ATTACHMENT' && it.attachmentRef ? (
+              <AttachmentSourceLink
+                attachmentRef={it.attachmentRef}
+                attachments={policyAttachments}
+                className={`ml-3 inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs ${t.button}`}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  scrollAndHighlight(SCROLL_TARGETS[it.sourceField as NonAttachmentSource])
+                }
+                className={`ml-3 inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs ${t.button}`}
+              >
+                {SOURCE_LABELS[it.sourceField as NonAttachmentSource]} ↗
+              </button>
+            )}
           </li>
         ))}
       </ul>

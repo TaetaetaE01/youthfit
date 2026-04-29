@@ -49,4 +49,55 @@ class IncomeBracketReferenceTest {
         assertThat(ctx).contains("차상위계층");
         assertThat(ctx).contains("1인=119.6만");
     }
+
+    @Test
+    void findUrbanWorkerAmount_100퍼_기준값에_percent_비례하여_반환() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2026, 2,
+                Map.of(),
+                Map.of(),
+                Map.of(HouseholdSize.FOUR, 8_802_202L));
+
+        assertThat(ref.findUrbanWorkerAmount(HouseholdSize.FOUR, 100))
+                .contains(8_802_202L);
+        assertThat(ref.findUrbanWorkerAmount(HouseholdSize.FOUR, 130))
+                .contains(11_442_863L);
+        assertThat(ref.findUrbanWorkerAmount(HouseholdSize.FOUR, 50))
+                .contains(4_401_101L);
+    }
+
+    @Test
+    void findUrbanWorkerAmount_미존재_가구원수면_빈_옵셔널() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2026, 2, Map.of(), Map.of(), Map.of());
+
+        assertThat(ref.findUrbanWorkerAmount(HouseholdSize.FOUR, 100)).isEmpty();
+    }
+
+    @Test
+    void toContextText_urbanWorker_표도_노출() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2026, 2,
+                Map.of(),
+                Map.of(),
+                Map.of(HouseholdSize.THREE, 8_168_429L, HouseholdSize.FOUR, 8_802_202L));
+
+        String ctx = ref.toContextText();
+
+        assertThat(ctx).contains("도시근로자 가구 월평균소득 100%");
+        assertThat(ctx).contains("3인=816.8만");
+        assertThat(ctx).contains("4인=880.2만");
+        assertThat(ctx).contains("percent/100");
+    }
+
+    @Test
+    void 기존_4_arg_생성자_호환_유지() {
+        IncomeBracketReference ref = new IncomeBracketReference(
+                2025, 1,
+                Map.of(HouseholdSize.ONE, Map.of(60, 1_435_000L)),
+                Map.of(HouseholdSize.ONE, 1_196_000L));
+
+        assertThat(ref.urbanWorkerIncome()).isEmpty();
+        assertThat(ref.findUrbanWorkerAmount(HouseholdSize.ONE, 100)).isEmpty();
+    }
 }

@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,6 +42,21 @@ class OpenAiChatClientTest {
         assertThat(content.criteria()).isNull();
         assertThat(content.pitfalls()).hasSize(1);
         assertThat(content.pitfalls().get(0).text()).isEqualTo("월세 60만원 초과 제외");
+    }
+
+    @Test
+    void buildResponseFormat_includesAttachmentEnumAndAttachmentRef() throws Exception {
+        OpenAiChatClient client = new OpenAiChatClient(properties);
+        Method m = OpenAiChatClient.class.getDeclaredMethod("buildResponseFormat");
+        m.setAccessible(true);
+        Object format = m.invoke(client);
+        String json = new ObjectMapper().writeValueAsString(format);
+
+        assertThat(json).contains("ATTACHMENT");
+        assertThat(json).contains("attachmentRef");
+        assertThat(json).contains("attachmentId");
+        assertThat(json).contains("pageStart");
+        assertThat(json).contains("pageEnd");
     }
 
     @Test

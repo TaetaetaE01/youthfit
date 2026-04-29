@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21 + Spring Boot 4.0.5, JPA + Postgres + pgvector, Apache Tika, hwplib, AWS SDK v2 S3 (선택적), JUnit 5 + AssertJ + WireMock.
 
-**Spec:** `docs/superpowers/specs/2026-04-28-attachment-extraction-pipeline-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-28-attachment-extraction-pipeline-design.md`
 
 **커밋 컨벤션:**
 - 영역 태그: `feat(be)`, `fix(be)`, `refactor(be)`, `chore(be)`, `test(be)`

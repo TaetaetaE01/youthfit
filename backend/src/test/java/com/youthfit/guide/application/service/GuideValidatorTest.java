@@ -1,6 +1,7 @@
 package com.youthfit.guide.application.service;
 
 import com.youthfit.guide.application.service.GuideValidator.ValidationReport;
+import com.youthfit.guide.domain.model.AttachmentRef;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuideHighlight;
@@ -79,7 +80,7 @@ class GuideValidatorTest {
         ));
         GuideContent content = content(criteria);
 
-        ValidationReport report = validator.validate(content);
+        ValidationReport report = validator.validate(content, Set.of());
 
         assertThat(report.hasGroupMixViolation()).isTrue();
     }
@@ -94,7 +95,7 @@ class GuideValidatorTest {
                 ),
                 null, null, null, List.of());
 
-        ValidationReport report = validator.validate(content);
+        ValidationReport report = validator.validate(content, Set.of());
 
         assertThat(report.hasInsufficientHighlights()).isTrue();
     }
@@ -110,7 +111,7 @@ class GuideValidatorTest {
                 ),
                 null, null, null, List.of());
 
-        ValidationReport report = validator.validate(content);
+        ValidationReport report = validator.validate(content, Set.of());
 
         assertThat(report.hasInsufficientHighlights()).isFalse();
     }
@@ -127,6 +128,65 @@ class GuideValidatorTest {
 
         assertThat(filtered).hasSize(1);
         assertThat(filtered.get(0)).isEqualTo(valid);
+    }
+
+    @Test
+    void givenAttachmentSourceFieldWithNullRef_whenValidate_thenInvalid() {
+        GuideContent content = guideContentWith(
+                List.of(new GuideHighlight("text", GuideSourceField.ATTACHMENT, null)),
+                List.of());
+
+        ValidationReport report = validator.validate(content, Set.of(12L));
+
+        assertThat(report.hasInvalidAttachmentRef()).isTrue();
+        assertThat(report.hasRetryTrigger()).isTrue();
+    }
+
+    @Test
+    void givenAttachmentRefToUnknownId_whenValidate_thenInvalid() {
+        GuideContent content = guideContentWith(
+                List.of(new GuideHighlight("text", GuideSourceField.ATTACHMENT,
+                        new AttachmentRef(99L, 1, 1))),
+                List.of());
+
+        ValidationReport report = validator.validate(content, Set.of(12L, 13L));
+
+        assertThat(report.hasInvalidAttachmentRef()).isTrue();
+    }
+
+    @Test
+    void givenNonAttachmentWithRef_whenValidate_thenInvalid() {
+        GuideContent content = guideContentWith(
+                List.of(new GuideHighlight("text", GuideSourceField.SUPPORT_TARGET,
+                        new AttachmentRef(12L, 1, 1))),
+                List.of());
+
+        ValidationReport report = validator.validate(content, Set.of(12L));
+
+        assertThat(report.hasInvalidAttachmentRef()).isTrue();
+    }
+
+    @Test
+    void givenValidAttachmentRef_whenValidate_thenOk() {
+        GuideContent content = guideContentWith(
+                List.of(
+                        new GuideHighlight("hi-1", GuideSourceField.SUPPORT_TARGET, null),
+                        new GuideHighlight("hi-2", GuideSourceField.ATTACHMENT,
+                                new AttachmentRef(12L, 35, 37)),
+                        new GuideHighlight("hi-3", GuideSourceField.BODY, null)
+                ),
+                List.of());
+
+        ValidationReport report = validator.validate(content, Set.of(12L));
+
+        assertThat(report.hasInvalidAttachmentRef()).isFalse();
+    }
+
+    private GuideContent guideContentWith(List<GuideHighlight> hi, List<GuidePitfall> pi) {
+        return new GuideContent(
+                "summary", hi,
+                null, null, null,
+                pi);
     }
 
     private Set<GuideSourceField> sourceFieldsSet(String... names) {

@@ -62,25 +62,35 @@ public class YamlIncomeBracketReferenceLoader implements IncomeBracketReferenceL
         int version = (int) raw.get("version");
         Map<String, Map<String, Number>> medianRaw = (Map<String, Map<String, Number>>) raw.get("medianIncome");
         Map<String, Number> nearPoorRaw = (Map<String, Number>) raw.get("nearPoor");
+        Map<String, Number> urbanWorkerRaw = (Map<String, Number>) raw.get("urbanWorkerIncome");
 
         Map<HouseholdSize, Map<Integer, Long>> median = new HashMap<>();
-        medianRaw.forEach((sizeKey, byPercent) -> {
-            Map<Integer, Long> mapped = new HashMap<>();
-            byPercent.forEach((p, v) -> mapped.put(Integer.parseInt(p), v.longValue()));
-            median.put(toSize(sizeKey), mapped);
-        });
+        if (medianRaw != null) {
+            medianRaw.forEach((sizeKey, byPercent) -> {
+                Map<Integer, Long> mapped = new HashMap<>();
+                byPercent.forEach((p, v) -> mapped.put(Integer.parseInt(p), v.longValue()));
+                median.put(toSize(sizeKey), mapped);
+            });
+        }
 
         Map<HouseholdSize, Long> nearPoor = new HashMap<>();
-        nearPoorRaw.forEach((k, v) -> nearPoor.put(toSize(k), v.longValue()));
+        if (nearPoorRaw != null) {
+            nearPoorRaw.forEach((k, v) -> nearPoor.put(toSize(k), v.longValue()));
+        }
 
-        return new IncomeBracketReference(year, version, median, nearPoor);
+        Map<HouseholdSize, Long> urbanWorker = new HashMap<>();
+        if (urbanWorkerRaw != null) {
+            urbanWorkerRaw.forEach((k, v) -> urbanWorker.put(toSize(k), v.longValue()));
+        }
+
+        return new IncomeBracketReference(year, version, median, nearPoor, urbanWorker);
     }
 
     private HouseholdSize toSize(String key) {
-        return switch (key) {
-            case "1" -> HouseholdSize.ONE;
-            case "2" -> HouseholdSize.TWO;
-            default -> throw new IllegalArgumentException("지원하지 않는 가구원 수: " + key);
-        };
+        try {
+            return HouseholdSize.fromCount(Integer.parseInt(key));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("yaml household 키 파싱 실패: " + key, e);
+        }
     }
 }

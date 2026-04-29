@@ -1,12 +1,13 @@
-import type { GuidePitfall } from '@/types/policy';
-import { SourceLinkedListCard, type AttachmentRef } from './SourceLinkedListCard';
+import type { GuidePitfall, PolicyAttachment } from '@/types/policy';
+import { SourceLinkedListCard, type AttachmentSummary } from './SourceLinkedListCard';
 
 interface Props {
   pitfalls: GuidePitfall[];
-  attachments: AttachmentRef[];
+  attachments: AttachmentSummary[];
+  policyAttachments: PolicyAttachment[];
 }
 
-export function PitfallsCard({ pitfalls, attachments }: Props) {
+export function PitfallsCard({ pitfalls, attachments, policyAttachments }: Props) {
   return (
     <SourceLinkedListCard
       title="놓치기 쉬운 점"
@@ -14,6 +15,7 @@ export function PitfallsCard({ pitfalls, attachments }: Props) {
       tone="amber"
       items={pitfalls}
       attachments={attachments}
+      policyAttachments={policyAttachments}
     />
   );
 }

@@ -1,12 +1,13 @@
-import type { GuideHighlight } from '@/types/policy';
-import { SourceLinkedListCard, type AttachmentRef } from './SourceLinkedListCard';
+import type { GuideHighlight, PolicyAttachment } from '@/types/policy';
+import { SourceLinkedListCard, type AttachmentSummary } from './SourceLinkedListCard';
 
 interface Props {
   highlights: GuideHighlight[];
-  attachments: AttachmentRef[];
+  attachments: AttachmentSummary[];
+  policyAttachments: PolicyAttachment[];
 }
 
-export function HighlightsCard({ highlights, attachments }: Props) {
+export function HighlightsCard({ highlights, attachments, policyAttachments }: Props) {
   return (
     <SourceLinkedListCard
       title="이 정책의 특징"
@@ -14,6 +15,7 @@ export function HighlightsCard({ highlights, attachments }: Props) {
       tone="indigo"
       items={highlights}
       attachments={attachments}
+      policyAttachments={policyAttachments}
     />
   );
 }

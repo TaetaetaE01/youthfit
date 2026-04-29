@@ -19,12 +19,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class AttachmentReindexService {
 
     private static final Logger log = LoggerFactory.getLogger(AttachmentReindexService.class);
+
+    private static final Pattern PAGE_SENTINEL =
+            Pattern.compile("\\f<page=([^>]+)>\\n");
 
     private final PolicyRepository policyRepository;
     private final PolicyAttachmentRepository attachmentRepository;
@@ -68,10 +72,13 @@ public class AttachmentReindexService {
         sb.append("=== 정책 본문 ===\n");
         sb.append(policy.getBody() == null ? "" : policy.getBody());
 
-        // Pre-fetch name and text for all attachments eagerly before deciding inclusion
-        record AttachmentEntry(String name, String text) {}
+        // Pre-fetch id, name and text for all attachments eagerly before deciding inclusion
+        record AttachmentEntry(Long id, String name, String text) {}
         List<AttachmentEntry> entries = attachments.stream()
-                .map(a -> new AttachmentEntry(a.getName(), a.getExtractedText() == null ? "" : a.getExtractedText()))
+                .map(a -> new AttachmentEntry(
+                        a.getId(),
+                        a.getName(),
+                        a.getExtractedText() == null ? "" : sentinelToMarkers(a.getExtractedText())))
                 .toList();
 
         long remaining = maxBytes - sb.length();
@@ -81,7 +88,8 @@ public class AttachmentReindexService {
                 log.debug("attachment skipped from reindex (cap reached): {}", entry.name());
                 continue;
             }
-            String header = "\n\n=== 첨부: " + entry.name() + " ===\n";
+            String header = "\n\n=== 첨부 attachment-id=" + entry.id()
+                    + " name=\"" + entry.name() + "\" ===\n";
             String body = entry.text();
             long needed = header.length() + body.length();
             if (needed <= remaining) {
@@ -99,5 +107,10 @@ public class AttachmentReindexService {
             }
         }
         return sb.toString();
+    }
+
+    private String sentinelToMarkers(String extractedText) {
+        return PAGE_SENTINEL.matcher(extractedText)
+                .replaceAll(mr -> "\n--- page=" + java.util.regex.Matcher.quoteReplacement(mr.group(1)) + " ---\n");
     }
 }

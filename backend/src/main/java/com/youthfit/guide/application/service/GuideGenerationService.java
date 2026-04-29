@@ -15,6 +15,7 @@ import com.youthfit.guide.domain.repository.GuideRepository;
 import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
@@ -32,13 +33,14 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class GuideGenerationService {
 
-    static final String PROMPT_VERSION = "v3";  // 프롬프트 / 스키마 변경 시 증분
-    static final String ANNOTATOR_VERSION = "v1";  // 환산값 후처리기 변경 시 증분
+    static final String PROMPT_VERSION = "v4";  // 프롬프트 / 스키마 변경 시 증분
+    static final String ANNOTATOR_VERSION = "v5";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
@@ -79,15 +81,18 @@ public class GuideGenerationService {
         }
 
         GuideGenerationInput input = GuideGenerationInput.of(policy, chunks, reference);
+        Set<Long> validAttachmentIds = policy.getAttachments().stream()
+                .map(PolicyAttachment::getId)
+                .collect(Collectors.toSet());
         GuideContent firstResponse = guideLlmProvider.generateGuide(input);
-        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse);
+        GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse, validAttachmentIds);
 
         GuideContent finalResponse;
         if (firstReport.hasRetryTrigger()) {
             log.info("가이드 검증 위반으로 재시도: policyId={}, violations={}",
                     command.policyId(), firstReport.feedbackMessages());
             GuideContent secondResponse = guideLlmProvider.regenerateWithFeedback(input, firstReport.feedbackMessages());
-            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse);
+            GuideValidator.ValidationReport secondReport = guideValidator.validate(secondResponse, validAttachmentIds);
 
             if (secondReport.violationCount() < firstReport.violationCount()) {
                 finalResponse = secondResponse;
@@ -105,6 +110,9 @@ public class GuideGenerationService {
 
         // 결정성 후처리: 중위소득/차상위 비율을 만원 기준 환산값으로 보강
         finalResponse = incomeBracketAnnotator.annotate(finalResponse, reference, command.policyId());
+
+        // attachmentRef 가 있으면 sourceField=ATTACHMENT 로 자동 보정 (LLM 이 라벨만 잘못 박는 케이스)
+        finalResponse = enforceAttachmentSourceField(finalResponse);
 
         // 검증 4: sourceField 유효성 (해당 항목 폐기)
         finalResponse = filterInvalidSourceFields(finalResponse, policy);
@@ -132,12 +140,36 @@ public class GuideGenerationService {
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
     }
 
+    /**
+     * attachmentRef 가 not-null 인 항목은 sourceField 를 ATTACHMENT 로 강제 보정한다.
+     * LLM (gpt-4o-mini) 이 attachmentRef 메타는 정확히 박지만 sourceField 라벨을
+     * SUPPORT_CONTENT 등으로 잘못 분류하는 케이스 대응.
+     */
+    private GuideContent enforceAttachmentSourceField(GuideContent c) {
+        List<GuideHighlight> hs = c.highlights().stream()
+                .map(h -> h.attachmentRef() != null && h.sourceField() != GuideSourceField.ATTACHMENT
+                        ? new GuideHighlight(h.text(), GuideSourceField.ATTACHMENT, h.attachmentRef())
+                        : h)
+                .toList();
+        List<GuidePitfall> ps = c.pitfalls().stream()
+                .map(p -> p.attachmentRef() != null && p.sourceField() != GuideSourceField.ATTACHMENT
+                        ? new GuidePitfall(p.text(), GuideSourceField.ATTACHMENT, p.attachmentRef())
+                        : p)
+                .toList();
+        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+    }
+
     private GuideContent filterInvalidSourceFields(GuideContent c, Policy p) {
         Set<GuideSourceField> nonEmpty = new HashSet<>();
         if (notBlank(p.getSupportTarget())) nonEmpty.add(GuideSourceField.SUPPORT_TARGET);
         if (notBlank(p.getSelectionCriteria())) nonEmpty.add(GuideSourceField.SELECTION_CRITERIA);
         if (notBlank(p.getSupportContent())) nonEmpty.add(GuideSourceField.SUPPORT_CONTENT);
         if (notBlank(p.getBody())) nonEmpty.add(GuideSourceField.BODY);
+        // 정책에 첨부가 있으면 ATTACHMENT 라벨 허용 — 검증 5(GuideValidator) 가 별도로
+        // attachmentRef 의 attachmentId 화이트리스트 검증을 수행한다
+        if (p.getAttachments() != null && !p.getAttachments().isEmpty()) {
+            nonEmpty.add(GuideSourceField.ATTACHMENT);
+        }
 
         List<GuideHighlight> hs = guideValidator.filterInvalidSourceFields(
                 c.highlights(), nonEmpty, GuideHighlight::sourceField);

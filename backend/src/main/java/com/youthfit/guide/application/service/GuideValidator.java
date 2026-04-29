@@ -1,7 +1,10 @@
 package com.youthfit.guide.application.service;
 
+import com.youthfit.guide.domain.model.AttachmentRef;
 import com.youthfit.guide.domain.model.GuideContent;
+import com.youthfit.guide.domain.model.GuideHighlight;
 import com.youthfit.guide.domain.model.GuidePairedSection;
+import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
 import org.springframework.stereotype.Component;
 
@@ -33,24 +36,27 @@ public class GuideValidator {
     public record ValidationReport(
             boolean hasGroupMixViolation,
             boolean hasInsufficientHighlights,
+            boolean hasInvalidAttachmentRef,
             List<String> feedbackMessages
     ) {
 
         public boolean hasRetryTrigger() {
-            return hasGroupMixViolation || hasInsufficientHighlights;
+            return hasGroupMixViolation || hasInsufficientHighlights || hasInvalidAttachmentRef;
         }
 
         public int violationCount() {
             int n = 0;
             if (hasGroupMixViolation) n++;
             if (hasInsufficientHighlights) n++;
+            if (hasInvalidAttachmentRef) n++;
             return n;
         }
     }
 
-    public ValidationReport validate(GuideContent content) {
+    public ValidationReport validate(GuideContent content, Set<Long> validAttachmentIds) {
         boolean groupMix = checkGroupMix(content);
         boolean insufficientHighlights = content.highlights().size() < 3;
+        boolean invalidAttachmentRef = checkInvalidAttachmentRef(content, validAttachmentIds);
 
         List<String> feedback = new ArrayList<>();
         if (groupMix) {
@@ -59,8 +65,15 @@ public class GuideValidator {
         if (insufficientHighlights) {
             feedback.add("highlights가 " + content.highlights().size() + "개. 최소 3개 이상 작성할 것 (긍정·중립·차별점).");
         }
+        if (invalidAttachmentRef) {
+            feedback.add(
+                    "highlights/pitfalls 항목의 sourceField 가 ATTACHMENT 인 경우 attachmentRef 가 정확해야 합니다. "
+                            + "사용 가능한 attachmentId 목록: " + validAttachmentIds + ". "
+                            + "이 목록에 없는 ID 는 사용 금지 (few-shot 예시의 12 는 형식 예시일 뿐). "
+                            + "sourceField 가 ATTACHMENT 가 아닌데 attachmentRef 를 박지 마세요.");
+        }
 
-        return new ValidationReport(groupMix, insufficientHighlights, feedback);
+        return new ValidationReport(groupMix, insufficientHighlights, invalidAttachmentRef, feedback);
     }
 
     public <T> List<T> filterInvalidSourceFields(
@@ -101,6 +114,25 @@ public class GuideValidator {
                     long count = CATEGORY_KEYWORDS.stream().filter(joined::contains).count();
                     return count >= 2;
                 });
+    }
+
+    private boolean checkInvalidAttachmentRef(GuideContent content, Set<Long> validIds) {
+        Set<Long> ids = validIds == null ? Set.of() : validIds;
+        for (GuideHighlight h : content.highlights()) {
+            if (isInvalidRef(h.sourceField(), h.attachmentRef(), ids)) return true;
+        }
+        for (GuidePitfall p : content.pitfalls()) {
+            if (isInvalidRef(p.sourceField(), p.attachmentRef(), ids)) return true;
+        }
+        return false;
+    }
+
+    private boolean isInvalidRef(GuideSourceField sf, AttachmentRef ref, Set<Long> validIds) {
+        if (sf == GuideSourceField.ATTACHMENT) {
+            if (ref == null) return true;
+            return !validIds.contains(ref.attachmentId());
+        }
+        return ref != null;
     }
 
     private Set<String> extractTokens(String text) {

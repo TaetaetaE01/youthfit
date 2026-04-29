@@ -115,4 +115,33 @@ class TikaAttachmentExtractorTest {
             assertThat(text).contains("청년 월세");
         }
     }
+
+    @Test
+    void given3PagePdf_whenExtract_thenSentinelPerPage() throws Exception {
+        try (InputStream pdf = getClass().getResourceAsStream("/extractor/sample-3-pages.pdf")) {
+            assertThat(pdf).isNotNull();
+            long size = pdf.available();
+
+            ExtractionResult result = sut.extract(pdf, size);
+
+            assertThat(result).isInstanceOf(ExtractionResult.Success.class);
+            String text = ((ExtractionResult.Success) result).text();
+
+            assertThat(text).contains("\f<page=1>");
+            assertThat(text).contains("\f<page=2>");
+            assertThat(text).contains("\f<page=3>");
+        }
+    }
+
+    @Test
+    void givenPlainText_whenExtract_thenSinglePageNullSentinel() throws Exception {
+        try (InputStream txt = new ByteArrayInputStream("hello".getBytes())) {
+            ExtractionResult result = sut.extract(txt, 5);
+
+            assertThat(result).isInstanceOf(ExtractionResult.Success.class);
+            String text = ((ExtractionResult.Success) result).text();
+            assertThat(text).contains("\f<page=null>");
+            assertThat(text).contains("hello");
+        }
+    }
 }

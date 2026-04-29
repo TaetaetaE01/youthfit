@@ -4,5 +4,6 @@ public enum GuideSourceField {
     SUPPORT_TARGET,
     SELECTION_CRITERIA,
     SUPPORT_CONTENT,
-    BODY
+    BODY,
+    ATTACHMENT
 }

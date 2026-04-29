@@ -34,6 +34,7 @@ export interface Policy {
 }
 
 export interface PolicyAttachment {
+  id: number;
   name: string;
   url: string;
   mediaType: string | null;
@@ -84,7 +85,14 @@ export type GuideSourceField =
   | 'SUPPORT_TARGET'
   | 'SELECTION_CRITERIA'
   | 'SUPPORT_CONTENT'
-  | 'BODY';
+  | 'BODY'
+  | 'ATTACHMENT';
+
+export interface AttachmentRef {
+  attachmentId: number;
+  pageStart: number | null;
+  pageEnd: number | null;
+}
 
 export interface GuideGroup {
   label: string | null;
@@ -98,11 +106,13 @@ export interface GuidePairedSection {
 export interface GuidePitfall {
   text: string;
   sourceField: GuideSourceField;
+  attachmentRef: AttachmentRef | null;
 }
 
 export interface GuideHighlight {
   text: string;
   sourceField: GuideSourceField;
+  attachmentRef: AttachmentRef | null;
 }
 
 export interface Guide {

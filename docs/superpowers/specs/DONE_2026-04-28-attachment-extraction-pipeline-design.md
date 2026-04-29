@@ -2,8 +2,8 @@
 
 > 작성: 2026-04-28
 > 상태: 설계 합의됨, 구현 플랜 대기
-> 후속: `docs/superpowers/plans/2026-04-28-attachment-extraction-pipeline.md` (예정)
-> 연관 사이클: `docs/superpowers/specs/2026-04-28-easy-policy-interpretation-design.md` (가이드)
+> 후속: `docs/superpowers/plans/DONE_2026-04-28-attachment-extraction-pipeline.md` (예정)
+> 연관 사이클: `docs/superpowers/specs/DONE_2026-04-28-easy-policy-interpretation-design.md` (가이드)
 
 ## 0. 한 줄 요약
 

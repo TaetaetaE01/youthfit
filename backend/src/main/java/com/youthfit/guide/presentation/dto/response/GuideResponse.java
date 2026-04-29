@@ -22,9 +22,16 @@ public record GuideResponse(
 
     public record GroupDto(String label, List<String> items) {}
 
-    public record PitfallDto(String text, String sourceField) {}
+    public record AttachmentRefDto(Long attachmentId, Integer pageStart, Integer pageEnd) {
+        public static AttachmentRefDto from(com.youthfit.guide.domain.model.AttachmentRef r) {
+            return r == null ? null
+                    : new AttachmentRefDto(r.attachmentId(), r.pageStart(), r.pageEnd());
+        }
+    }
 
-    public record HighlightDto(String text, String sourceField) {}
+    public record PitfallDto(String text, String sourceField, AttachmentRefDto attachmentRef) {}
+
+    public record HighlightDto(String text, String sourceField, AttachmentRefDto attachmentRef) {}
 
     public static GuideResponse from(GuideResult result) {
         GuideContent c = result.content();
@@ -32,13 +39,15 @@ public record GuideResponse(
                 result.policyId(),
                 c.oneLineSummary(),
                 c.highlights().stream()
-                        .map(h -> new HighlightDto(h.text(), h.sourceField().name()))
+                        .map(h -> new HighlightDto(h.text(), h.sourceField().name(),
+                                AttachmentRefDto.from(h.attachmentRef())))
                         .toList(),
                 toPairedDto(c.target()),
                 toPairedDto(c.criteria()),
                 toPairedDto(c.content()),
                 c.pitfalls().stream()
-                        .map(p -> new PitfallDto(p.text(), p.sourceField().name()))
+                        .map(p -> new PitfallDto(p.text(), p.sourceField().name(),
+                                AttachmentRefDto.from(p.attachmentRef())))
                         .toList(),
                 result.updatedAt()
         );

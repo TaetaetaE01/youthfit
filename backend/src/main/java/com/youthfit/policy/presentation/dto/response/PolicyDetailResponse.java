@@ -42,9 +42,9 @@ public record PolicyDetailResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public record Attachment(String name, String url, String mediaType) {
+    public record Attachment(Long id, String name, String url, String mediaType) {
         static Attachment from(PolicyDetailResult.Attachment a) {
-            return new Attachment(a.name(), a.url(), a.mediaType());
+            return new Attachment(a.id(), a.name(), a.url(), a.mediaType());
         }
     }
 

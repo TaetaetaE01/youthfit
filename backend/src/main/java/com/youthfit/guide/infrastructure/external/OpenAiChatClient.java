@@ -61,6 +61,26 @@ public class OpenAiChatClient implements GuideLlmProvider {
                - 차상위계층 표기: "차상위계층 이하 (2025년 기준 1인 가구 월 약 119만원 이하)"
                - [참고 - 환산표]에도 없으면 비율만 표기 (만들어내지 않는다).
                - 같은 풀이 안에서 동일 비율이 반복 등장하면 환산값은 첫 등장에만 병기 (가독성).
+            10. 출처 라벨 정확성 (첨부 trace):
+                - highlights / pitfalls 의 sourceField 는 정보가 발견된 청크 라벨의 source 값을 그대로 쓴다.
+                - source=ATTACHMENT 인 청크에서 가져온 정보:
+                  · attachmentRef.attachmentId = 청크 라벨의 attachment-id 그대로
+                  · attachmentRef.pageStart / pageEnd = 청크 라벨의 pages= 범위 그대로
+                  · 청크 라벨에 pages 가 없으면 pageStart / pageEnd = null (HWP 등)
+                  · 라벨에 없는 페이지를 추측해서 박지 말 것
+                - sourceField != ATTACHMENT 일 때 attachmentRef = null
+                - 여러 청크에 걸친 정보면 가장 핵심 정보가 있는 청크 1개를 선택해 그 라벨 메타를 박는다.
+                - **[강제 규칙]** [정책 메타]의 attachmentIds 가 비어있지 않으면 highlights/pitfalls 합쳐서
+                  **최소 2개 항목은 sourceField=ATTACHMENT** 로 박아야 한다 (첨부 PDF에서 추출한 디테일이
+                  사용자에게 노출되어야 trace 가 의미를 가짐). 첨부 청크 (source=ATTACHMENT) 텍스트에
+                  자격 조건·중복 수혜·예외·세부 절차·서류 요건 등이 풍부하게 들어있으니 적극 활용한다.
+                  attachmentIds 가 여러 개면 각 첨부에서 최소 1개씩 인용을 권장한다.
+
+            [변환 예시 6] 첨부 trace:
+            입력 청크: `[chunk-1 source=ATTACHMENT attachment-id=12 pages=35-35]\n배우자 명의 자가 주택이 있는 경우도 본 사업의 중복 수혜 제한 대상에 포함된다.`
+            → pitfalls 출력:
+            { "text": "배우자 명의 자가 주택이 있어도 신청 제외", "sourceField": "ATTACHMENT",
+              "attachmentRef": { "attachmentId": 12, "pageStart": 35, "pageEnd": 35 } }
 
             [출력 단위 — JSON]
             - oneLineSummary: 정책 정체를 누가/무엇을/얼마나 받는지 1~2문장.
@@ -237,9 +257,34 @@ public class OpenAiChatClient implements GuideLlmProvider {
         node.forEach(n -> {
             String text = n.get("text").asText();
             String sourceFieldStr = n.get("sourceField").asText();
-            highlights.add(new GuideHighlight(text, GuideSourceField.valueOf(sourceFieldStr)));
+            highlights.add(new GuideHighlight(
+                    text,
+                    GuideSourceField.valueOf(sourceFieldStr),
+                    parseAttachmentRef(n.get("attachmentRef"))));
         });
         return highlights;
+    }
+
+    private com.youthfit.guide.domain.model.AttachmentRef parseAttachmentRef(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        JsonNode idNode = node.get("attachmentId");
+        if (idNode == null || idNode.isNull()) return null;
+
+        Long attachmentId = idNode.asLong();
+        JsonNode startNode = node.get("pageStart");
+        JsonNode endNode = node.get("pageEnd");
+        Integer pageStart = (startNode == null || startNode.isNull()) ? null : startNode.asInt();
+        Integer pageEnd = (endNode == null || endNode.isNull()) ? null : endNode.asInt();
+
+        try {
+            return new com.youthfit.guide.domain.model.AttachmentRef(attachmentId, pageStart, pageEnd);
+        } catch (IllegalArgumentException e) {
+            // LLM 이 잘못된 page range 박은 경우 (pageStart > pageEnd 또는 한쪽만 존재) → null fallback,
+            // 후속 GuideValidator 검증 5 가 retry 트리거
+            log.warn("invalid attachmentRef from LLM: id={} start={} end={}, message={}",
+                    attachmentId, pageStart, pageEnd, e.getMessage());
+            return null;
+        }
     }
 
     private GuidePairedSection parsePaired(JsonNode node) {
@@ -268,7 +313,10 @@ public class OpenAiChatClient implements GuideLlmProvider {
         node.forEach(n -> {
             String text = n.get("text").asText();
             String sourceFieldStr = n.get("sourceField").asText();
-            pitfalls.add(new GuidePitfall(text, GuideSourceField.valueOf(sourceFieldStr)));
+            pitfalls.add(new GuidePitfall(
+                    text,
+                    GuideSourceField.valueOf(sourceFieldStr),
+                    parseAttachmentRef(n.get("attachmentRef"))));
         });
         return pitfalls;
     }
@@ -280,6 +328,18 @@ public class OpenAiChatClient implements GuideLlmProvider {
         if (input.referenceYear() != null) sb.append("referenceYear: ").append(input.referenceYear()).append("\n");
         if (input.organization() != null) sb.append("organization: ").append(input.organization()).append("\n");
         if (input.contact() != null) sb.append("contact: ").append(input.contact()).append("\n");
+
+        // 이 정책의 첨부 ID 화이트리스트 — LLM 이 attachmentRef.attachmentId 를 이 목록에서만 고르도록 강제
+        java.util.LinkedHashSet<Long> attachmentIds = new java.util.LinkedHashSet<>();
+        for (var c : input.chunks()) {
+            if (c.attachmentId() != null) attachmentIds.add(c.attachmentId());
+        }
+        if (!attachmentIds.isEmpty()) {
+            sb.append("attachmentIds: ").append(attachmentIds).append("\n");
+            sb.append("(sourceField=ATTACHMENT 일 때 attachmentRef.attachmentId 는 위 목록에서만 사용. ")
+              .append("few-shot 예시의 attachmentId=12 는 단순 형식 예시이며 실제 값으로 사용 금지.)\n");
+        }
+
         sb.append("\n[원문]\n");
         sb.append(input.combinedSourceText());
         if (input.referenceData() != null) {
@@ -311,16 +371,44 @@ public class OpenAiChatClient implements GuideLlmProvider {
                 )
         );
 
+        Map<String, Object> attachmentRefSchema = Map.of(
+                "anyOf", List.of(
+                        Map.of(
+                                "type", "object",
+                                "additionalProperties", false,
+                                "required", List.of("attachmentId", "pageStart", "pageEnd"),
+                                "properties", Map.of(
+                                        "attachmentId", Map.of("type", "integer"),
+                                        "pageStart", Map.of("anyOf", List.of(
+                                                Map.of("type", "integer"),
+                                                Map.of("type", "null")
+                                        )),
+                                        "pageEnd", Map.of("anyOf", List.of(
+                                                Map.of("type", "integer"),
+                                                Map.of("type", "null")
+                                        ))
+                                )
+                        ),
+                        Map.of("type", "null")
+                )
+        );
+
         Map<String, Object> pitfallSchema = Map.of(
                 "type", "object",
                 "additionalProperties", false,
-                "required", List.of("text", "sourceField"),
+                "required", List.of("text", "sourceField", "attachmentRef"),
                 "properties", Map.of(
                         "text", Map.of("type", "string"),
                         "sourceField", Map.of(
                                 "type", "string",
-                                "enum", List.of("SUPPORT_TARGET", "SELECTION_CRITERIA", "SUPPORT_CONTENT", "BODY")
-                        )
+                                "enum", List.of(
+                                        "SUPPORT_TARGET",
+                                        "SELECTION_CRITERIA",
+                                        "SUPPORT_CONTENT",
+                                        "BODY",
+                                        "ATTACHMENT")
+                        ),
+                        "attachmentRef", attachmentRefSchema
                 )
         );
 

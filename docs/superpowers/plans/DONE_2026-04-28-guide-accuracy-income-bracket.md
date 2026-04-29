@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, JPA, PostgreSQL + pgvector, OpenAI Chat API, JUnit 5, snakeyaml. 프론트: React 19, TypeScript 5, Vite 6, TanStack Query, Tailwind v4, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-04-28-guide-accuracy-income-bracket-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-28-guide-accuracy-income-bracket-design.md`
 
 **PR 전략:** 단일 PR + 6 commit (Task 1 = commit 1, …, Task 6 = commit 6). 각 commit은 독립적으로 머지 안전한 상태이지만, e2e 가치는 Task 3·4 머지 이후 발현.
 

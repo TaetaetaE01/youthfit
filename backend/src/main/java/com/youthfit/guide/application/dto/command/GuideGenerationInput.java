@@ -18,7 +18,7 @@ public record GuideGenerationInput(
         String supportContent,
         String contact,
         String organization,
-        List<String> chunkContents,
+        List<ChunkInput> chunks,
         IncomeBracketReference referenceData
 ) {
 
@@ -29,14 +29,20 @@ public record GuideGenerationInput(
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("title은 비어있을 수 없습니다");
         }
-        chunkContents = chunkContents == null ? List.of() : List.copyOf(chunkContents);
+        chunks = chunks == null ? List.of() : List.copyOf(chunks);
         // referenceData는 nullable 허용 (yaml 누락 시 호출부에서 fallback 처리)
     }
 
     public static GuideGenerationInput of(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference referenceData) {
-        List<String> chunkTexts = chunks == null
+        List<ChunkInput> chunkInputs = chunks == null
                 ? List.of()
-                : chunks.stream().map(PolicyDocument::getContent).collect(Collectors.toList());
+                : chunks.stream()
+                        .map(d -> new ChunkInput(
+                                d.getContent(),
+                                d.getAttachmentId(),
+                                d.getPageStart(),
+                                d.getPageEnd()))
+                        .collect(Collectors.toList());
 
         return new GuideGenerationInput(
                 policy.getId(),
@@ -49,7 +55,7 @@ public record GuideGenerationInput(
                 policy.getSupportContent(),
                 policy.getContact(),
                 policy.getOrganization(),
-                chunkTexts,
+                chunkInputs,
                 referenceData
         );
     }
@@ -64,8 +70,19 @@ public record GuideGenerationInput(
         if (referenceYear != null) {
             sb.append("[referenceYear]\n").append(referenceYear).append("\n\n");
         }
-        for (int i = 0; i < chunkContents.size(); i++) {
-            sb.append("[chunk-").append(i).append("]\n").append(chunkContents.get(i)).append("\n\n");
+        for (int i = 0; i < chunks.size(); i++) {
+            ChunkInput c = chunks.get(i);
+            sb.append('[').append("chunk-").append(i);
+            if (c.attachmentId() == null) {
+                sb.append(" source=BODY]\n");
+            } else {
+                sb.append(" source=ATTACHMENT attachment-id=").append(c.attachmentId());
+                if (c.pageStart() != null) {
+                    sb.append(" pages=").append(c.pageStart()).append('-').append(c.pageEnd());
+                }
+                sb.append("]\n");
+            }
+            sb.append(c.content()).append("\n\n");
         }
         return sb.toString();
     }

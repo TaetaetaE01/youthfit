@@ -28,6 +28,48 @@ class PolicyDocumentTest {
     }
 
     @Nested
+    @DisplayName("첨부 메타")
+    class AttachmentMeta {
+
+        @Test
+        @DisplayName("첨부 청크는 attachmentId/pageStart/pageEnd 가 설정된다")
+        void givenAttachmentChunk_whenBuild_thenAttachmentMetaSet() {
+            // given & when
+            PolicyDocument doc = PolicyDocument.builder()
+                    .policyId(7L)
+                    .chunkIndex(2)
+                    .content("청크 텍스트")
+                    .sourceHash("abc")
+                    .attachmentId(12L)
+                    .pageStart(35)
+                    .pageEnd(37)
+                    .build();
+
+            // then
+            assertThat(doc.getAttachmentId()).isEqualTo(12L);
+            assertThat(doc.getPageStart()).isEqualTo(35);
+            assertThat(doc.getPageEnd()).isEqualTo(37);
+        }
+
+        @Test
+        @DisplayName("본문 청크는 attachmentId/pageStart/pageEnd 가 모두 null 이다")
+        void givenBodyChunk_whenBuild_thenAttachmentMetaNull() {
+            // given & when
+            PolicyDocument doc = PolicyDocument.builder()
+                    .policyId(7L)
+                    .chunkIndex(0)
+                    .content("본문 청크")
+                    .sourceHash("abc")
+                    .build();
+
+            // then
+            assertThat(doc.getAttachmentId()).isNull();
+            assertThat(doc.getPageStart()).isNull();
+            assertThat(doc.getPageEnd()).isNull();
+        }
+    }
+
+    @Nested
     @DisplayName("임베딩 관리")
     class EmbeddingManagement {
 
