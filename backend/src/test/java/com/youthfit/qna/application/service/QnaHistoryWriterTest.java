@@ -74,4 +74,14 @@ class QnaHistoryWriterTest {
 
         verify(repository, org.mockito.Mockito.never()).save(any());
     }
+
+    @Test
+    @DisplayName("findById 가 비어 있으면 markFailed 도 조용히 무시 (이미 정리된 케이스)")
+    void markFailed_missingHistory_silentlyIgnored() {
+        given(repository.findById(99L)).willReturn(Optional.empty());
+
+        writer.markFailed(99L, QnaFailedReason.LLM_ERROR);
+
+        verify(repository, org.mockito.Mockito.never()).save(any());
+    }
 }
