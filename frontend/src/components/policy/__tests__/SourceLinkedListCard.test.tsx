@@ -11,6 +11,7 @@ describe('SourceLinkedListCard', () => {
         tone="indigo"
         items={[]}
         attachments={[]}
+        policyAttachments={[]}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -22,8 +23,11 @@ describe('SourceLinkedListCard', () => {
         title="이 정책의 특징"
         emoji="🌟"
         tone="indigo"
-        items={[{ text: '월 20만원 지원', sourceField: 'SUPPORT_CONTENT' }]}
+        items={[
+          { text: '월 20만원 지원', sourceField: 'SUPPORT_CONTENT', attachmentRef: null },
+        ]}
         attachments={[]}
+        policyAttachments={[]}
       />,
     );
 
@@ -38,8 +42,9 @@ describe('SourceLinkedListCard', () => {
         title="이 정책의 특징"
         emoji="🌟"
         tone="indigo"
-        items={[{ text: 'a', sourceField: 'BODY' }]}
+        items={[{ text: 'a', sourceField: 'BODY', attachmentRef: null }]}
         attachments={[{ id: 1, name: 'pdf', url: 'https://example.com/a.pdf' }]}
+        policyAttachments={[]}
       />,
     );
     const link = screen.getByRole('link', { name: /원본 첨부/ });
@@ -56,14 +61,43 @@ describe('SourceLinkedListCard', () => {
         title="t"
         emoji="🌟"
         tone="indigo"
-        items={[{ text: 'a', sourceField: 'BODY' }]}
+        items={[{ text: 'a', sourceField: 'BODY', attachmentRef: null }]}
         attachments={[
           { id: 1, name: 'a', url: 'x' },
           { id: 2, name: 'b', url: 'y' },
         ]}
+        policyAttachments={[]}
       />,
     );
     const button = screen.getByRole('button', { name: /원본 첨부/ });
     expect(button).toBeInTheDocument();
+  });
+
+  it('sourceField=ATTACHMENT 항목은 AttachmentSourceLink 렌더', () => {
+    render(
+      <SourceLinkedListCard
+        title="이 정책의 특징"
+        emoji="🌟"
+        tone="indigo"
+        items={[
+          {
+            text: '시행규칙 35조 참조',
+            sourceField: 'ATTACHMENT',
+            attachmentRef: { attachmentId: 12, pageStart: 35, pageEnd: 35 },
+          },
+        ]}
+        attachments={[]}
+        policyAttachments={[
+          {
+            id: 12,
+            name: '시행규칙.pdf',
+            url: 'https://orig/12.pdf',
+            mediaType: 'application/pdf',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/시행규칙\.pdf/)).toBeInTheDocument();
+    expect(screen.getByText(/35페이지/)).toBeInTheDocument();
   });
 });

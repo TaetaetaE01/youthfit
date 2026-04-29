@@ -774,6 +774,7 @@ export default function PolicyDetailPage() {
             <HighlightsCard
               highlights={guide.highlights ?? []}
               attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
             />
           )}
 
@@ -826,7 +827,11 @@ export default function PolicyDetailPage() {
 
           {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
           {guide && (
-            <PitfallsCard pitfalls={guide.pitfalls} attachments={policy.attachments ?? []} />
+            <PitfallsCard
+              pitfalls={guide.pitfalls}
+              attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
+            />
           )}
 
           {/* Reference Sites */}
