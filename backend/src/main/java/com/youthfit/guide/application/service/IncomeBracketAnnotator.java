@@ -38,13 +38,13 @@ public class IncomeBracketAnnotator {
         }
         String oneLine = annotateText(content.oneLineSummary(), reference, policyId);
         List<GuideHighlight> highlights = content.highlights().stream()
-                .map(h -> new GuideHighlight(annotateText(h.text(), reference, policyId), h.sourceField()))
+                .map(h -> new GuideHighlight(annotateText(h.text(), reference, policyId), h.sourceField(), h.attachmentRef()))
                 .toList();
         GuidePairedSection target = annotatePaired(content.target(), reference, policyId);
         GuidePairedSection criteria = annotatePaired(content.criteria(), reference, policyId);
         GuidePairedSection contentSection = annotatePaired(content.content(), reference, policyId);
         List<GuidePitfall> pitfalls = content.pitfalls().stream()
-                .map(p -> new GuidePitfall(annotateText(p.text(), reference, policyId), p.sourceField()))
+                .map(p -> new GuidePitfall(annotateText(p.text(), reference, policyId), p.sourceField(), p.attachmentRef()))
                 .toList();
         return new GuideContent(oneLine, highlights, target, criteria, contentSection, pitfalls);
     }
