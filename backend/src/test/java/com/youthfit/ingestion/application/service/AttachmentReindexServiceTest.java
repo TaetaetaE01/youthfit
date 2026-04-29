@@ -49,7 +49,7 @@ class AttachmentReindexServiceTest {
         when(policy.getTitle()).thenReturn("title");
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
 
-        PolicyAttachment a1 = pa("공고문.pdf", "내용 A");
+        PolicyAttachment a1 = pa(11L, "공고문.pdf", "내용 A");
         when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of(a1));
         when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 5, true));
 
@@ -59,10 +59,47 @@ class AttachmentReindexServiceTest {
         verify(ragIndexingService).indexPolicyDocument(captor.capture());
         String content = captor.getValue().content();
         assertThat(content).contains("정책 본문");
-        assertThat(content).contains("공고문.pdf");
+        assertThat(content).contains("=== 첨부 attachment-id=11 name=\"공고문.pdf\" ===");
         assertThat(content).contains("내용 A");
 
         verify(guideGenerationService).generateGuide(any());
+    }
+
+    @Test
+    void mergeContent_첨부에_페이지_sentinel_있으면_LLM_친화적_마커로_변환() {
+        Policy policy = mock(Policy.class);
+        when(policy.getBody()).thenReturn("정책 본문 텍스트");
+
+        PolicyAttachment att = pa(12L, "시행규칙.pdf",
+                "\f<page=1>\n첫 페이지 텍스트\n\f<page=2>\n둘째 페이지 텍스트\n");
+
+        String merged = sut.mergeContent(policy, List.of(att));
+
+        assertThat(merged).contains("=== 정책 본문 ===");
+        assertThat(merged).contains("정책 본문 텍스트");
+        assertThat(merged).contains("=== 첨부 attachment-id=12 name=\"시행규칙.pdf\" ===");
+        assertThat(merged).contains("--- page=1 ---");
+        assertThat(merged).contains("첫 페이지 텍스트");
+        assertThat(merged).contains("--- page=2 ---");
+        assertThat(merged).contains("둘째 페이지 텍스트");
+        // sentinel 원본은 잔존하지 않아야 함
+        assertThat(merged).doesNotContain("\f<page=");
+    }
+
+    @Test
+    void mergeContent_HWP등_단일페이지_sentinel_은_page_null_마커로_변환() {
+        Policy policy = mock(Policy.class);
+        when(policy.getBody()).thenReturn("본문");
+
+        PolicyAttachment hwp = pa(13L, "안내문.hwp",
+                "\f<page=null>\n전체 텍스트\n");
+
+        String merged = sut.mergeContent(policy, List.of(hwp));
+
+        assertThat(merged).contains("=== 첨부 attachment-id=13 name=\"안내문.hwp\" ===");
+        assertThat(merged).contains("--- page=null ---");
+        assertThat(merged).contains("전체 텍스트");
+        assertThat(merged).doesNotContain("\f<page=");
     }
 
     @Test
@@ -87,9 +124,9 @@ class AttachmentReindexServiceTest {
         when(policy.getTitle()).thenReturn("t");
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
 
-        PolicyAttachment big1 = pa("a.pdf", "X".repeat(150_000));
-        PolicyAttachment big2 = pa("b.pdf", "Y".repeat(100_000));
-        PolicyAttachment skipped = pa("c.pdf", "Z".repeat(50_000));
+        PolicyAttachment big1 = pa(101L, "a.pdf", "X".repeat(150_000));
+        PolicyAttachment big2 = pa(102L, "b.pdf", "Y".repeat(100_000));
+        PolicyAttachment skipped = pa(103L, "c.pdf", "Z".repeat(50_000));
         when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of(big1, big2, skipped));
         when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 1, true));
 
@@ -103,8 +140,9 @@ class AttachmentReindexServiceTest {
         assertThat(content).contains("a.pdf");
     }
 
-    private PolicyAttachment pa(String name, String text) {
+    private PolicyAttachment pa(Long id, String name, String text) {
         PolicyAttachment a = mock(PolicyAttachment.class);
+        when(a.getId()).thenReturn(id);
         when(a.getName()).thenReturn(name);
         when(a.getExtractedText()).thenReturn(text);
         return a;
