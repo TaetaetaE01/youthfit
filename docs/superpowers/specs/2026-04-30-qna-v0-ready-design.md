@@ -95,8 +95,9 @@
 
 마이그레이션:
 
-- 기존 row는 `status='COMPLETED'`로 백필
-- 새 컬럼은 `NOT NULL`(status)·`NULL`(failed_reason)
+- 본 프로젝트는 Flyway/Liquibase 미도입. local 프로파일은 `ddl-auto: update`로 엔티티 변경 시 컬럼이 자동 추가되며, prod는 `validate`라 사전 ALTER가 필요하다.
+- 운영 문서 `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` 에 prod 배포 전 적용할 SQL을 둔다 (status 컬럼 추가 + 기존 row `status='COMPLETED'` 백필 + NOT NULL 제약).
+- 신규 컬럼: `status NOT NULL`, `failed_reason NULL`
 
 ### 4.2 `PolicyDocumentChunkResult` (rag 모듈)
 
@@ -327,20 +328,19 @@ SseEmitter 검증은 `Consumer<String>` 캡처(LLM chunk callback) + `SseEmitter
 | 캐시 write 실패 | 사용자 응답 정상, WARN 로그, history COMPLETED |
 | 정책 없음 | NOT_FOUND, history 미저장 |
 
-### 7.3 Infrastructure 슬라이스
+### 7.3 Infrastructure / Presentation 테스트 정책
 
-- `PolicyDocumentRepositoryImplTest` (DataJpaTest + Testcontainers postgres+pgvector — 기존 패턴 따라): `findSimilarByEmbedding`이 `SimilarChunk(document, distance)` 반환·distance 오름차순 정렬·동일 정책 스코프 검증
-- `QnaHistoryRepositoryImplTest`: `status`/`failed_reason` 컬럼 매핑, 마이그레이션 후 기존 데이터의 status 디폴트 백필 동작
-- `RedisQnaAnswerCacheTest`: Redis 컨테이너 또는 `@DataRedisTest`. put → get round-trip, TTL 만료, 정규화(공백/대소문자 다른 질문이 같은 키)
+본 프로젝트는 현재 `@DataJpaTest`·Testcontainers·`@WebMvcTest` 등의 슬라이스 테스트 인프라를 두고 있지 않다 (단위 테스트 + Mockito가 표준). 본 작업에서 인프라를 함께 도입하면 범위가 커지므로, v0에서는 다음 정책을 따른다.
 
-### 7.4 Presentation (선택, 가벼움)
+- **인프라 슬라이스 테스트는 도입하지 않는다** — `RedisQnaAnswerCache`, `PolicyDocumentRepositoryImpl`(distance 반환 변경), `QnaHistoryRepositoryImpl`은 application 단위 테스트에서 포트 모킹으로 검증. distance·attachment 메타·status 컬럼 매핑 동작은 staging 수동 smoke로 확인.
+- **Presentation 테스트 도입하지 않는다** — `AskQuestionRequest`의 `@Size` 동작은 입력 검증 단위 테스트(`AskQuestionRequestValidationTest`)로 검증. 인증 게이팅은 기존 SecurityConfig 단위 테스트가 커버.
+- **테스트 인프라 도입(Testcontainers, @DataJpaTest, @WebMvcTest)** 은 별도 사이클로 §9에 후속 작업으로 둔다.
 
-- `@WebMvcTest QnaControllerTest`: 입력 validation(`@Size`, `@NotNull`), 인증 게이팅(`@AuthenticationPrincipal`)만 검증. SSE 본문 흐름은 application 단위가 책임.
-
-### 7.5 명시적으로 안 하는 것
+### 7.4 명시적으로 안 하는 것
 
 - 실제 OpenAI API e2e — staging 수동 검증
 - SSE 풀-체인 통합 테스트 — v0+ 운영 견고성 작업과 함께
+- DB·Redis 슬라이스 테스트 — §7.3 정책에 따라 별도 사이클
 
 ---
 
@@ -364,8 +364,8 @@ SseEmitter 검증은 `Consumer<String>` 캡처(LLM chunk callback) + `SseEmitter
 | `rag/domain/model/SimilarChunk.java` (신규) | 거리 포함 결과형 |
 | `rag/application/service/RagSearchService.java` | 새 결과형 변환 |
 | `rag/infrastructure/persistence/PolicyDocumentRepositoryImpl.java` | distance SELECT |
-| `common/cost-guard/...` | qna 정책 ID allowlist 항목 추가 (기존 메커니즘 재사용) |
-| `db/migration/Vxxx__qna_history_status.sql` | status·failed_reason 컬럼 추가, 백필 |
+| `common/config/CostGuard` | 직접 변경 없음 — `QnaService`에서 `costGuard.allows(policyId)` 호출 추가 (기존 빈 재사용) |
+| `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` (신규) | prod 배포 전 적용할 ALTER TABLE SQL + 운영 메모 |
 
 ---
 
@@ -394,7 +394,14 @@ SseEmitter 검증은 `Consumer<String>` 캡처(LLM chunk callback) + `SseEmitter
 - ingestion 단계에서 헤딩 파싱 (PDF·HTML 별도 전략)
 - `QnaSourceResult`에 `sectionTitle` 노출 → PRD 예시(`"section": "자격 요건"`) 정확 충족
 
-### 9.4 히스토리 조회 API (요구 발생 시)
+### 9.4 테스트 인프라 도입
+
+- `@DataJpaTest` + Testcontainers postgres+pgvector — 리포지토리 슬라이스 검증
+- `@WebMvcTest` — Controller 입력 검증·인증 게이팅
+- `@DataRedisTest` 또는 Redis Testcontainer — 캐시 어댑터 round-trip
+- 도입 후 본 v0 작업에서 application 단위로 미룬 검증을 슬라이스 테스트로 보강
+
+### 9.5 히스토리 조회 API (요구 발생 시)
 
 - 사용자 본인의 Q&A 히스토리 페이징 조회
 - PRD 미명시 — 프론트 요구사항이 들어오면 별도 사이클
