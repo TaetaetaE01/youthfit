@@ -29,6 +29,7 @@ class RedirectAttachmentServiceTest {
         PolicyAttachment att = mockAttachment(12L, "key-12", "https://orig.example/x.pdf",
                 "application/pdf");
         Mockito.when(repo.findById(12L)).thenReturn(Optional.of(att));
+        Mockito.when(storage.exists("key-12")).thenReturn(true);
         Mockito.when(storage.presign(Mockito.eq("key-12"), Mockito.any(Duration.class)))
                 .thenReturn(Optional.of("https://s3.aws/presigned"));
 
@@ -45,6 +46,7 @@ class RedirectAttachmentServiceTest {
         PolicyAttachment att = mockAttachment(12L, "key-12", "https://orig.example/x.pdf",
                 "application/pdf");
         Mockito.when(repo.findById(12L)).thenReturn(Optional.of(att));
+        Mockito.when(storage.exists("key-12")).thenReturn(true);
         Mockito.when(storage.presign(Mockito.eq("key-12"), Mockito.any(Duration.class)))
                 .thenReturn(Optional.empty());
         Mockito.when(storage.get("key-12"))
