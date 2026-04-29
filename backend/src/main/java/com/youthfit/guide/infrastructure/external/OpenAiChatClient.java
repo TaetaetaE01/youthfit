@@ -252,9 +252,34 @@ public class OpenAiChatClient implements GuideLlmProvider {
         node.forEach(n -> {
             String text = n.get("text").asText();
             String sourceFieldStr = n.get("sourceField").asText();
-            highlights.add(new GuideHighlight(text, GuideSourceField.valueOf(sourceFieldStr)));
+            highlights.add(new GuideHighlight(
+                    text,
+                    GuideSourceField.valueOf(sourceFieldStr),
+                    parseAttachmentRef(n.get("attachmentRef"))));
         });
         return highlights;
+    }
+
+    private com.youthfit.guide.domain.model.AttachmentRef parseAttachmentRef(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        JsonNode idNode = node.get("attachmentId");
+        if (idNode == null || idNode.isNull()) return null;
+
+        Long attachmentId = idNode.asLong();
+        JsonNode startNode = node.get("pageStart");
+        JsonNode endNode = node.get("pageEnd");
+        Integer pageStart = (startNode == null || startNode.isNull()) ? null : startNode.asInt();
+        Integer pageEnd = (endNode == null || endNode.isNull()) ? null : endNode.asInt();
+
+        try {
+            return new com.youthfit.guide.domain.model.AttachmentRef(attachmentId, pageStart, pageEnd);
+        } catch (IllegalArgumentException e) {
+            // LLM 이 잘못된 page range 박은 경우 (pageStart > pageEnd 또는 한쪽만 존재) → null fallback,
+            // 후속 GuideValidator 검증 5 가 retry 트리거
+            log.warn("invalid attachmentRef from LLM: id={} start={} end={}, message={}",
+                    attachmentId, pageStart, pageEnd, e.getMessage());
+            return null;
+        }
     }
 
     private GuidePairedSection parsePaired(JsonNode node) {
@@ -283,7 +308,10 @@ public class OpenAiChatClient implements GuideLlmProvider {
         node.forEach(n -> {
             String text = n.get("text").asText();
             String sourceFieldStr = n.get("sourceField").asText();
-            pitfalls.add(new GuidePitfall(text, GuideSourceField.valueOf(sourceFieldStr)));
+            pitfalls.add(new GuidePitfall(
+                    text,
+                    GuideSourceField.valueOf(sourceFieldStr),
+                    parseAttachmentRef(n.get("attachmentRef"))));
         });
         return pitfalls;
     }
