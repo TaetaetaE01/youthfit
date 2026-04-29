@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class GuideGenerationService {
 
     static final String PROMPT_VERSION = "v4";  // 프롬프트 / 스키마 변경 시 증분
-    static final String ANNOTATOR_VERSION = "v1";  // 환산값 후처리기 변경 시 증분
+    static final String ANNOTATOR_VERSION = "v5";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
