@@ -143,6 +143,11 @@ public class GuideGenerationService {
         if (notBlank(p.getSelectionCriteria())) nonEmpty.add(GuideSourceField.SELECTION_CRITERIA);
         if (notBlank(p.getSupportContent())) nonEmpty.add(GuideSourceField.SUPPORT_CONTENT);
         if (notBlank(p.getBody())) nonEmpty.add(GuideSourceField.BODY);
+        // 정책에 첨부가 있으면 ATTACHMENT 라벨 허용 — 검증 5(GuideValidator) 가 별도로
+        // attachmentRef 의 attachmentId 화이트리스트 검증을 수행한다
+        if (p.getAttachments() != null && !p.getAttachments().isEmpty()) {
+            nonEmpty.add(GuideSourceField.ATTACHMENT);
+        }
 
         List<GuideHighlight> hs = guideValidator.filterInvalidSourceFields(
                 c.highlights(), nonEmpty, GuideHighlight::sourceField);
