@@ -48,20 +48,44 @@ export async function fetchQnaAnswer(
     for (const line of lines) {
       if (!line.startsWith('data:')) continue;
       const data = line.slice(5).trim();
-      if (data === '[DONE]') {
-        onDone();
-        return;
-      }
+      if (!data) continue;
+
       try {
         const parsed = JSON.parse(data);
-        if (parsed.type === 'content') {
-          onChunk(parsed.text);
-        } else if (parsed.type === 'sources') {
-          onSources(parsed.sources);
+        if (parsed.type === 'CHUNK') {
+          onChunk(parsed.content ?? '');
+        } else if (parsed.type === 'SOURCES') {
+          const sourceStrings: string[] = Array.from(
+            new Set(
+              (parsed.sources ?? []).map(
+                (s: {
+                  policyId?: number;
+                  attachmentLabel?: string | null;
+                  pageStart?: number | null;
+                  pageEnd?: number | null;
+                }) => {
+                  const label = s.attachmentLabel ?? `정책 #${s.policyId}`;
+                  const page =
+                    s.pageStart && s.pageEnd
+                      ? s.pageStart === s.pageEnd
+                        ? ` p.${s.pageStart}`
+                        : ` p.${s.pageStart}-${s.pageEnd}`
+                      : '';
+                  return `${label}${page}`;
+                },
+              ),
+            ),
+          );
+          onSources(sourceStrings);
+        } else if (parsed.type === 'DONE') {
+          onDone();
+          return;
+        } else if (parsed.type === 'ERROR') {
+          onError(new Error(parsed.content ?? '답변 생성 중 오류가 발생했습니다'));
+          return;
         }
       } catch {
-        // partial JSON, accumulate
-        onChunk(data);
+        // SSE 데이터가 partial JSON 인 경우는 발생하지 않으나 안전하게 무시
       }
     }
   }

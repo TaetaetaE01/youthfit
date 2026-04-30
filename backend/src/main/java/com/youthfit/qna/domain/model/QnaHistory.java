@@ -32,15 +32,39 @@ public class QnaHistory extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String sources;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private QnaHistoryStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "failed_reason", length = 30)
+    private QnaFailedReason failedReason;
+
     @Builder
     private QnaHistory(Long userId, Long policyId, String question) {
         this.userId = userId;
         this.policyId = policyId;
         this.question = question;
+        this.status = QnaHistoryStatus.IN_PROGRESS;
     }
 
-    public void completeAnswer(String answer, String sources) {
+    public void markCompleted(String answer, String sources) {
+        requireInProgress();
         this.answer = answer;
         this.sources = sources;
+        this.status = QnaHistoryStatus.COMPLETED;
+    }
+
+    public void markFailed(QnaFailedReason reason) {
+        requireInProgress();
+        this.failedReason = reason;
+        this.status = QnaHistoryStatus.FAILED;
+    }
+
+    private void requireInProgress() {
+        if (this.status != QnaHistoryStatus.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "QnaHistory 상태 전이 불가: 현재=" + this.status);
+        }
     }
 }

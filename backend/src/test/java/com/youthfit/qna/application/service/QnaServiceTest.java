@@ -1,12 +1,20 @@
 package com.youthfit.qna.application.service;
 
+import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
+import com.youthfit.qna.application.dto.result.CachedAnswer;
+import com.youthfit.qna.application.dto.result.QnaSourceResult;
+import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
-import com.youthfit.qna.domain.repository.QnaHistoryRepository;
+import com.youthfit.qna.domain.model.QnaFailedReason;
+import com.youthfit.qna.infrastructure.config.QnaProperties;
+import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.service.RagSearchService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,93 +22,221 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("QnaService")
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class QnaServiceTest {
 
     @InjectMocks
     private QnaService qnaService;
 
-    @Mock
-    private PolicyRepository policyRepository;
+    @Mock private CostGuard costGuard;
+    @Mock private PolicyRepository policyRepository;
+    @Mock private PolicyAttachmentRepository policyAttachmentRepository;
+    @Mock private RagSearchService ragSearchService;
+    @Mock private QnaLlmProvider qnaLlmProvider;
+    @Mock private QnaAnswerCache qnaAnswerCache;
+    @Mock private QnaHistoryWriter historyWriter;
+    @Mock private QnaProperties qnaProperties;
+    @Mock private ObjectMapper objectMapper;
 
-    @Mock
-    private RagSearchService ragSearchService;
+    private Policy policy;
 
-    @Mock
-    private QnaLlmProvider qnaLlmProvider;
-
-    @Mock
-    private QnaHistoryRepository qnaHistoryRepository;
-
-    @Mock
-    private ObjectMapper objectMapper;
+    @BeforeEach
+    void setUp() {
+        policy = mockPolicy(10L, "테스트 정책");
+        given(qnaProperties.relevanceDistanceThreshold()).willReturn(0.4);
+    }
 
     @Nested
-    @DisplayName("askQuestion - 정책 질문")
-    class AskQuestion {
+    @DisplayName("진입점 가드")
+    class Entry {
 
         @Test
-        @DisplayName("존재하지 않는 정책에 질문하면 예외가 발생한다")
-        void policyNotFound_throwsException() {
-            // given
-            AskQuestionCommand command = new AskQuestionCommand(999L, "질문", 1L);
-            given(policyRepository.findById(999L)).willReturn(Optional.empty());
+        @DisplayName("CostGuard 가 차단하면 LLM/RAG 호출 없이 ERROR 이벤트만 보낸다")
+        void costGuardBlocked_emitsErrorOnly() throws Exception {
+            given(costGuard.allows(10L)).willReturn(false);
 
-            // when & then
+            AskQuestionCommand command = new AskQuestionCommand(10L, "재학생도 가능?", 1L);
+            SseEmitter emitter = qnaService.askQuestion(command);
+
+            // SseEmitter 비동기 처리 대기 (간단히 sleep — 더 결정적인 방식은 ExecutorService 주입으로 동기화)
+            Thread.sleep(100);
+
+            verify(costGuard).allows(10L);
+            verify(policyRepository, never()).findById(anyLong());
+            verify(ragSearchService, never()).searchRelevantChunks(any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(historyWriter, never()).startInProgress(anyLong(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("정책이 없으면 NOT_FOUND 예외, history 미저장")
+        void policyNotFound_throws() {
+            given(costGuard.allows(10L)).willReturn(true);
+            given(policyRepository.findById(10L)).willReturn(Optional.empty());
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
+
             assertThatThrownBy(() -> qnaService.askQuestion(command))
                     .isInstanceOf(YouthFitException.class);
-        }
-
-        @Test
-        @DisplayName("정상적인 질문에 대해 SseEmitter를 반환한다")
-        void validQuestion_returnsSseEmitter() {
-            // given
-            AskQuestionCommand command = new AskQuestionCommand(1L, "이 정책 재학생도 가능해요?", 1L);
-            Policy policy = createPolicy(1L, "청년 주거 지원");
-            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
-
-            // when
-            SseEmitter emitter = qnaService.askQuestion(command);
-
-            // then
-            assertThat(emitter).isNotNull();
-        }
-
-        @Test
-        @DisplayName("정책이 존재하면 SseEmitter를 반환하고 비동기 처리를 시작한다")
-        void policyExists_returnsSseEmitterAndStartsAsync() {
-            // given
-            AskQuestionCommand command = new AskQuestionCommand(1L, "지원 자격은?", 1L);
-            Policy policy = createPolicy(1L, "청년 취업 지원");
-
-            given(policyRepository.findById(1L)).willReturn(Optional.of(policy));
-
-            // when
-            SseEmitter emitter = qnaService.askQuestion(command);
-
-            // then
-            assertThat(emitter).isNotNull();
+            verify(historyWriter, never()).startInProgress(anyLong(), anyLong(), anyString());
         }
     }
 
-    // ── 헬퍼 메서드 ──
+    @Nested
+    @DisplayName("캐시 히트")
+    class CacheHit {
 
-    private Policy createPolicy(Long id, String title) {
-        Policy policy = Policy.builder()
-                .title(title)
-                .build();
-        ReflectionTestUtils.setField(policy, "id", id);
-        return policy;
+        @Test
+        @DisplayName("캐시 히트 시 LLM·RAG 호출 없이 캐시된 답변을 그대로 반환")
+        void cacheHit_skipsRagAndLlm() throws Exception {
+            given(costGuard.allows(10L)).willReturn(true);
+            given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
+            given(historyWriter.startInProgress(1L, 10L, "재학생도 가능?")).willReturn(99L);
+            CachedAnswer cached = new CachedAnswer(
+                    "이전 답변",
+                    List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
+                    Instant.now()
+            );
+            given(qnaAnswerCache.get(10L, "재학생도 가능?")).willReturn(Optional.of(cached));
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "재학생도 가능?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(100);
+
+            verify(ragSearchService, never()).searchRelevantChunks(any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(historyWriter).markCompleted(eq(99L), eq("이전 답변"), anyString());
+            verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("거절 흐름")
+    class Reject {
+
+        @Test
+        @DisplayName("정책에 인덱싱된 청크가 0건이면 NO_INDEXED_DOCUMENT 거절")
+        void noIndexedChunks_failsWithNoIndexedDocument() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any())).willReturn(List.of());
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(100);
+
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(historyWriter).markFailed(99L, QnaFailedReason.NO_INDEXED_DOCUMENT);
+        }
+
+        @Test
+        @DisplayName("모든 청크 distance 가 임계값을 초과하면 NO_RELEVANT_CHUNK 거절")
+        void allChunksOverThreshold_failsWithNoRelevantChunk() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any())).willReturn(List.of(
+                    chunk(0.7),
+                    chunk(0.9)
+            ));
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(100);
+
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(historyWriter).markFailed(99L, QnaFailedReason.NO_RELEVANT_CHUNK);
+        }
+    }
+
+    @Nested
+    @DisplayName("정상 경로")
+    class Happy {
+
+        @Test
+        @DisplayName("임계값 통과 청크가 있으면 LLM 1회 호출 + 캐시 put + history COMPLETED")
+        void threshold_passesAndCallsLlm() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any())).willReturn(List.of(
+                    chunk(0.2),
+                    chunk(0.6)  // 임계값 0.4 초과 — 컨텍스트에서 제외
+            ));
+            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+                    .willAnswer(inv -> {
+                        Consumer<String> consumer = inv.getArgument(3);
+                        consumer.accept("답변 ");
+                        consumer.accept("일부.");
+                        return "답변 일부.";
+                    });
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
+            verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("LLM 에러")
+    class LlmError {
+
+        @Test
+        @DisplayName("LLM 호출이 예외를 던지면 history FAILED·LLM_ERROR")
+        void llmThrows_marksFailed() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+                    .willThrow(new RuntimeException("OpenAI 5xx"));
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            verify(historyWriter).markFailed(99L, QnaFailedReason.LLM_ERROR);
+            verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
+        }
+    }
+
+    private void cacheMissDefaults() {
+        given(costGuard.allows(10L)).willReturn(true);
+        given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
+        given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
+        given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
+    }
+
+    private static PolicyDocumentChunkResult chunk(double distance) {
+        return new PolicyDocumentChunkResult(
+                1L, 10L, 0, "내용", distance, null, null, null
+        );
+    }
+
+    private static Policy mockPolicy(Long id, String title) {
+        Policy p = org.mockito.Mockito.mock(Policy.class);
+        given(p.getTitle()).willReturn(title);
+        return p;
     }
 }

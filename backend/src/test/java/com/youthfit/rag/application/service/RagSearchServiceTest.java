@@ -4,6 +4,7 @@ import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -82,8 +83,8 @@ class RagSearchServiceTest {
             // given
             SearchChunksCommand command = new SearchChunksCommand(1L, "주거 지원");
             float[] queryEmbedding = new float[]{0.1f, 0.2f};
-            List<PolicyDocument> similar = List.of(
-                    createChunkWithId(1L, 1L, 0, "주거 지원 관련 청크")
+            List<SimilarChunk> similar = List.of(
+                    createSimilarChunk(1L, 1L, 0, "주거 지원 관련 청크", 0.1)
             );
 
             given(embeddingProvider.embed("주거 지원")).willReturn(queryEmbedding);
@@ -180,5 +181,9 @@ class RagSearchServiceTest {
                 .build();
         ReflectionTestUtils.setField(chunk, "id", id);
         return chunk;
+    }
+
+    private SimilarChunk createSimilarChunk(Long id, Long policyId, int index, String content, double distance) {
+        return new SimilarChunk(id, policyId, index, content, null, null, null, distance);
     }
 }

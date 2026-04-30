@@ -3,7 +3,7 @@ package com.youthfit.rag.application.service;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
-import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -32,12 +32,20 @@ public class RagSearchService {
         }
 
         float[] queryEmbedding = embeddingProvider.embed(command.query());
-        List<PolicyDocument> similar = policyDocumentRepository.findSimilarByEmbedding(
+        List<SimilarChunk> similar = policyDocumentRepository.findSimilarByEmbedding(
                 command.policyId(), queryEmbedding, DEFAULT_TOP_K);
 
         if (similar.isEmpty()) {
             log.info("벡터 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
             return fallbackKeywordSearch(command);
+        }
+
+        if (log.isInfoEnabled()) {
+            String distanceSummary = similar.stream()
+                    .map(c -> String.format("%.3f", c.distance()))
+                    .toList()
+                    .toString();
+            log.info("RAG 검색 결과: policyId={}, top{}={}", command.policyId(), similar.size(), distanceSummary);
         }
 
         return similar.stream()

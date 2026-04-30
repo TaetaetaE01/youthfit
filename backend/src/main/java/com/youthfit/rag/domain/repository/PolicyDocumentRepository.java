@@ -1,6 +1,7 @@
 package com.youthfit.rag.domain.repository;
 
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.SimilarChunk;
 
 import java.util.List;
 
@@ -16,5 +17,5 @@ public interface PolicyDocumentRepository {
 
     void deleteByPolicyId(Long policyId);
 
-    List<PolicyDocument> findSimilarByEmbedding(Long policyId, float[] queryEmbedding, int limit);
+    List<SimilarChunk> findSimilarByEmbedding(Long policyId, float[] queryEmbedding, int limit);
 }
