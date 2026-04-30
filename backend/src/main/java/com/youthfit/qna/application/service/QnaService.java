@@ -19,6 +19,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
@@ -55,7 +56,8 @@ public class QnaService {
     private final QnaProperties qnaProperties;
     private final ObjectMapper objectMapper;
 
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService executor = new DelegatingSecurityContextExecutorService(
+            Executors.newVirtualThreadPerTaskExecutor());
 
     public SseEmitter askQuestion(AskQuestionCommand command) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
