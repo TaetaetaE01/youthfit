@@ -55,21 +55,26 @@ export async function fetchQnaAnswer(
         if (parsed.type === 'CHUNK') {
           onChunk(parsed.content ?? '');
         } else if (parsed.type === 'SOURCES') {
-          const sourceStrings: string[] = (parsed.sources ?? []).map(
-            (s: {
-              policyId?: number;
-              attachmentId?: number | null;
-              attachmentLabel?: string | null;
-              pageStart?: number | null;
-              pageEnd?: number | null;
-              excerpt?: string;
-            }) => {
-              const label = s.attachmentLabel ?? `정책 #${s.policyId}`;
-              const page =
-                s.pageStart && s.pageEnd ? ` p.${s.pageStart}-${s.pageEnd}` : '';
-              const excerpt = s.excerpt ? ` — ${s.excerpt}` : '';
-              return `${label}${page}${excerpt}`;
-            },
+          const sourceStrings: string[] = Array.from(
+            new Set(
+              (parsed.sources ?? []).map(
+                (s: {
+                  policyId?: number;
+                  attachmentLabel?: string | null;
+                  pageStart?: number | null;
+                  pageEnd?: number | null;
+                }) => {
+                  const label = s.attachmentLabel ?? `정책 #${s.policyId}`;
+                  const page =
+                    s.pageStart && s.pageEnd
+                      ? s.pageStart === s.pageEnd
+                        ? ` p.${s.pageStart}`
+                        : ` p.${s.pageStart}-${s.pageEnd}`
+                      : '';
+                  return `${label}${page}`;
+                },
+              ),
+            ),
           );
           onSources(sourceStrings);
         } else if (parsed.type === 'DONE') {
