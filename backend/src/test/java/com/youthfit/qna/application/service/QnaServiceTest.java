@@ -3,6 +3,7 @@ package com.youthfit.qna.application.service;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
@@ -51,6 +52,7 @@ class QnaServiceTest {
 
     @Mock private CostGuard costGuard;
     @Mock private PolicyRepository policyRepository;
+    @Mock private PolicyAttachmentRepository policyAttachmentRepository;
     @Mock private RagSearchService ragSearchService;
     @Mock private QnaLlmProvider qnaLlmProvider;
     @Mock private QnaAnswerCache qnaAnswerCache;

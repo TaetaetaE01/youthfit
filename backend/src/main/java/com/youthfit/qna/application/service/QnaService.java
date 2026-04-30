@@ -4,6 +4,8 @@ import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
@@ -31,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +52,7 @@ public class QnaService {
 
     private final CostGuard costGuard;
     private final PolicyRepository policyRepository;
+    private final PolicyAttachmentRepository policyAttachmentRepository;
     private final RagSearchService ragSearchService;
     private final QnaLlmProvider qnaLlmProvider;
     private final QnaAnswerCache qnaAnswerCache;
@@ -187,16 +191,31 @@ public class QnaService {
     }
 
     private List<QnaSourceResult> buildSources(Long policyId, List<PolicyDocumentChunkResult> chunks) {
+        Map<Long, String> attachmentLabels = policyAttachmentRepository.findByPolicyId(policyId).stream()
+                .collect(Collectors.toMap(PolicyAttachment::getId, a -> stripExtension(a.getName())));
+
         return chunks.stream()
                 .map(chunk -> new QnaSourceResult(
                         policyId,
                         chunk.attachmentId(),
-                        chunk.attachmentId() == null ? null : "첨부 #" + chunk.attachmentId(),
+                        resolveAttachmentLabel(chunk.attachmentId(), attachmentLabels),
                         chunk.pageStart(),
                         chunk.pageEnd(),
                         truncateExcerpt(chunk.content())
                 ))
                 .toList();
+    }
+
+    private String resolveAttachmentLabel(Long attachmentId, Map<Long, String> labels) {
+        if (attachmentId == null) return null;
+        String name = labels.get(attachmentId);
+        return name != null ? name : "첨부 #" + attachmentId;
+    }
+
+    private String stripExtension(String name) {
+        if (name == null) return null;
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
     }
 
     private String truncateExcerpt(String content) {
