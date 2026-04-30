@@ -40,6 +40,14 @@ public class RagSearchService {
             return fallbackKeywordSearch(command);
         }
 
+        if (log.isInfoEnabled()) {
+            String distanceSummary = similar.stream()
+                    .map(c -> String.format("%.3f", c.distance()))
+                    .toList()
+                    .toString();
+            log.info("RAG 검색 결과: policyId={}, top{}={}", command.policyId(), similar.size(), distanceSummary);
+        }
+
         return similar.stream()
                 .map(PolicyDocumentChunkResult::from)
                 .toList();
