@@ -41,3 +41,17 @@
 - 추적 가능성을 위해 source URL, source type, source hash를 기록한다.
 - 각 정책 레코드가 어디서 왔는지 설명할 수 있을 정도의 메타데이터(rawJson 포함)를 보존한다.
 - 원문 전체를 그대로 노출하지 않고 요약·인용 범위로 제한한다.
+
+## Q&A 의미 캐시 테이블 (2026-05-01)
+
+`qna_question_cache` 테이블을 운영 PG에 수동 적용한다 (Flyway 미사용).
+
+```bash
+psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-01-qna-question-cache.sql
+```
+
+배포 순서:
+1. 운영 PG에 위 DDL 적용
+2. 백엔드 재배포
+
+DDL 미적용 상태로 배포되면 `qna_question_cache`를 매핑한 엔티티 검증(`ddl-auto: validate`)에서 부팅 실패한다.
