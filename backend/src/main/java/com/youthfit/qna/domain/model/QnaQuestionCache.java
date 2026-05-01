@@ -34,6 +34,9 @@ public class QnaQuestionCache extends BaseTimeEntity {
     @Column(name = "policy_id", nullable = false)
     private Long policyId;
 
+    @Column(name = "source_hash", nullable = false, length = 64)
+    private String sourceHash;
+
     @Column(name = "question_text", nullable = false, columnDefinition = "TEXT")
     private String questionText;
 
@@ -51,11 +54,13 @@ public class QnaQuestionCache extends BaseTimeEntity {
 
     @Builder
     private QnaQuestionCache(Long policyId,
+                             String sourceHash,
                              String questionText,
                              float[] embedding,
                              String answer,
                              String sourcesJson) {
         this.policyId = policyId;
+        this.sourceHash = sourceHash;
         this.questionText = questionText;
         this.embedding = embedding;
         this.answer = answer;

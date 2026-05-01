@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 @Repository
@@ -46,6 +47,11 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
         return jpaRepository.findSimilarByEmbedding(policyId, vectorString, limit).stream()
                 .map(this::toSimilarChunk)
                 .toList();
+    }
+
+    @Override
+    public Optional<String> findSourceHashByPolicyId(Long policyId) {
+        return jpaRepository.findDistinctSourceHashByPolicyId(policyId).stream().findFirst();
     }
 
     private SimilarChunk toSimilarChunk(Object[] row) {

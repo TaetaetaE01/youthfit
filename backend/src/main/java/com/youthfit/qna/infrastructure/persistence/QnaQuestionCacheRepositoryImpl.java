@@ -27,10 +27,12 @@ public class QnaQuestionCacheRepositoryImpl implements QnaQuestionCacheRepositor
         if (rows.isEmpty()) return Optional.empty();
         Object[] row = rows.get(0);
         return Optional.of(new SimilarCachedAnswer(
-                ((Number) row[0]).longValue(),
-                (String) row[1],
-                (String) row[2],
-                ((Number) row[3]).doubleValue()
+                ((Number) row[0]).longValue(),     // id
+                (String) row[1],                    // questionText
+                (String) row[2],                    // sourceHash
+                (String) row[3],                    // answer
+                (String) row[4],                    // sourcesJson
+                ((Number) row[5]).doubleValue()    // distance
         ));
     }
 

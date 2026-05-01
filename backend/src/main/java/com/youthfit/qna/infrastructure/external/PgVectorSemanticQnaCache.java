@@ -31,20 +31,31 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
     private final ObjectMapper objectMapper;
 
     @Override
-    public Optional<CachedAnswer> findSimilar(Long policyId, float[] queryEmbedding) {
+    public Optional<CachedAnswer> findSimilar(Long policyId, String userQuestion, float[] queryEmbedding) {
         Duration ttl = Duration.ofHours(properties.cacheTtlHours());
         Optional<SimilarCachedAnswer> closest = repository.findClosestByPolicyId(policyId, queryEmbedding, ttl);
+
         if (closest.isEmpty()) {
+            log.info("Q&A 의미 캐시 미스: missReason=NO_ROW, policyId={}, userQuestion=\"{}\"",
+                    policyId, userQuestion);
             return Optional.empty();
         }
+
         SimilarCachedAnswer hit = closest.get();
-        if (hit.distance() > properties.semanticDistanceThreshold()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Q&A 의미 캐시 미스: policyId={}, closestDistance={}", policyId, hit.distance());
-            }
+        double distance = hit.distance();
+        double similarity = 1.0 - distance;
+
+        if (distance > properties.semanticDistanceThreshold()) {
+            log.info("Q&A 의미 캐시 미스: missReason=DISTANCE_OVER_THRESHOLD, policyId={}, sourceHash={}, " +
+                            "distance={}, similarity={}, userQuestion=\"{}\", cachedQuestion=\"{}\"",
+                    policyId, hit.sourceHash(), distance, similarity, userQuestion, hit.questionText());
             return Optional.empty();
         }
-        log.info("Q&A 의미 캐시 히트: policyId={}, distance={}", policyId, hit.distance());
+
+        log.info("Q&A 의미 캐시 히트: policyId={}, sourceHash={}, distance={}, similarity={}, " +
+                        "userQuestion=\"{}\", cachedQuestion=\"{}\"",
+                policyId, hit.sourceHash(), distance, similarity, userQuestion, hit.questionText());
+
         try {
             List<QnaSourceResult> sources = objectMapper.readValue(hit.sourcesJson(), SOURCES_TYPE);
             return Optional.of(new CachedAnswer(hit.answer(), sources, Instant.now()));
@@ -55,11 +66,12 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
     }
 
     @Override
-    public void put(Long policyId, String question, float[] embedding, CachedAnswer answer) {
+    public void put(Long policyId, String question, String sourceHash, float[] embedding, CachedAnswer answer) {
         try {
             String sourcesJson = objectMapper.writeValueAsString(answer.sources());
             QnaQuestionCache entity = QnaQuestionCache.builder()
                     .policyId(policyId)
+                    .sourceHash(sourceHash)
                     .questionText(question)
                     .embedding(embedding)
                     .answer(answer.answer())

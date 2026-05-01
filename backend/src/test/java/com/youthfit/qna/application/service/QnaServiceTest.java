@@ -55,6 +55,7 @@ class QnaServiceTest {
     @Mock private CostGuard costGuard;
     @Mock private PolicyRepository policyRepository;
     @Mock private PolicyAttachmentRepository policyAttachmentRepository;
+    @Mock private com.youthfit.rag.domain.repository.PolicyDocumentRepository policyDocumentRepository;
     @Mock private RagSearchService ragSearchService;
     @Mock private QnaLlmProvider qnaLlmProvider;
     @Mock private QnaAnswerCache qnaAnswerCache;
@@ -136,7 +137,7 @@ class QnaServiceTest {
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
             verify(embeddingProvider, never()).embed(anyString());
-            verify(semanticQnaCache, never()).findSimilar(anyLong(), any());
+            verify(semanticQnaCache, never()).findSimilar(anyLong(), anyString(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변"), anyString());
             verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
         }
@@ -206,7 +207,7 @@ class QnaServiceTest {
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
             verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
-            verify(semanticQnaCache).put(eq(10L), eq("질문"), any(), any(CachedAnswer.class));
+            verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
             verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
         }
     }
@@ -250,7 +251,7 @@ class QnaServiceTest {
                     List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
                     Instant.now()
             );
-            given(semanticQnaCache.findSimilar(10L, embedding)).willReturn(Optional.of(cached));
+            given(semanticQnaCache.findSimilar(eq(10L), eq("재학생도 가능?"), eq(embedding))).willReturn(Optional.of(cached));
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "재학생도 가능?", 1L);
@@ -262,7 +263,7 @@ class QnaServiceTest {
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
             verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
             verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
-            verify(semanticQnaCache, never()).put(anyLong(), anyString(), any(), any());
+            verify(semanticQnaCache, never()).put(anyLong(), anyString(), anyString(), any(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변(의미 일치)"), anyString());
         }
 
@@ -275,11 +276,12 @@ class QnaServiceTest {
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
             float[] embedding = new float[]{0.3f, 0.4f};
             given(embeddingProvider.embed("질문")).willReturn(embedding);
-            given(semanticQnaCache.findSimilar(10L, embedding)).willReturn(Optional.empty());
+            given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(Optional.empty());
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
             given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
+            given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
             qnaService.askQuestion(command);
@@ -289,7 +291,7 @@ class QnaServiceTest {
             verify(ragSearchService, times(1)).searchRelevantChunks(any(), eq(embedding));
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
-            verify(semanticQnaCache).put(eq(10L), eq("질문"), eq(embedding), any(CachedAnswer.class));
+            verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(embedding), any(CachedAnswer.class));
         }
 
         @Test
@@ -301,12 +303,13 @@ class QnaServiceTest {
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
             float[] embedding = new float[]{0.5f};
             given(embeddingProvider.embed("질문")).willReturn(embedding);
-            given(semanticQnaCache.findSimilar(anyLong(), any()))
+            given(semanticQnaCache.findSimilar(anyLong(), anyString(), any()))
                     .willThrow(new RuntimeException("DB 장애"));
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
             given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
+            given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
             qnaService.askQuestion(command);
@@ -322,7 +325,8 @@ class QnaServiceTest {
         given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
         given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
         given(embeddingProvider.embed(anyString())).willReturn(new float[]{0.1f});
-        given(semanticQnaCache.findSimilar(anyLong(), any())).willReturn(Optional.empty());
+        given(semanticQnaCache.findSimilar(anyLong(), anyString(), any())).willReturn(Optional.empty());
+        given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
     }
 
     private static PolicyDocumentChunkResult chunk(double distance) {

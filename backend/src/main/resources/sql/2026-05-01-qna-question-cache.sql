@@ -6,6 +6,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS qna_question_cache (
     id            BIGSERIAL PRIMARY KEY,
     policy_id     BIGINT       NOT NULL,
+    source_hash   VARCHAR(64)  NOT NULL,
     question_text TEXT         NOT NULL,
     embedding     vector(1536) NOT NULL,
     answer        TEXT         NOT NULL,

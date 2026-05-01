@@ -12,6 +12,8 @@ public interface QnaQuestionCacheJpaRepository extends JpaRepository<QnaQuestion
 
     @Query(value = """
             SELECT id,
+                   question_text     AS questionText,
+                   source_hash       AS sourceHash,
                    answer,
                    sources_json::text AS sourcesJson,
                    (embedding <=> cast(:queryEmbedding AS vector)) AS distance

@@ -19,6 +19,7 @@ import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.application.service.RagSearchService;
+import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ public class QnaService {
     private final CostGuard costGuard;
     private final PolicyRepository policyRepository;
     private final PolicyAttachmentRepository policyAttachmentRepository;
+    private final PolicyDocumentRepository policyDocumentRepository;
     private final RagSearchService ragSearchService;
     private final QnaLlmProvider qnaLlmProvider;
     private final QnaAnswerCache qnaAnswerCache;
@@ -126,7 +128,7 @@ public class QnaService {
         // ③ 의미 캐시
         Optional<CachedAnswer> semantic;
         try {
-            semantic = semanticQnaCache.findSimilar(command.policyId(), queryEmbedding);
+            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding);
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 findSimilar 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
             semantic = Optional.empty();
@@ -184,8 +186,9 @@ public class QnaService {
         } catch (Exception e) {
             log.warn("Q&A 정확 캐시 put 실패: policyId={}", command.policyId(), e);
         }
+        String sourceHash = policyDocumentRepository.findSourceHashByPolicyId(command.policyId()).orElse("UNKNOWN");
         try {
-            semanticQnaCache.put(command.policyId(), command.question(), queryEmbedding, answer);
+            semanticQnaCache.put(command.policyId(), command.question(), sourceHash, queryEmbedding, answer);
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 put 실패: policyId={}", command.policyId(), e);
         }
