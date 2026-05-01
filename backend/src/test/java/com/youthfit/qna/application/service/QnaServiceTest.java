@@ -22,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -211,6 +212,34 @@ class QnaServiceTest {
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
             verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
         }
+
+        @Test
+        @DisplayName("LLM 호출 시 PolicyMetadata 9필드가 매핑되어 전달된다")
+        void llmReceivesMappedPolicyMetadata() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("LLM 답변");
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "이 정책 뭐야?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            ArgumentCaptor<PolicyMetadata> captor = ArgumentCaptor.forClass(PolicyMetadata.class);
+            verify(qnaLlmProvider).generateAnswer(
+                    anyString(), captor.capture(), anyString(), anyString(), any());
+
+            PolicyMetadata captured = captor.getValue();
+            org.assertj.core.api.Assertions.assertThat(captured.category()).isEqualTo("WELFARE");
+            org.assertj.core.api.Assertions.assertThat(captured.summary()).isEqualTo("저소득 청년 자산형성 지원");
+            org.assertj.core.api.Assertions.assertThat(captured.supportTarget()).isEqualTo("만 19~34세, 근로소득자");
+            org.assertj.core.api.Assertions.assertThat(captured.organization()).isEqualTo("보건복지부");
+            org.assertj.core.api.Assertions.assertThat(captured.contact()).isEqualTo("02-123-4567");
+            org.assertj.core.api.Assertions.assertThat(captured.applyStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
+            org.assertj.core.api.Assertions.assertThat(captured.applyEnd()).isEqualTo(java.time.LocalDate.of(2026, 5, 31));
+            org.assertj.core.api.Assertions.assertThat(captured.provideType()).isEqualTo("현금");
+        }
     }
 
     @Nested
@@ -339,6 +368,15 @@ class QnaServiceTest {
     private static Policy mockPolicy(Long id, String title) {
         Policy p = org.mockito.Mockito.mock(Policy.class);
         given(p.getTitle()).willReturn(title);
+        given(p.getCategory()).willReturn(com.youthfit.policy.domain.model.Category.WELFARE);
+        given(p.getSummary()).willReturn("저소득 청년 자산형성 지원");
+        given(p.getSupportTarget()).willReturn("만 19~34세, 근로소득자");
+        given(p.getSupportContent()).willReturn("월 30만원 매칭");
+        given(p.getOrganization()).willReturn("보건복지부");
+        given(p.getContact()).willReturn("02-123-4567");
+        given(p.getApplyStart()).willReturn(java.time.LocalDate.of(2026, 5, 1));
+        given(p.getApplyEnd()).willReturn(java.time.LocalDate.of(2026, 5, 31));
+        given(p.getProvideType()).willReturn("현금");
         return p;
     }
 }
