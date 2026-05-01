@@ -13,7 +13,7 @@ public interface QnaQuestionCacheJpaRepository extends JpaRepository<QnaQuestion
     @Query(value = """
             SELECT id,
                    answer,
-                   sources_json AS sourcesJson,
+                   sources_json::text AS sourcesJson,
                    (embedding <=> cast(:queryEmbedding AS vector)) AS distance
               FROM qna_question_cache
              WHERE policy_id = :policyId
