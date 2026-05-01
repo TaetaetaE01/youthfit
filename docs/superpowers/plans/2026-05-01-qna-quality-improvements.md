@@ -849,19 +849,30 @@ git log --oneline origin/main..HEAD
 git push -u origin "$(git rev-parse --abbrev-ref HEAD)"
 gh pr create --title "feat(qna): Q&A 품질 개선 (출처 정합성 + 메타 질문 대응)" --body "$(cat <<'EOF'
 ## Summary
-- RAG `relevance-distance-threshold` 0.7 → 0.5 로 조여 미관련 청크가 LLM 까지 도달하지 못하도록 차단 (이슈 1: "관련 내용 없음" + 출처 5개 모순 해소)
-- `Policy` 9필드를 `PolicyMetadata` record 로 묶어 user message 에 포함, 시스템 프롬프트를 "본문 우선, 메타 보강" 명시적 우선순위로 교체 (이슈 2: 메타 질문 처리)
+- 정책 메타데이터 9필드(category, summary, supportTarget, supportContent, organization, contact, applyStart/End, provideType)를 `PolicyMetadata` record 로 묶어 LLM user message 에 포함 (이슈 2: 메타 질문 처리)
+- 시스템 프롬프트를 "본문 우선, 메타 보강" 명시적 우선순위로 교체 + fallback 메시지 보존
+- RAG `relevance-distance-threshold` 0.7 → 0.78 (검증 중 발견된 실측 한국어 임베딩 distance 분포 0.7~0.75 반영)
+- `passing.isEmpty()` 분기에서도 LLM 호출 (메타데이터로 답변 기회 보장)
+- LLM fallback 답변 패턴 검출 시 sources 비우기 (출처 모순 차단)
+- 메타 답변 시 sources 에 "정책 기본 정보" entry 추가 (출처 가시성)
+
+## 설계 변경 배경
+spec/plan 에 따라 Tasks 1~5 머지 후 도커 수동 검증 중 두 가지 디자인 결함이 발견되어 같은 PR 안에서 Tasks 7, 8 로 hot fix 했다. 자세한 재결정 배경은 spec § 14 참조.
+
 - spec: docs/superpowers/specs/2026-05-01-qna-quality-improvements-design.md
 - plan: docs/superpowers/plans/2026-05-01-qna-quality-improvements.md
 
 ## Test plan
-- [x] `./gradlew build` 전체 PASS
-- [x] `PolicyMetadataTest` 신규 (2 tests)
-- [x] `OpenAiQnaClientTest` 신규 (4 tests, user message 포맷 + null 처리)
-- [x] `QnaServiceTest` 메타 질문 시나리오 추가 + 기존 verify 패턴 5인자로 갱신
-- [x] 도커 환경 메타 질문 5~8개 변형 정상 응답
-- [x] 무관 질문에서 sources 비어 있음 확인
-- [x] 세부 질문 회귀 없음 확인
+- [x] `./gradlew build` 전체 PASS (12 QnaServiceTest + 4 OpenAiQnaClientTest + 2 PolicyMetadataTest)
+- [x] `PolicyMetadataTest` 신규 (Policy 9필드 → record 매핑)
+- [x] `OpenAiQnaClientTest` 신규 (user message 포맷 + null 처리 + system prompt)
+- [x] `QnaServiceTest` 메타 captor 검증, fallback 안전망 검증, 메타 sources entry 검증 추가
+- [x] 도커 환경 메타 질문 ("누가 대상자야?", "이 정책 뭐야?"): 본문 + 메타 종합 답변 + 출처 정상
+- [x] 도커 환경 본문 질문 ("프리랜서도 가능?"): 본문 기반 답변 + 출처 정상
+- [x] 도커 환경 무관/인사말 ("고마웡"): fallback 메시지 + sources 빈 배열 (안전망 작동)
+
+## 후속 / 미결 (Out of scope)
+운영 데이터 1~2주 누적 후 KPI 측정 — fallback 빈도, 거절률, LLM TTFT, 무관 질문 비용. spec § 14.4 / § 14.5 참조.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -870,10 +881,86 @@ EOF
 
 ---
 
+## Tasks 7, 8 — 검증 후 hot fix (계획 외 추가)
+
+> Task 6 의 도커 수동 검증 단계에서 두 가지 결함이 발견되어 같은 PR 안에서 추가 fix 함. 자세한 디자인 재결정 배경은 spec § 14 참조.
+
+### Task 7: `passing.isEmpty()` 분기에서도 LLM 호출 (commit `7b0e1a8`)
+
+**Files:** `QnaService.java`, `QnaServiceTest.java`
+
+**문제**: spec § 5 "메타데이터를 user message 에 포함" 해결책은 LLM 이 호출되어야 의미 있는데, `passing.isEmpty()` 분기가 LLM 호출 전에 early return → 메타 질문은 청크 통과율 0% → LLM 호출 자체가 안 됨.
+
+**Fix**:
+```java
+// QnaService.processQuestion
+String context;
+List<QnaSourceResult> sources;
+if (passing.isEmpty()) {
+    context = "(본문에서 관련 청크를 찾지 못했습니다.)";
+    sources = List.of();
+} else {
+    context = buildContext(passing);
+    sources = buildSources(command.policyId(), passing);
+}
+// 이후 LLM 호출은 두 분기 공통
+```
+
+**테스트**: `Reject.allChunksOverThreshold_failsWithNoRelevantChunk` 삭제 → `Happy.emptyPassingChunks_stillCallsLlmWithMetadata` 추가 (Task 8 에서 다시 갱신됨).
+
+**부수 정리**: 미참조 `NO_RELEVANT_MESSAGE` 상수 제거. `QnaFailedReason.NO_RELEVANT_CHUNK` enum 값은 다른 테스트 참조로 보존.
+
+### Task 8: threshold 0.78 + fallback 안전망 + 메타 sources entry (commit `8476814`)
+
+**Files:** `application.yml`, `QnaService.java`, `QnaServiceTest.java`
+
+**문제 1 (실측 distance 분포)**: 운영 백엔드 로그에서 `RAG 검색 결과: top5=[0.709, 0.714, 0.725, 0.726, 0.732]`. 한국어 임베딩의 짧은 질문 vs 긴 본문 청크 distance 는 본질적으로 0.7~0.75 분포. threshold 0.5 는 사실상 빡빡한 임계값이었음.
+
+**문제 2 (메타 답변 sources 부재)**: 사용자 피드백 "메타데이터에서 답을 뽑았으면 메타데이터를 sources 로 줘야 한다". § 7 의 "메타데이터는 sources 에 포함하지 않음" 결정이 사용자 신뢰감 측면에서 잘못됨.
+
+**Fix A — threshold 변경**:
+```yaml
+# application.yml
+relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.78}
+```
+
+**Fix B — fallback 안전망**:
+```java
+// QnaService.java
+private static boolean isFallbackAnswer(String answer) {
+    return answer != null && answer.contains("명시되어 있지 않");
+}
+```
+
+**Fix C — 메타 sources entry + Fix B 통합 적용 (LLM 호출 후)**:
+```java
+if (isFallbackAnswer(fullAnswer)) {
+    sources = List.of();
+} else if (passing.isEmpty()) {
+    sources = List.of(new QnaSourceResult(
+            command.policyId(), null, "정책 기본 정보", null, null,
+            "정책 메타데이터 기반 답변"
+    ));
+}
+```
+
+**테스트**:
+- `emptyPassingChunks_stillCallsLlmWithMetadata` → `emptyPassingChunks_addsMetaSourceEntry` 로 갱신: sources 에 "정책 기본 정보" entry 1개 검증.
+- 새 테스트 `fallbackAnswer_emptiesSources`: LLM 이 fallback 메시지 반환 시 sources = [] 검증.
+
+**검증 결과 (도커 수동)**:
+- 메타 질문 ("누가 대상자야?"): 본문 + 메타 종합 답변 + 본문 출처 정상 ✅
+- 본문 질문 ("프리랜서도 가능?"): 본문 기반 답변 + 출처 정상 ✅
+- 무관/인사 ("고마웡"): fallback 메시지 + sources 빈 배열 (안전망 작동) ✅
+
+---
+
 ## 후속 / 미결 (Out of scope)
 
-본 PR 머지 후 운영 데이터 1~2주 누적하여 spec § 12 의 KPI 측정. 결과에 따라:
+본 PR 머지 후 운영 데이터 1~2주 누적하여 spec § 12 / § 14.4 의 KPI 측정. 결과에 따라:
 
-- LLM 답변 "관련 내용 없" 패턴 빈도가 여전히 높음 → 후속 사이클(B 패턴 매칭 또는 C NO_ANSWER 토큰)
-- 정상 질문 거절률이 너무 높음 → env var `QNA_RELEVANCE_DISTANCE_THRESHOLD=0.55` 로 즉시 완화 (PR 불필요)
-- 정밀 인용 ROI 명확 → v1+ 사이클로 분리
+- LLM 답변 "명시되어 있지 않" 패턴 빈도가 너무 높음 → 본 사이클의 안전망(B) 외에 추가 처리 (질문 분류 등) v1 후보.
+- 정상 질문 거절률이 너무 높음 → env var `QNA_RELEVANCE_DISTANCE_THRESHOLD=0.74` 로 즉시 완화 (PR 불필요).
+- 응답 지연 (LLM TTFT) 임계 초과 → top-K 5 → 3 으로 축소 검토.
+- 무관 질문 비용 방어 (Task 8 부산물) — per-user QPS 제한 또는 입력 길이/언어 검증. v1 후보.
+- 정밀 인용 ROI 명확 → v1+ 사이클로 분리.

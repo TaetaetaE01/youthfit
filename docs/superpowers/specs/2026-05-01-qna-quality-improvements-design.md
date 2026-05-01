@@ -283,3 +283,88 @@ cd backend
 - v0 의미 캐시 plan: `docs/superpowers/plans/2026-05-01-semantic-qna-cache.md`
 - v1 의미 캐시 (intent 기반): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`
 - 본 spec 의 출발점 메모: `docs/superpowers/specs/v1-qna-quality-improvements.md` (이 spec 으로 흡수됨, history 보존 위해 유지)
+
+## 14. 검증 후 발견 (Tasks 7, 8) 과 디자인 재결정
+
+> 작성: 2026-05-02 도커 환경 수동 검증 단계.
+> Tasks 1~5 머지 후 운영 환경에서 검증하던 중 두 가지 사항이 추가로 발견되어 같은 사이클·같은 PR 안에서 fix 함.
+
+### 14.1 Task 7 — `passing.isEmpty()` 분기에서 LLM 호출 누락 결함
+
+**증상**: 메타 질문 ("누가 대상자야?", "이 정책 뭐야?") 에 대해 정책 메타데이터가 LLM 까지 전혀 도달하지 못함. 응답은 항상 `NO_RELEVANT_MESSAGE` ("해당 정책 원문에서 관련 내용을 찾지 못했습니다...").
+
+**근본 원인**: spec § 5 의 해결책 ("메타데이터를 user message 에 포함") 은 LLM 이 호출되어야 의미가 있는데, `QnaService.processQuestion` 의 `passing.isEmpty()` 분기가 LLM 호출 전에 early return 함. 메타 질문은 본문 청크와 의미적 거리가 멀어 청크 통과율이 0% 가 되기 쉬움 → LLM 자체가 호출 안 됨 → 메타데이터가 LLM 에 도달할 기회 없음.
+
+**Fix (commit `7b0e1a8`)**: `passing.isEmpty()` 시 `rejectAndComplete` 대신 빈 본문 컨텍스트 + 메타데이터로 LLM 호출. system prompt 의 "본문에 답이 없으면 메타 보강" 룰이 동작하도록.
+
+```java
+String context;
+List<QnaSourceResult> sources;
+if (passing.isEmpty()) {
+    context = "(본문에서 관련 청크를 찾지 못했습니다.)";
+    sources = List.of();
+} else {
+    context = buildContext(passing);
+    sources = buildSources(command.policyId(), passing);
+}
+```
+
+부수 정리: 더 이상 사용 안 하는 `NO_RELEVANT_MESSAGE` 상수 제거. `QnaFailedReason.NO_RELEVANT_CHUNK` enum 값은 다른 테스트에서 참조되어 보존.
+
+### 14.2 Task 8 — 한국어 임베딩 distance 분포 vs threshold 가정 불일치
+
+**증상**: Task 7 fix 후에도 본문에 명백히 들어 있는 정보 ("중복 수혜 안 되는 통장", "프리랜서 가능 여부") 도 답변 못 함.
+
+**근본 원인**: 운영 백엔드 로그에서 RAG 검색 distance 분포 확인:
+```
+RAG 검색 결과: policyId=7, top5=[0.709, 0.714, 0.725, 0.726, 0.732]
+```
+
+가장 가까운 청크조차 distance 0.709. **한국어 짧은 질문 vs 긴 정책 본문 청크의 OpenAI `text-embedding-3-small` distance 는 본질적으로 0.7~0.75 가 기본 분포**. spec § 4.1 의 "0.7 이 느슨하다" 는 추정은 실측과 맞지 않음 — 0.5 는 물론 0.7 도 사실상 빡빡한 임계값이었음.
+
+**결과**: 본문 청크가 거의 통과 못 해 LLM 컨텍스트로 도달 못 함 → 메타데이터에 없는 본문 정보는 답변 불가 → 메타에 있는 정보만 답변되는 비대칭.
+
+**또한 사용자 피드백**: "메타데이터에서 답을 뽑았으면 메타데이터를 sources 로 줘야 한다" — § 7 의 "메타데이터는 sources 에 포함하지 않음" 결정이 사용자 신뢰감 측면에서 잘못된 결정이었음.
+
+**Fix A+B+C (commit `8476814`)**:
+
+- **A. threshold 0.5 → 0.78** — 실측 distance 분포 (0.7~0.75) 보다 약간 위. 본문 청크가 LLM 에 도달 가능.
+- **B. fallback 패턴 안전망** — threshold 풀어서 무관 질문도 청크 통과 → sources 모순 재발 우려. LLM 응답에 fallback 패턴 (`"명시되어 있지 않"`) 검출 시 `sources = List.of()`. spec § 9 에서 "안전망 없음(A) 으로 시작" 이라 했는데, 실측 distance 분포가 그 결정의 전제와 달라서 안전망을 본 사이클 안에서 채택.
+- **C. 메타 답변 sources entry 추가** — `passing.isEmpty()` + non-fallback 답변일 때 sources 에 "정책 기본 정보" entry 1개 추가. 사용자 출처 가시성 제공. § 7 "메타데이터는 sources 에 포함하지 않음" 결정 변경.
+
+```java
+// QnaService.processQuestion — LLM 호출 후
+if (isFallbackAnswer(fullAnswer)) {
+    sources = List.of();
+} else if (passing.isEmpty()) {
+    sources = List.of(new QnaSourceResult(
+            command.policyId(), null, "정책 기본 정보", null, null,
+            "정책 메타데이터 기반 답변"
+    ));
+}
+```
+
+`isFallbackAnswer(String)` 헬퍼: `answer.contains("명시되어 있지 않")` 패턴 매칭.
+
+### 14.3 변경된 결정들 정리
+
+| 항목 | 원래 spec 결정 | 검증 후 결정 | 이유 |
+|---|---|---|---|
+| § 4.1 threshold 기본값 | 0.5 | **0.78** | 한국어 임베딩 실측 distance 분포 0.7~0.75 |
+| § 5 메타데이터 LLM 도달 | passing.isEmpty 시 early return | **passing.isEmpty 시에도 LLM 호출** | spec 의도와 코드 흐름 불일치 (Task 7) |
+| § 7 메타 답변 sources | 비포함 (사이클 의도된 동작) | **메타 답변 시 "정책 기본 정보" entry 1개** | 사용자 출처 신뢰감 |
+| § 9 안전망 (LLM fallback 검출) | 비범위 — 운영 후 결정 | **본 사이클 안에서 채택 (B 패턴 매칭)** | threshold 0.78 부작용 차단 필수 |
+
+### 14.4 운영 KPI 재정의
+
+§ 12 의 KPI 는 그대로 유효하지만 다음을 추가:
+
+- threshold 0.78 통과 청크 수 분포 — 평균 통과 청크 N 개. N≈5 (top-K) 면 컨텍스트 사이즈 모니터링.
+- LLM TTFT (첫 토큰까지 시간) — 컨텍스트 커지면서 응답 지연 우려. 너무 길면 top-K 5 → 3 검토.
+- fallback 패턴 매칭 false positive — 정상 답변에 "명시되어 있지 않" 들어가는 케이스 (있다면 패턴 정밀화).
+
+### 14.5 후속 / 미결 (Tasks 7, 8 추가분)
+
+- **무관 질문 비용 방어** (Task 8 부산물): threshold 0.78 부터는 무관 질문도 청크 통과해 LLM 호출. fallback 답변은 안전망으로 sources 비우지만 LLM 호출 비용은 발생. per-user QPS 제한 또는 입력 길이/언어 검증으로 보호. v1 후보.
+- **메타 sources entry 의 정보 풍부화**: 현재 `attachmentLabel = "정책 기본 정보"` + `excerpt = "정책 메타데이터 기반 답변"` 의 단순 형태. 향후 정책 상세 페이지 링크 또는 메타 필드별 entry 분리 검토.
+- **top-K 튜닝**: top-K 5 + threshold 0.78 = 청크 5개 모두 LLM 컨텍스트로 들어감. 응답 지연이 운영 KPI 에서 임계 초과 시 top-K 3 으로 줄이기.
