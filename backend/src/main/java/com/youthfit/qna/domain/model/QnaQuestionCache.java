@@ -45,6 +45,7 @@ public class QnaQuestionCache extends BaseTimeEntity {
     @Column(name = "answer", nullable = false, columnDefinition = "TEXT")
     private String answer;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "sources_json", nullable = false, columnDefinition = "JSONB")
     private String sourcesJson;
 
