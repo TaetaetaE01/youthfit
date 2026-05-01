@@ -22,6 +22,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -43,6 +44,9 @@ class RagIndexingServiceTest {
 
     @Spy
     private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
+
+    @Mock
+    private com.youthfit.qna.application.port.QnaCacheInvalidator qnaCacheInvalidator;
 
     @Nested
     @DisplayName("indexPolicyDocument - 정책 문서 인덱싱")
@@ -125,6 +129,52 @@ class RagIndexingServiceTest {
             assertThat(result.chunkCount()).isEqualTo(1);
             verify(policyDocumentRepository).deleteByPolicyId(1L);
             verify(policyDocumentRepository).saveAll(newChunks);
+        }
+
+        @Test
+        @DisplayName("해시가 변경되면 의미 캐시도 같은 트랜잭션 안에서 비운다")
+        void differentHash_invalidatesSemanticCache() {
+            IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "변경된 내용");
+            PolicyDocument existing = createChunk(1L, 0, "기존 청크", "old-hash");
+
+            given(documentChunker.computeHash("변경된 내용")).willReturn("new-hash");
+            given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
+            given(documentChunker.chunk(1L, "변경된 내용"))
+                    .willReturn(List.of(createChunk(1L, 0, "새 청크", "new-hash")));
+            given(embeddingProvider.embedBatch(List.of("새 청크")))
+                    .willReturn(List.of(new float[]{0.5f}));
+
+            ragIndexingService.indexPolicyDocument(command);
+
+            verify(qnaCacheInvalidator).invalidatePolicy(1L);
+        }
+
+        @Test
+        @DisplayName("해시가 동일하면 의미 캐시 invalidate 를 호출하지 않는다")
+        void sameHash_doesNotInvalidate() {
+            IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "정책 내용");
+            PolicyDocument existing = createChunk(1L, 0, "기존 청크", "same-hash");
+            given(documentChunker.computeHash("정책 내용")).willReturn("same-hash");
+            given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
+
+            ragIndexingService.indexPolicyDocument(command);
+
+            verify(qnaCacheInvalidator, never()).invalidatePolicy(anyLong());
+        }
+
+        @Test
+        @DisplayName("신규 정책(기존 인덱스 없음)은 invalidate 호출 없이 그대로 인덱싱한다")
+        void newDocument_doesNotInvalidate() {
+            IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "정책 내용");
+            given(documentChunker.computeHash("정책 내용")).willReturn("hash");
+            given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
+            given(documentChunker.chunk(1L, "정책 내용"))
+                    .willReturn(List.of(createChunk(1L, 0, "청크", "hash")));
+            given(embeddingProvider.embedBatch(any())).willReturn(List.of(new float[]{0.1f}));
+
+            ragIndexingService.indexPolicyDocument(command);
+
+            verify(qnaCacheInvalidator, never()).invalidatePolicy(anyLong());
         }
     }
 

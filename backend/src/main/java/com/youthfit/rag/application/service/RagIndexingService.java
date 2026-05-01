@@ -1,6 +1,7 @@
 package com.youthfit.rag.application.service;
 
 import com.youthfit.common.config.CostGuard;
+import com.youthfit.qna.application.port.QnaCacheInvalidator;
 import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
@@ -25,6 +26,7 @@ public class RagIndexingService {
     private final DocumentChunker documentChunker;
     private final EmbeddingProvider embeddingProvider;
     private final CostGuard costGuard;
+    private final QnaCacheInvalidator qnaCacheInvalidator;
 
     @Transactional
     public IndexingResult indexPolicyDocument(IndexPolicyDocumentCommand command) {
@@ -41,6 +43,7 @@ public class RagIndexingService {
                 return new IndexingResult(command.policyId(), existing.size(), false);
             }
             policyDocumentRepository.deleteByPolicyId(command.policyId());
+            qnaCacheInvalidator.invalidatePolicy(command.policyId());
         }
 
         List<PolicyDocument> chunks = documentChunker.chunk(command.policyId(), command.content());
