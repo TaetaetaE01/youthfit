@@ -24,6 +24,7 @@ import java.util.Optional;
 public class PgVectorSemanticQnaCache implements SemanticQnaCache {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorSemanticQnaCache.class);
+    private static final TypeReference<List<QnaSourceResult>> SOURCES_TYPE = new TypeReference<>() {};
 
     private final QnaQuestionCacheRepository repository;
     private final QnaProperties properties;
@@ -38,13 +39,14 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
         }
         SimilarCachedAnswer hit = closest.get();
         if (hit.distance() > properties.semanticDistanceThreshold()) {
-            log.info("Q&A 의미 캐시 미스: policyId={}, closestDistance={}", policyId, hit.distance());
+            if (log.isDebugEnabled()) {
+                log.debug("Q&A 의미 캐시 미스: policyId={}, closestDistance={}", policyId, hit.distance());
+            }
             return Optional.empty();
         }
         log.info("Q&A 의미 캐시 히트: policyId={}, distance={}", policyId, hit.distance());
         try {
-            List<QnaSourceResult> sources = objectMapper.readValue(
-                    hit.sourcesJson(), new TypeReference<List<QnaSourceResult>>() {});
+            List<QnaSourceResult> sources = objectMapper.readValue(hit.sourcesJson(), SOURCES_TYPE);
             return Optional.of(new CachedAnswer(hit.answer(), sources, Instant.now()));
         } catch (RuntimeException e) {
             log.warn("Q&A 의미 캐시 sources 역직렬화 실패: policyId={}, error={}", policyId, e.toString());
