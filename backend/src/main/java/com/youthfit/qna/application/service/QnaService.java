@@ -177,6 +177,17 @@ public class QnaService {
             return;
         }
 
+        // Fix B: LLM 이 fallback 메시지 출력 시 출처 모순 방지 — sources 비우기
+        // Fix C: passing 0건 + fallback 아닌 답변 시 메타데이터 출처 entry 추가
+        if (isFallbackAnswer(fullAnswer)) {
+            sources = List.of();
+        } else if (passing.isEmpty()) {
+            sources = List.of(new QnaSourceResult(
+                    command.policyId(), null, "정책 기본 정보", null, null,
+                    "정책 메타데이터 기반 답변"
+            ));
+        }
+
         sendSourcesEvent(emitter, sources);
         sendDoneEvent(emitter);
         emitter.complete();
@@ -259,6 +270,14 @@ public class QnaService {
         if (name == null) return null;
         int dot = name.lastIndexOf('.');
         return dot > 0 ? name.substring(0, dot) : name;
+    }
+
+    /**
+     * LLM 이 system prompt 의 fallback 메시지를 출력했는지 패턴 매칭으로 검출.
+     * fallback 답변일 때 sources 를 비워 출처 모순을 방지한다.
+     */
+    private static boolean isFallbackAnswer(String answer) {
+        return answer != null && answer.contains("명시되어 있지 않");
     }
 
     private String truncateExcerpt(String content) {

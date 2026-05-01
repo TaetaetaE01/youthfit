@@ -228,16 +228,24 @@ class QnaServiceTest {
         }
 
         @Test
-        @DisplayName("청크 통과율 0건이어도 LLM 1회 호출 (메타데이터로 답변 기회 보장) + sources 빈 배열")
-        void emptyPassingChunks_stillCallsLlmWithMetadata() throws Exception {
+        @DisplayName("청크 통과율 0건 + 메타 답변일 때 sources 에 정책 기본 정보 entry 1개 포함")
+        void emptyPassingChunks_addsMetaSourceEntry() throws Exception {
             cacheMissDefaults();
             given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(
-                    chunk(0.6),
-                    chunk(0.7)
+                    chunk(0.85),
+                    chunk(0.9)
             ));
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
-                    .willReturn("메타데이터 기반 답변");
-            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+                    .willReturn("청년내일저축계좌는 만 19~34세 청년을 대상으로...");
+
+            given(objectMapper.writeValueAsString(any())).willAnswer(inv -> {
+                Object arg = inv.getArgument(0);
+                if (arg instanceof java.util.List<?> list && !list.isEmpty()) {
+                    QnaSourceResult first = (QnaSourceResult) list.get(0);
+                    return "[{\"label\":\"" + first.attachmentLabel() + "\"}]";
+                }
+                return "[]";
+            });
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "이 정책 뭐야?", 1L);
             qnaService.askQuestion(command);
@@ -245,8 +253,31 @@ class QnaServiceTest {
 
             verify(qnaLlmProvider, times(1)).generateAnswer(
                     anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
-            verify(qnaAnswerCache).put(eq(10L), eq("이 정책 뭐야?"), any(CachedAnswer.class));
-            verify(historyWriter).markCompleted(eq(99L), eq("메타데이터 기반 답변"), anyString());
+            // sources 가 캐시 put 시 전달되는지 확인
+            ArgumentCaptor<CachedAnswer> answerCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+            verify(qnaAnswerCache).put(eq(10L), eq("이 정책 뭐야?"), answerCaptor.capture());
+            java.util.List<QnaSourceResult> capturedSources = answerCaptor.getValue().sources();
+            assertThat(capturedSources).hasSize(1);
+            assertThat(capturedSources.get(0).attachmentLabel()).isEqualTo("정책 기본 정보");
+            assertThat(capturedSources.get(0).policyId()).isEqualTo(10L);
+        }
+
+        @Test
+        @DisplayName("LLM 이 fallback 메시지 반환 시 sources 비우기 (출처 모순 방지)")
+        void fallbackAnswer_emptiesSources() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.6)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.");
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "오늘 점심 뭐 먹지?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            ArgumentCaptor<CachedAnswer> answerCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+            verify(qnaAnswerCache).put(eq(10L), eq("오늘 점심 뭐 먹지?"), answerCaptor.capture());
+            assertThat(answerCaptor.getValue().sources()).isEmpty();
         }
     }
 

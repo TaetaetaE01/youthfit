@@ -75,8 +75,8 @@ youthfit:
     policy-allowlist: ${POLICY_ALLOWLIST:}
   qna:
     cache-ttl-hours: ${QNA_CACHE_TTL_HOURS:24}
-    # 한국어 임베딩 cosine distance. 더 엄격: 0.45~0.5, 더 관대: 0.55~0.6. RagSearchService 로그로 운영값 조정.
-    relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.5}
+    # 한국어 임베딩 cosine distance. 실측 분포는 0.7~0.75. 더 엄격: 0.72~0.75, 더 관대: 0.80~0.85. RagSearchService 로그로 운영값 조정.
+    relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.78}
     semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.15}  # 의미 캐시 히트 컷오프. 더 엄격: 0.10, 더 관대: 0.20
 
 attachment:
