@@ -8,6 +8,7 @@ import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
@@ -46,8 +47,6 @@ public class QnaService {
     private static final long SSE_TIMEOUT = 120_000L;
     private static final String NO_INDEXED_MESSAGE =
             "이 정책은 아직 본문 인덱싱이 되어 있지 않아 답변을 만들 수 없습니다. 정책 상세 페이지에서 원문을 확인해 주세요.";
-    private static final String NO_RELEVANT_MESSAGE =
-            "해당 정책 원문에서 관련 내용을 찾지 못했습니다. 공식 문의처에서 확인하시는 것을 권장합니다.";
     private static final String COST_GUARD_BLOCKED_MESSAGE =
             "현재 환경에서 이 정책은 Q&A를 지원하지 않습니다.";
     private static final String LLM_ERROR_MESSAGE =
@@ -152,19 +151,22 @@ public class QnaService {
                 .filter(c -> c.distance() <= threshold)
                 .toList();
 
+        String context;
+        List<QnaSourceResult> sources;
         if (passing.isEmpty()) {
-            rejectAndComplete(emitter, historyId, NO_RELEVANT_MESSAGE, QnaFailedReason.NO_RELEVANT_CHUNK);
-            return;
+            context = "(본문에서 관련 청크를 찾지 못했습니다.)";
+            sources = List.of();
+        } else {
+            context = buildContext(passing);
+            sources = buildSources(command.policyId(), passing);
         }
-
-        String context = buildContext(passing);
-        List<QnaSourceResult> sources = buildSources(command.policyId(), passing);
 
         // ⑤ LLM 스트림
         String fullAnswer;
         try {
+            PolicyMetadata metadata = PolicyMetadata.from(policy);
             fullAnswer = qnaLlmProvider.generateAnswer(
-                    policy.getTitle(), context, command.question(),
+                    policy.getTitle(), metadata, context, command.question(),
                     chunk -> sendChunkEvent(emitter, chunk)
             );
         } catch (Exception e) {
@@ -173,6 +175,17 @@ public class QnaService {
             historyWriter.markFailed(historyId, QnaFailedReason.LLM_ERROR);
             emitter.completeWithError(e);
             return;
+        }
+
+        // Fix B: LLM 이 fallback 메시지 출력 시 출처 모순 방지 — sources 비우기
+        // Fix C: passing 0건 + fallback 아닌 답변 시 메타데이터 출처 entry 추가
+        if (isFallbackAnswer(fullAnswer)) {
+            sources = List.of();
+        } else if (passing.isEmpty()) {
+            sources = List.of(new QnaSourceResult(
+                    command.policyId(), null, "정책 기본 정보", null, null,
+                    "정책 메타데이터 기반 답변"
+            ));
         }
 
         sendSourcesEvent(emitter, sources);
@@ -257,6 +270,14 @@ public class QnaService {
         if (name == null) return null;
         int dot = name.lastIndexOf('.');
         return dot > 0 ? name.substring(0, dot) : name;
+    }
+
+    /**
+     * LLM 이 system prompt 의 fallback 메시지를 출력했는지 패턴 매칭으로 검출.
+     * fallback 답변일 때 sources 를 비워 출처 모순을 방지한다.
+     */
+    private static boolean isFallbackAnswer(String answer) {
+        return answer != null && answer.contains("명시되어 있지 않");
     }
 
     private String truncateExcerpt(String content) {

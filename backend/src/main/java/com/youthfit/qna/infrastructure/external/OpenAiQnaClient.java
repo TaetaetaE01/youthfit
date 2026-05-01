@@ -2,6 +2,7 @@ package com.youthfit.qna.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -16,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -29,12 +31,13 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private static final String SYSTEM_PROMPT = """
             당신은 청년 정책 Q&A 전문가입니다.
-            사용자가 특정 정책에 대해 질문하면, 제공된 정책 원문 컨텍스트를 근거로 정확하게 답변하세요.
+            사용자가 특정 정책에 대해 질문하면, 제공된 정책 메타데이터와 본문 컨텍스트에 근거하여 답변하세요.
 
             규칙:
-            - 반드시 제공된 컨텍스트에 근거하여 답변하세요.
-            - 컨텍스트에 없는 내용을 지어내지 마세요.
-            - 컨텍스트에서 명확한 답을 찾을 수 없으면 "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다."라고 답변하세요.
+            - 본문 컨텍스트에 답이 있으면 본문을 우선 사용하세요.
+            - 본문에 답이 없으면 정책 메타데이터로 보강하세요.
+            - 메타데이터와 본문 어느 쪽에도 없는 내용을 지어내지 마세요.
+            - 메타데이터와 본문 모두에 답이 없으면 "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다."라고 답변하세요.
             - 쉬운 한국어로 답변하세요.
             - 답변은 간결하고 핵심적으로 작성하세요.
             """;
@@ -44,8 +47,8 @@ public class OpenAiQnaClient implements QnaLlmProvider {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public String generateAnswer(String policyTitle, String context, String question, Consumer<String> chunkConsumer) {
-        String userMessage = "정책명: " + policyTitle + "\n\n정책 원문 컨텍스트:\n" + context + "\n\n질문: " + question;
+    public String generateAnswer(String policyTitle, PolicyMetadata metadata, String context, String question, Consumer<String> chunkConsumer) {
+        String userMessage = buildUserMessage(policyTitle, metadata, context, question);
 
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getModel(),
@@ -77,6 +80,34 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             log.error("OpenAI Q&A 스트리밍 호출 실패: policyTitle={}", policyTitle, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
         }
+    }
+
+    static String buildUserMessage(String policyTitle, PolicyMetadata metadata, String context, String question) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("정책명: ").append(policyTitle).append("\n\n");
+
+        List<String> metaLines = new ArrayList<>();
+        if (metadata != null) {
+            if (metadata.category() != null)       metaLines.add("- 분야: " + metadata.category());
+            if (metadata.summary() != null)        metaLines.add("- 요약: " + metadata.summary());
+            if (metadata.supportTarget() != null)  metaLines.add("- 지원 대상: " + metadata.supportTarget());
+            if (metadata.supportContent() != null) metaLines.add("- 지원 내용: " + metadata.supportContent());
+            if (metadata.organization() != null)   metaLines.add("- 운영 기관: " + metadata.organization());
+            if (metadata.contact() != null)        metaLines.add("- 문의처: " + metadata.contact());
+            if (metadata.applyStart() != null && metadata.applyEnd() != null) {
+                metaLines.add("- 신청 기간: " + metadata.applyStart() + " ~ " + metadata.applyEnd());
+            }
+            if (metadata.provideType() != null)    metaLines.add("- 지급 방식: " + metadata.provideType());
+        }
+        if (!metaLines.isEmpty()) {
+            sb.append("정책 메타데이터:\n");
+            for (String line : metaLines) sb.append(line).append("\n");
+            sb.append("\n");
+        }
+
+        sb.append("정책 본문 컨텍스트:\n").append(context).append("\n\n");
+        sb.append("질문: ").append(question);
+        return sb.toString();
     }
 
     private String readStreamResponse(InputStream inputStream, Consumer<String> chunkConsumer) throws Exception {

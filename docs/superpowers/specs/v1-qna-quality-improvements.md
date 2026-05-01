@@ -1,8 +1,10 @@
 # Q&A 품질 개선 (메타 질문 + 출처 정합성)
 
-- **상태**: TODO (다음 작업 후보)
+- **상태**: 이관 완료 → `docs/superpowers/specs/2026-05-01-qna-quality-improvements-design.md`
 - **작성일**: 2026-05-01
 - **참고**: v0 의미 캐시(`2026-05-01-semantic-qna-cache-design.md`) 검증 중 발견된 이슈
+
+> **이관 메모 (2026-05-01)**: 본 TODO 는 사이클 진입 spec 으로 흡수되었다. 결정 로그 / 변경 범위 / 비범위 / 위험 / 검증은 사이클 spec 을 정본으로 본다. 본 파일은 history 보존 목적으로 유지.
 
 ## 배경
 

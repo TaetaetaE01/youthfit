@@ -6,6 +6,7 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -94,7 +97,7 @@ class QnaServiceTest {
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
             verify(embeddingProvider, never()).embed(anyString());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(historyWriter, never()).startInProgress(anyLong(), anyLong(), anyString());
         }
 
@@ -135,7 +138,7 @@ class QnaServiceTest {
             Thread.sleep(100);
 
             verify(ragSearchService, never()).searchRelevantChunks(any());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(embeddingProvider, never()).embed(anyString());
             verify(semanticQnaCache, never()).findSimilar(anyLong(), anyString(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변"), anyString());
@@ -157,26 +160,10 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(100);
 
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(historyWriter).markFailed(99L, QnaFailedReason.NO_INDEXED_DOCUMENT);
         }
 
-        @Test
-        @DisplayName("모든 청크 distance 가 임계값을 초과하면 NO_RELEVANT_CHUNK 거절")
-        void allChunksOverThreshold_failsWithNoRelevantChunk() throws Exception {
-            cacheMissDefaults();
-            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(
-                    chunk(0.7),
-                    chunk(0.9)
-            ));
-
-            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
-            qnaService.askQuestion(command);
-            Thread.sleep(100);
-
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
-            verify(historyWriter).markFailed(99L, QnaFailedReason.NO_RELEVANT_CHUNK);
-        }
     }
 
     @Nested
@@ -191,9 +178,9 @@ class QnaServiceTest {
                     chunk(0.2),
                     chunk(0.6)  // 임계값 0.4 초과 — 컨텍스트에서 제외
             ));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willAnswer(inv -> {
-                        Consumer<String> consumer = inv.getArgument(3);
+                        Consumer<String> consumer = inv.getArgument(4);
                         consumer.accept("답변 ");
                         consumer.accept("일부.");
                         return "답변 일부.";
@@ -204,11 +191,93 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(200);
 
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
             verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
+        }
+
+        @Test
+        @DisplayName("LLM 호출 시 PolicyMetadata 9필드가 매핑되어 전달된다")
+        void llmReceivesMappedPolicyMetadata() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("LLM 답변");
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "이 정책 뭐야?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            ArgumentCaptor<PolicyMetadata> captor = ArgumentCaptor.forClass(PolicyMetadata.class);
+            verify(qnaLlmProvider).generateAnswer(
+                    anyString(), captor.capture(), anyString(), anyString(), any());
+
+            PolicyMetadata captured = captor.getValue();
+            assertThat(captured.category()).isEqualTo("WELFARE");
+            assertThat(captured.summary()).isEqualTo("저소득 청년 자산형성 지원");
+            assertThat(captured.supportTarget()).isEqualTo("만 19~34세, 근로소득자");
+            assertThat(captured.supportContent()).isEqualTo("월 30만원 매칭");
+            assertThat(captured.organization()).isEqualTo("보건복지부");
+            assertThat(captured.contact()).isEqualTo("02-123-4567");
+            assertThat(captured.applyStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
+            assertThat(captured.applyEnd()).isEqualTo(java.time.LocalDate.of(2026, 5, 31));
+            assertThat(captured.provideType()).isEqualTo("현금");
+        }
+
+        @Test
+        @DisplayName("청크 통과율 0건 + 메타 답변일 때 sources 에 정책 기본 정보 entry 1개 포함")
+        void emptyPassingChunks_addsMetaSourceEntry() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(
+                    chunk(0.85),
+                    chunk(0.9)
+            ));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("청년내일저축계좌는 만 19~34세 청년을 대상으로...");
+
+            given(objectMapper.writeValueAsString(any())).willAnswer(inv -> {
+                Object arg = inv.getArgument(0);
+                if (arg instanceof java.util.List<?> list && !list.isEmpty()) {
+                    QnaSourceResult first = (QnaSourceResult) list.get(0);
+                    return "[{\"label\":\"" + first.attachmentLabel() + "\"}]";
+                }
+                return "[]";
+            });
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "이 정책 뭐야?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            verify(qnaLlmProvider, times(1)).generateAnswer(
+                    anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
+            // sources 가 캐시 put 시 전달되는지 확인
+            ArgumentCaptor<CachedAnswer> answerCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+            verify(qnaAnswerCache).put(eq(10L), eq("이 정책 뭐야?"), answerCaptor.capture());
+            java.util.List<QnaSourceResult> capturedSources = answerCaptor.getValue().sources();
+            assertThat(capturedSources).hasSize(1);
+            assertThat(capturedSources.get(0).attachmentLabel()).isEqualTo("정책 기본 정보");
+            assertThat(capturedSources.get(0).policyId()).isEqualTo(10L);
+        }
+
+        @Test
+        @DisplayName("LLM 이 fallback 메시지 반환 시 sources 비우기 (출처 모순 방지)")
+        void fallbackAnswer_emptiesSources() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.6)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.");
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "오늘 점심 뭐 먹지?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            ArgumentCaptor<CachedAnswer> answerCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+            verify(qnaAnswerCache).put(eq(10L), eq("오늘 점심 뭐 먹지?"), answerCaptor.capture());
+            assertThat(answerCaptor.getValue().sources()).isEmpty();
         }
     }
 
@@ -221,7 +290,7 @@ class QnaServiceTest {
         void llmThrows_marksFailed() throws Exception {
             cacheMissDefaults();
             given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willThrow(new RuntimeException("OpenAI 5xx"));
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
@@ -261,7 +330,7 @@ class QnaServiceTest {
             verify(embeddingProvider, times(1)).embed("재학생도 가능?");
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
             verify(semanticQnaCache, never()).put(anyLong(), anyString(), anyString(), any(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변(의미 일치)"), anyString());
@@ -278,7 +347,7 @@ class QnaServiceTest {
             given(embeddingProvider.embed("질문")).willReturn(embedding);
             given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(Optional.empty());
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
             given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
@@ -289,7 +358,7 @@ class QnaServiceTest {
 
             verify(embeddingProvider, times(1)).embed("질문");
             verify(ragSearchService, times(1)).searchRelevantChunks(any(), eq(embedding));
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(embedding), any(CachedAnswer.class));
         }
@@ -306,7 +375,7 @@ class QnaServiceTest {
             given(semanticQnaCache.findSimilar(anyLong(), anyString(), any()))
                     .willThrow(new RuntimeException("DB 장애"));
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
             given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
@@ -315,7 +384,7 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(200);
 
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
         }
     }
 
@@ -338,6 +407,15 @@ class QnaServiceTest {
     private static Policy mockPolicy(Long id, String title) {
         Policy p = org.mockito.Mockito.mock(Policy.class);
         given(p.getTitle()).willReturn(title);
+        given(p.getCategory()).willReturn(com.youthfit.policy.domain.model.Category.WELFARE);
+        given(p.getSummary()).willReturn("저소득 청년 자산형성 지원");
+        given(p.getSupportTarget()).willReturn("만 19~34세, 근로소득자");
+        given(p.getSupportContent()).willReturn("월 30만원 매칭");
+        given(p.getOrganization()).willReturn("보건복지부");
+        given(p.getContact()).willReturn("02-123-4567");
+        given(p.getApplyStart()).willReturn(java.time.LocalDate.of(2026, 5, 1));
+        given(p.getApplyEnd()).willReturn(java.time.LocalDate.of(2026, 5, 31));
+        given(p.getProvideType()).willReturn("현금");
         return p;
     }
 }
