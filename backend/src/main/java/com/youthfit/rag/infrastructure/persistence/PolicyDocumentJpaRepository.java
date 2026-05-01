@@ -35,4 +35,7 @@ public interface PolicyDocumentJpaRepository extends JpaRepository<PolicyDocumen
             @Param("queryEmbedding") String queryEmbedding,
             @Param("limit") int limit
     );
+
+    @Query("SELECT DISTINCT pd.sourceHash FROM PolicyDocument pd WHERE pd.policyId = :policyId")
+    List<String> findDistinctSourceHashByPolicyId(@Param("policyId") Long policyId);
 }

@@ -30,10 +30,21 @@ public class RagSearchService {
                     .map(PolicyDocumentChunkResult::from)
                     .toList();
         }
-
         float[] queryEmbedding = embeddingProvider.embed(command.query());
+        return searchRelevantChunks(command, queryEmbedding);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PolicyDocumentChunkResult> searchRelevantChunks(SearchChunksCommand command,
+                                                                float[] precomputedEmbedding) {
+        if (command.query() == null || command.query().isBlank()) {
+            return policyDocumentRepository.findByPolicyIdOrderByChunkIndex(command.policyId()).stream()
+                    .map(PolicyDocumentChunkResult::from)
+                    .toList();
+        }
+
         List<SimilarChunk> similar = policyDocumentRepository.findSimilarByEmbedding(
-                command.policyId(), queryEmbedding, DEFAULT_TOP_K);
+                command.policyId(), precomputedEmbedding, DEFAULT_TOP_K);
 
         if (similar.isEmpty()) {
             log.info("벡터 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
