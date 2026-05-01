@@ -76,7 +76,7 @@ public record QnaProperties(
 ```yaml
 youthfit:
   qna:
-    semantic-distance-threshold: ${YOUTHFIT_QNA_SEMANTIC_DISTANCE_THRESHOLD:0.15}
+    semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.15}  # 의미 캐시 히트 컷오프. 더 엄격: 0.10, 더 관대: 0.20
 ```
 
 - [ ] **Step 4: 빌드 검증**

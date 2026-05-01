@@ -204,6 +204,7 @@ class QnaServiceTest {
             Thread.sleep(200);
 
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), any(), any(CachedAnswer.class));
             verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
