@@ -8,6 +8,7 @@ import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
@@ -163,8 +164,9 @@ public class QnaService {
         // ⑤ LLM 스트림
         String fullAnswer;
         try {
+            PolicyMetadata metadata = PolicyMetadata.from(policy);
             fullAnswer = qnaLlmProvider.generateAnswer(
-                    policy.getTitle(), context, command.question(),
+                    policy.getTitle(), metadata, context, command.question(),
                     chunk -> sendChunkEvent(emitter, chunk)
             );
         } catch (Exception e) {

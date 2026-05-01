@@ -6,6 +6,7 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.qna.application.dto.command.AskQuestionCommand;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
@@ -94,7 +95,7 @@ class QnaServiceTest {
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
             verify(embeddingProvider, never()).embed(anyString());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(historyWriter, never()).startInProgress(anyLong(), anyLong(), anyString());
         }
 
@@ -135,7 +136,7 @@ class QnaServiceTest {
             Thread.sleep(100);
 
             verify(ragSearchService, never()).searchRelevantChunks(any());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(embeddingProvider, never()).embed(anyString());
             verify(semanticQnaCache, never()).findSimilar(anyLong(), anyString(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변"), anyString());
@@ -157,7 +158,7 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(100);
 
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(historyWriter).markFailed(99L, QnaFailedReason.NO_INDEXED_DOCUMENT);
         }
 
@@ -174,7 +175,7 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(100);
 
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(historyWriter).markFailed(99L, QnaFailedReason.NO_RELEVANT_CHUNK);
         }
     }
@@ -191,9 +192,9 @@ class QnaServiceTest {
                     chunk(0.2),
                     chunk(0.6)  // 임계값 0.4 초과 — 컨텍스트에서 제외
             ));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willAnswer(inv -> {
-                        Consumer<String> consumer = inv.getArgument(3);
+                        Consumer<String> consumer = inv.getArgument(4);
                         consumer.accept("답변 ");
                         consumer.accept("일부.");
                         return "답변 일부.";
@@ -204,7 +205,7 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(200);
 
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
@@ -221,7 +222,7 @@ class QnaServiceTest {
         void llmThrows_marksFailed() throws Exception {
             cacheMissDefaults();
             given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willThrow(new RuntimeException("OpenAI 5xx"));
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
@@ -261,7 +262,7 @@ class QnaServiceTest {
             verify(embeddingProvider, times(1)).embed("재학생도 가능?");
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
             verify(semanticQnaCache, never()).put(anyLong(), anyString(), anyString(), any(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변(의미 일치)"), anyString());
@@ -278,7 +279,7 @@ class QnaServiceTest {
             given(embeddingProvider.embed("질문")).willReturn(embedding);
             given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(Optional.empty());
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
             given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
@@ -289,7 +290,7 @@ class QnaServiceTest {
 
             verify(embeddingProvider, times(1)).embed("질문");
             verify(ragSearchService, times(1)).searchRelevantChunks(any(), eq(embedding));
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(embedding), any(CachedAnswer.class));
         }
@@ -306,7 +307,7 @@ class QnaServiceTest {
             given(semanticQnaCache.findSimilar(anyLong(), anyString(), any()))
                     .willThrow(new RuntimeException("DB 장애"));
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
-            given(qnaLlmProvider.generateAnswer(anyString(), anyString(), anyString(), any()))
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
             given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
@@ -315,7 +316,7 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(200);
 
-            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
         }
     }
 

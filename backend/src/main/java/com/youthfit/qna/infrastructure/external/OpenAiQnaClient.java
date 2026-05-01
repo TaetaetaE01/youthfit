@@ -2,6 +2,7 @@ package com.youthfit.qna.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -44,7 +45,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public String generateAnswer(String policyTitle, String context, String question, Consumer<String> chunkConsumer) {
+    public String generateAnswer(String policyTitle, PolicyMetadata metadata, String context, String question, Consumer<String> chunkConsumer) {
         String userMessage = "정책명: " + policyTitle + "\n\n정책 원문 컨텍스트:\n" + context + "\n\n질문: " + question;
 
         Map<String, Object> requestBody = Map.of(
