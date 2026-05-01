@@ -112,7 +112,16 @@ public class QnaService {
         }
 
         // ② 임베딩 1회
-        float[] queryEmbedding = embeddingProvider.embed(command.question());
+        float[] queryEmbedding;
+        try {
+            queryEmbedding = embeddingProvider.embed(command.question());
+        } catch (Exception e) {
+            log.error("Q&A 임베딩 호출 실패: policyId={}", command.policyId(), e);
+            sendErrorEvent(emitter, LLM_ERROR_MESSAGE);
+            historyWriter.markFailed(historyId, QnaFailedReason.LLM_ERROR);
+            emitter.completeWithError(e);
+            return;
+        }
 
         // ③ 의미 캐시
         Optional<CachedAnswer> semantic;

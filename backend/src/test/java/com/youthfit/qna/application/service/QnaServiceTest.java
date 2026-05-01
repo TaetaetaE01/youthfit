@@ -260,6 +260,8 @@ class QnaServiceTest {
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
             verify(qnaLlmProvider, never()).generateAnswer(anyString(), anyString(), anyString(), any());
+            verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
+            verify(semanticQnaCache, never()).put(anyLong(), anyString(), any(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변(의미 일치)"), anyString());
         }
 
