@@ -164,22 +164,6 @@ class QnaServiceTest {
             verify(historyWriter).markFailed(99L, QnaFailedReason.NO_INDEXED_DOCUMENT);
         }
 
-        @Test
-        @DisplayName("모든 청크 distance 가 임계값을 초과하면 NO_RELEVANT_CHUNK 거절")
-        void allChunksOverThreshold_failsWithNoRelevantChunk() throws Exception {
-            cacheMissDefaults();
-            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(
-                    chunk(0.7),
-                    chunk(0.9)
-            ));
-
-            AskQuestionCommand command = new AskQuestionCommand(10L, "질문", 1L);
-            qnaService.askQuestion(command);
-            Thread.sleep(100);
-
-            verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
-            verify(historyWriter).markFailed(99L, QnaFailedReason.NO_RELEVANT_CHUNK);
-        }
     }
 
     @Nested
@@ -241,6 +225,28 @@ class QnaServiceTest {
             assertThat(captured.applyStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
             assertThat(captured.applyEnd()).isEqualTo(java.time.LocalDate.of(2026, 5, 31));
             assertThat(captured.provideType()).isEqualTo("현금");
+        }
+
+        @Test
+        @DisplayName("청크 통과율 0건이어도 LLM 1회 호출 (메타데이터로 답변 기회 보장) + sources 빈 배열")
+        void emptyPassingChunks_stillCallsLlmWithMetadata() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(
+                    chunk(0.6),
+                    chunk(0.7)
+            ));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("메타데이터 기반 답변");
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            AskQuestionCommand command = new AskQuestionCommand(10L, "이 정책 뭐야?", 1L);
+            qnaService.askQuestion(command);
+            Thread.sleep(200);
+
+            verify(qnaLlmProvider, times(1)).generateAnswer(
+                    anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
+            verify(qnaAnswerCache).put(eq(10L), eq("이 정책 뭐야?"), any(CachedAnswer.class));
+            verify(historyWriter).markCompleted(eq(99L), eq("메타데이터 기반 답변"), anyString());
         }
     }
 
