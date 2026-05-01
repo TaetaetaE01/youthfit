@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -231,14 +232,15 @@ class QnaServiceTest {
                     anyString(), captor.capture(), anyString(), anyString(), any());
 
             PolicyMetadata captured = captor.getValue();
-            org.assertj.core.api.Assertions.assertThat(captured.category()).isEqualTo("WELFARE");
-            org.assertj.core.api.Assertions.assertThat(captured.summary()).isEqualTo("저소득 청년 자산형성 지원");
-            org.assertj.core.api.Assertions.assertThat(captured.supportTarget()).isEqualTo("만 19~34세, 근로소득자");
-            org.assertj.core.api.Assertions.assertThat(captured.organization()).isEqualTo("보건복지부");
-            org.assertj.core.api.Assertions.assertThat(captured.contact()).isEqualTo("02-123-4567");
-            org.assertj.core.api.Assertions.assertThat(captured.applyStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
-            org.assertj.core.api.Assertions.assertThat(captured.applyEnd()).isEqualTo(java.time.LocalDate.of(2026, 5, 31));
-            org.assertj.core.api.Assertions.assertThat(captured.provideType()).isEqualTo("현금");
+            assertThat(captured.category()).isEqualTo("WELFARE");
+            assertThat(captured.summary()).isEqualTo("저소득 청년 자산형성 지원");
+            assertThat(captured.supportTarget()).isEqualTo("만 19~34세, 근로소득자");
+            assertThat(captured.supportContent()).isEqualTo("월 30만원 매칭");
+            assertThat(captured.organization()).isEqualTo("보건복지부");
+            assertThat(captured.contact()).isEqualTo("02-123-4567");
+            assertThat(captured.applyStart()).isEqualTo(java.time.LocalDate.of(2026, 5, 1));
+            assertThat(captured.applyEnd()).isEqualTo(java.time.LocalDate.of(2026, 5, 31));
+            assertThat(captured.provideType()).isEqualTo("현금");
         }
     }
 
