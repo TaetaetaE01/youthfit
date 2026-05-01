@@ -1,6 +1,6 @@
 # Q&A 품질 개선 (메타 질문 + 출처 정합성)
 
-- **상태**: 이관 완료 → `docs/superpowers/specs/2026-05-01-qna-quality-improvements-design.md`
+- **상태**: 이관 완료 → `docs/superpowers/specs/DONE_2026-05-01-qna-quality-improvements-design.md` (PR #56 머지)
 - **작성일**: 2026-05-01
 - **참고**: v0 의미 캐시(`2026-05-01-semantic-qna-cache-design.md`) 검증 중 발견된 이슈
 
