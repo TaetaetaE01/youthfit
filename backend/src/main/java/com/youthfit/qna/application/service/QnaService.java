@@ -12,10 +12,12 @@ import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
+import com.youthfit.qna.application.port.SemanticQnaCache;
 import com.youthfit.qna.domain.model.QnaFailedReason;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
+import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.application.service.RagSearchService;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +58,8 @@ public class QnaService {
     private final RagSearchService ragSearchService;
     private final QnaLlmProvider qnaLlmProvider;
     private final QnaAnswerCache qnaAnswerCache;
+    private final SemanticQnaCache semanticQnaCache;
+    private final EmbeddingProvider embeddingProvider;
     private final QnaHistoryWriter historyWriter;
     private final QnaProperties qnaProperties;
     private final ObjectMapper objectMapper;
@@ -94,20 +98,38 @@ public class QnaService {
 
     private void processQuestion(SseEmitter emitter, AskQuestionCommand command, Policy policy, Long historyId)
             throws IOException {
-        Optional<CachedAnswer> cached;
+        // ① 정확 일치 캐시
+        Optional<CachedAnswer> exact;
         try {
-            cached = qnaAnswerCache.get(command.policyId(), command.question());
+            exact = qnaAnswerCache.get(command.policyId(), command.question());
         } catch (Exception e) {
-            log.warn("Q&A 캐시 get 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
-            cached = Optional.empty();
+            log.warn("Q&A 정확 캐시 get 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
+            exact = Optional.empty();
         }
-        if (cached.isPresent()) {
-            sendCachedAnswer(emitter, cached.get(), historyId);
+        if (exact.isPresent()) {
+            sendCachedAnswer(emitter, exact.get(), historyId);
             return;
         }
 
+        // ② 임베딩 1회
+        float[] queryEmbedding = embeddingProvider.embed(command.question());
+
+        // ③ 의미 캐시
+        Optional<CachedAnswer> semantic;
+        try {
+            semantic = semanticQnaCache.findSimilar(command.policyId(), queryEmbedding);
+        } catch (Exception e) {
+            log.warn("Q&A 의미 캐시 findSimilar 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
+            semantic = Optional.empty();
+        }
+        if (semantic.isPresent()) {
+            sendCachedAnswer(emitter, semantic.get(), historyId);
+            return;
+        }
+
+        // ④ RAG (임베딩 재사용)
         List<PolicyDocumentChunkResult> chunks = ragSearchService.searchRelevantChunks(
-                new SearchChunksCommand(command.policyId(), command.question()));
+                new SearchChunksCommand(command.policyId(), command.question()), queryEmbedding);
 
         if (chunks.isEmpty()) {
             rejectAndComplete(emitter, historyId, NO_INDEXED_MESSAGE, QnaFailedReason.NO_INDEXED_DOCUMENT);
@@ -127,6 +149,7 @@ public class QnaService {
         String context = buildContext(passing);
         List<QnaSourceResult> sources = buildSources(command.policyId(), passing);
 
+        // ⑤ LLM 스트림
         String fullAnswer;
         try {
             fullAnswer = qnaLlmProvider.generateAnswer(
@@ -145,11 +168,17 @@ public class QnaService {
         sendDoneEvent(emitter);
         emitter.complete();
 
+        // ⑥ 캐시 저장
+        CachedAnswer answer = new CachedAnswer(fullAnswer, sources, Instant.now());
         try {
-            qnaAnswerCache.put(command.policyId(), command.question(),
-                    new CachedAnswer(fullAnswer, sources, Instant.now()));
+            qnaAnswerCache.put(command.policyId(), command.question(), answer);
         } catch (Exception e) {
-            log.warn("Q&A 캐시 put 실패: policyId={}", command.policyId(), e);
+            log.warn("Q&A 정확 캐시 put 실패: policyId={}", command.policyId(), e);
+        }
+        try {
+            semanticQnaCache.put(command.policyId(), command.question(), queryEmbedding, answer);
+        } catch (Exception e) {
+            log.warn("Q&A 의미 캐시 put 실패: policyId={}", command.policyId(), e);
         }
 
         try {
