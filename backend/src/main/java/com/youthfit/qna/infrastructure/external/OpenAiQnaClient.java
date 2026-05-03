@@ -50,9 +50,13 @@ public class OpenAiQnaClient implements QnaLlmProvider {
     public String generateAnswer(String policyTitle, PolicyMetadata metadata, String context, String question, Consumer<String> chunkConsumer) {
         String userMessage = buildUserMessage(policyTitle, metadata, context, question);
 
+        // temperature/seed 고정: 동일 정책·컨텍스트·질문에 대한 답변 변동 폭을 줄여 의미 캐시 미스 시에도
+        // 같은 질문군이 거의 같은 답변을 받도록 한다.
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getModel(),
                 "max_tokens", properties.getMaxTokens(),
+                "temperature", 0.2,
+                "seed", 1,
                 "stream", true,
                 "messages", List.of(
                         Map.of("role", "system", "content", SYSTEM_PROMPT),
