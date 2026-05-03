@@ -17,4 +17,14 @@ public class EligibilityRuleRepositoryImpl implements EligibilityRuleRepository 
     public List<EligibilityRule> findAllByPolicyId(Long policyId) {
         return jpaRepository.findAllByPolicyId(policyId);
     }
+
+    @Override
+    public void deleteAllByPolicyId(Long policyId) {
+        jpaRepository.deleteAllByPolicyId(policyId);
+    }
+
+    @Override
+    public void saveAll(List<EligibilityRule> rules) {
+        jpaRepository.saveAll(rules);
+    }
 }
