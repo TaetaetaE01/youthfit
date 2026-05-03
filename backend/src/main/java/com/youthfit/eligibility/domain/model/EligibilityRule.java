@@ -36,14 +36,28 @@ public class EligibilityRule extends BaseTimeEntity {
     @Column(name = "source_reference", columnDefinition = "TEXT")
     private String sourceReference;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private RuleConfidence confidence;
+
+    @Column(name = "source_hash", length = 64)
+    private String sourceHash;
+
+    @Column(name = "extraction_version", length = 10)
+    private String extractionVersion;
+
     @Builder
     private EligibilityRule(Long policyId, String field, RuleOperator operator,
-                            String value, String label, String sourceReference) {
+                            String value, String label, String sourceReference,
+                            RuleConfidence confidence, String sourceHash, String extractionVersion) {
         this.policyId = policyId;
         this.field = field;
         this.operator = operator;
         this.value = value;
         this.label = label;
         this.sourceReference = sourceReference;
+        this.confidence = confidence == null ? RuleConfidence.MEDIUM : confidence;
+        this.sourceHash = sourceHash;
+        this.extractionVersion = extractionVersion;
     }
 }

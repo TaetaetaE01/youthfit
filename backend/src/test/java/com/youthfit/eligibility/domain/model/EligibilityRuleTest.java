@@ -45,4 +45,41 @@ class EligibilityRuleTest {
         // then
         assertThat(rule.getSourceReference()).isNull();
     }
+
+    @Test
+    @DisplayName("confidence 를 지정하지 않으면 MEDIUM 으로 기본값이 설정된다")
+    void builder_confidenceDefaultsToMedium() {
+        EligibilityRule rule = EligibilityRule.builder()
+                .policyId(1L)
+                .field("age")
+                .operator(RuleOperator.BETWEEN)
+                .value("19~34")
+                .label("연령")
+                .sourceReference("자격 요건 > 연령")
+                .build();
+
+        assertThat(rule.getConfidence()).isEqualTo(RuleConfidence.MEDIUM);
+        assertThat(rule.getSourceHash()).isNull();
+        assertThat(rule.getExtractionVersion()).isNull();
+    }
+
+    @Test
+    @DisplayName("confidence 와 추출 메타데이터를 지정하면 그대로 반영된다")
+    void builder_confidenceIsRespectedWhenSet() {
+        EligibilityRule rule = EligibilityRule.builder()
+                .policyId(1L)
+                .field("age")
+                .operator(RuleOperator.BETWEEN)
+                .value("19~34")
+                .label("연령")
+                .sourceReference("자격 요건 > 연령")
+                .confidence(RuleConfidence.LOW)
+                .sourceHash("abc")
+                .extractionVersion("v1")
+                .build();
+
+        assertThat(rule.getConfidence()).isEqualTo(RuleConfidence.LOW);
+        assertThat(rule.getSourceHash()).isEqualTo("abc");
+        assertThat(rule.getExtractionVersion()).isEqualTo("v1");
+    }
 }
