@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchQnaAnswer, type QnaCallbacks } from '@/apis/qna.api';
 import { useAuthStore } from '@/stores/authStore';
 import type { QnaMessage } from '@/types/qna';
@@ -16,10 +16,17 @@ const ERROR_FALLBACK = '답변을 생성하지 못했습니다. 잠시 후 다�
 export function useQnaChat(policyId: number): UseQnaChat {
   const [messages, setMessages] = useState<QnaMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
-  const accessTokenRef = useRef<string | null>(null);
-  accessTokenRef.current = useAuthStore((s) => s.accessToken);
+  const messagesRef = useRef<QnaMessage[]>(messages);
+  messagesRef.current = messages;
 
   const isStreaming = messages.some((m) => m.status === 'streaming');
+
+  // unmount 시 진행 중 SSE abort
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const streamInto = useCallback(
     (assistantId: string, question: string) => {
@@ -62,7 +69,7 @@ export function useQnaChat(policyId: number): UseQnaChat {
         policyId,
         question,
         callbacks,
-        accessTokenRef.current,
+        useAuthStore.getState().accessToken,
         controller.signal,
       );
     },
@@ -71,28 +78,19 @@ export function useQnaChat(policyId: number): UseQnaChat {
 
   const send = useCallback(
     (question: string) => {
-      const userId = `user-${Date.now()}`;
+      const userId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const assistantId = `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
       setMessages((prev) => [
         ...prev,
         { id: userId, role: 'user', content: question, status: 'done' },
-        {
-          id: assistantId,
-          role: 'assistant',
-          content: '',
-          status: 'streaming',
-          questionRef: userId,
-        },
+        { id: assistantId, role: 'assistant', content: '', status: 'streaming', questionRef: userId },
       ]);
 
       streamInto(assistantId, question);
     },
     [streamInto],
   );
-
-  const messagesRef = useRef<QnaMessage[]>(messages);
-  messagesRef.current = messages;
 
   const retry = useCallback(
     (assistantMessageId: string) => {
