@@ -1,4 +1,4 @@
-import bokjiroLogo from '@/assets/source-logos/bokjiro.svg';
+import bokjiroLogo from '@/assets/source-logos/bokjiro.gif';
 import youthCenterLogo from '@/assets/source-logos/youth-center.svg';
 import youthSeoulLogo from '@/assets/source-logos/youth-seoul.svg';
 import { cn } from '@/lib/cn';
