@@ -66,9 +66,11 @@ public class EligibilityRuleGenerationService {
         String hash = computeHash(input);
 
         List<EligibilityRule> existing = ruleRepository.findAllByPolicyId(policyId);
-        if (!existing.isEmpty()
-                && hash.equals(existing.get(0).getSourceHash())
-                && PROMPT_VERSION.equals(existing.get(0).getExtractionVersion())) {
+        boolean allUpToDate = !existing.isEmpty()
+                && existing.stream().allMatch(r ->
+                        hash.equals(r.getSourceHash())
+                                && PROMPT_VERSION.equals(r.getExtractionVersion()));
+        if (allUpToDate) {
             log.info("룰 변경 없음, 재추출 스킵: policyId={}", policyId);
             return new RuleGenerationResult(policyId, false, "변경 없음");
         }
@@ -95,8 +97,8 @@ public class EligibilityRuleGenerationService {
                 finalRules = firstReport.acceptedRules();
             }
         } catch (Exception e) {
-            log.error("룰 추출 실패 - 기존 룰 유지: policyId={}, message={}", policyId, e.getMessage());
-            return new RuleGenerationResult(policyId, false, "LLM 호출 실패: " + e.getMessage());
+            log.error("룰 추출 실패 - 기존 룰 유지: policyId={}", policyId, e);
+            return new RuleGenerationResult(policyId, false, "룰 추출 실패: " + e.getMessage());
         }
 
         ruleRepository.deleteAllByPolicyId(policyId);

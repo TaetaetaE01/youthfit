@@ -132,6 +132,33 @@ class EligibilityRuleGenerationServiceTest {
     }
 
     @Test
+    void retryNotImproving_keepsFirstResponse() {
+        Policy policy = mockPolicy(1L);
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(ruleRepository.findAllByPolicyId(1L)).thenReturn(List.of());
+
+        RawExtractedRule first = new RawExtractedRule("age", "BETWEEN", "19~34", "연령", "원문1", "HIGH");
+        RawExtractedRule second = new RawExtractedRule("age", "BETWEEN", "19~34", "연령", "원문2", "HIGH");
+
+        when(llmProvider.extractRules(any())).thenReturn(List.of(first));
+        when(validator.validate(List.of(first)))
+                .thenReturn(new ValidationReport(List.of(first), List.of("위반 1"), true));
+        when(llmProvider.regenerateWithFeedback(any(), anyList())).thenReturn(List.of(second));
+        when(validator.validate(List.of(second)))
+                .thenReturn(new ValidationReport(List.of(second), List.of("위반 1", "위반 2"), true));
+
+        RuleGenerationResult result = service.generateRules(new GenerateEligibilityRulesCommand(1L));
+
+        assertThat(result.generated()).isTrue();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<EligibilityRule>> captor = ArgumentCaptor.forClass(List.class);
+        verify(ruleRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().get(0).getSourceReference()).isEqualTo("원문1");
+    }
+
+    @Test
     void llmFailure_keepsExistingRules() {
         Policy policy = mockPolicy(1L);
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
