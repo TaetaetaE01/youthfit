@@ -78,9 +78,11 @@ youthfit:
     # 한국어 임베딩 cosine distance. 실측 분포는 0.7~0.75. 더 엄격: 0.72~0.75, 더 관대: 0.80~0.85. RagSearchService 로그로 운영값 조정.
     relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.78}
     # 의미 캐시 히트 컷오프 (cosine distance). 한국어 단문은 표면 어휘 다양성에 임베딩이 매우 민감해
-     # 의미 동일 질문도 0.40~0.55 분포가 흔함. QnaService 가 임베딩 입력에 정책명+카테고리 prefix 를
-     # 붙여 같은 정책 단문 간 거리를 좁히고, threshold 는 그에 맞춰 0.30 으로 운영. 더 엄격: 0.25, 더 관대: 0.35.
-    semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.30}
+     # 의미 동일 질문도 0.4~0.55 분포가 흔함. 정책 prefix 시도(PR #60)는 의미 다른 단문까지 0.14~0.20 으로
+     # 잡아당겨 false positive 가 발생해 되돌림. false positive 가 답변 정확도에 미치는 영향이 큰 만큼,
+     # threshold 는 의미 동일 미세 변형(예: 부호/공백 차이)만 잡힐 정도로 보수적으로 운영. 근본 해결은
+     # query rewriting(LLM 정규화) 도입 후 재검토.
+    semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.20}
 
 attachment:
   storage:

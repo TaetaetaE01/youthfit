@@ -192,8 +192,7 @@ class QnaServiceTest {
             Thread.sleep(200);
 
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
-            verify(embeddingProvider).embed("[정책: 테스트 정책 / WELFARE] 질문");
-            verify(embeddingProvider).embed("질문");
+            verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
             verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
@@ -307,31 +306,28 @@ class QnaServiceTest {
     @DisplayName("의미 캐시")
     class SemanticCache {
 
-        private static final String CACHE_QUERY = "[정책: 테스트 정책 / WELFARE] 재학생도 가능?";
-
         @Test
-        @DisplayName("정확 캐시 미스 → 의미 캐시 히트 시 cache용 임베딩만 호출, RAG 임베딩/RAG/LLM 호출 0회")
+        @DisplayName("정확 캐시 미스 → 의미 캐시 히트 시 임베딩 1회 호출, RAG/LLM 호출 0회")
         void semanticHit_skipsRagAndLlm() throws Exception {
             given(costGuard.allows(10L)).willReturn(true);
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
-            float[] cacheEmbedding = new float[]{0.1f, 0.2f};
-            given(embeddingProvider.embed(CACHE_QUERY)).willReturn(cacheEmbedding);
+            float[] embedding = new float[]{0.1f, 0.2f};
+            given(embeddingProvider.embed("재학생도 가능?")).willReturn(embedding);
             CachedAnswer cached = new CachedAnswer(
                     "이전 답변(의미 일치)",
                     List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
                     Instant.now()
             );
-            given(semanticQnaCache.findSimilar(eq(10L), eq("재학생도 가능?"), eq(cacheEmbedding))).willReturn(Optional.of(cached));
+            given(semanticQnaCache.findSimilar(eq(10L), eq("재학생도 가능?"), eq(embedding))).willReturn(Optional.of(cached));
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "재학생도 가능?", 1L);
             qnaService.askQuestion(command);
             Thread.sleep(100);
 
-            verify(embeddingProvider, times(1)).embed(CACHE_QUERY);
-            verify(embeddingProvider, never()).embed("재학생도 가능?");
+            verify(embeddingProvider, times(1)).embed("재학생도 가능?");
             verify(ragSearchService, never()).searchRelevantChunks(any());
             verify(ragSearchService, never()).searchRelevantChunks(any(), any());
             verify(qnaLlmProvider, never()).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
@@ -341,19 +337,16 @@ class QnaServiceTest {
         }
 
         @Test
-        @DisplayName("의미 캐시 미스 → cache용·RAG용 임베딩 각각 호출, RAG에는 prefix 없는 임베딩 전달, LLM 1회 + 두 캐시 모두 put")
-        void semanticMiss_callsBothEmbeddings() throws Exception {
-            String cacheQuery = "[정책: 테스트 정책 / WELFARE] 질문";
+        @DisplayName("의미 캐시 미스 → RAG에 동일한 임베딩이 전달되고 LLM 1회 호출 + 두 캐시 모두 put")
+        void semanticMiss_passesSameEmbeddingToRag() throws Exception {
             given(costGuard.allows(10L)).willReturn(true);
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
-            float[] cacheEmbedding = new float[]{0.3f, 0.4f};
-            float[] ragEmbedding = new float[]{0.5f, 0.6f};
-            given(embeddingProvider.embed(cacheQuery)).willReturn(cacheEmbedding);
-            given(embeddingProvider.embed("질문")).willReturn(ragEmbedding);
-            given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(cacheEmbedding))).willReturn(Optional.empty());
-            given(ragSearchService.searchRelevantChunks(any(), eq(ragEmbedding))).willReturn(List.of(chunk(0.2)));
+            float[] embedding = new float[]{0.3f, 0.4f};
+            given(embeddingProvider.embed("질문")).willReturn(embedding);
+            given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(Optional.empty());
+            given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
@@ -363,30 +356,25 @@ class QnaServiceTest {
             qnaService.askQuestion(command);
             Thread.sleep(200);
 
-            verify(embeddingProvider, times(1)).embed(cacheQuery);
             verify(embeddingProvider, times(1)).embed("질문");
-            verify(ragSearchService, times(1)).searchRelevantChunks(any(), eq(ragEmbedding));
+            verify(ragSearchService, times(1)).searchRelevantChunks(any(), eq(embedding));
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
-            // 의미 캐시에는 cache용(prefix 포함) 임베딩이 저장되어야 다음 조회에서 일관된 거리 측정이 가능.
-            verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(cacheEmbedding), any(CachedAnswer.class));
+            verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(embedding), any(CachedAnswer.class));
         }
 
         @Test
         @DisplayName("의미 캐시 findSimilar 가 예외를 던지면 RAG 흐름으로 폴백")
         void semanticCacheError_fallsBackToRag() throws Exception {
-            String cacheQuery = "[정책: 테스트 정책 / WELFARE] 질문";
             given(costGuard.allows(10L)).willReturn(true);
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
-            float[] cacheEmbedding = new float[]{0.5f};
-            float[] ragEmbedding = new float[]{0.7f};
-            given(embeddingProvider.embed(cacheQuery)).willReturn(cacheEmbedding);
-            given(embeddingProvider.embed("질문")).willReturn(ragEmbedding);
+            float[] embedding = new float[]{0.5f};
+            given(embeddingProvider.embed("질문")).willReturn(embedding);
             given(semanticQnaCache.findSimilar(anyLong(), anyString(), any()))
                     .willThrow(new RuntimeException("DB 장애"));
-            given(ragSearchService.searchRelevantChunks(any(), eq(ragEmbedding))).willReturn(List.of(chunk(0.2)));
+            given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
@@ -397,29 +385,6 @@ class QnaServiceTest {
             Thread.sleep(200);
 
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
-        }
-    }
-
-    @Nested
-    @DisplayName("buildCacheQuery")
-    class BuildCacheQuery {
-
-        @Test
-        @DisplayName("정책명·카테고리·질문이 prefix 형식으로 결합된다")
-        void buildsPrefixedQuery() {
-            Policy p = mockPolicy(7L, "청년내일저축계좌");
-            String result = QnaService.buildCacheQuery(p, "대상자는?");
-            assertThat(result).isEqualTo("[정책: 청년내일저축계좌 / WELFARE] 대상자는?");
-        }
-
-        @Test
-        @DisplayName("정책명/카테고리가 null 이면 빈 문자열로 대체")
-        void nullFields_useEmptyString() {
-            Policy p = org.mockito.Mockito.mock(Policy.class);
-            given(p.getTitle()).willReturn(null);
-            given(p.getCategory()).willReturn(null);
-            String result = QnaService.buildCacheQuery(p, "질문");
-            assertThat(result).isEqualTo("[정책:  / ] 질문");
         }
     }
 
