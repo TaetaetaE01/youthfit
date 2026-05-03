@@ -17,7 +17,7 @@ export function QnaSuggestionChips({ onPick }: Props) {
           key={q}
           type="button"
           onClick={() => onPick(q)}
-          className="rounded-full border border-[--color-chat-accent]/30 bg-[--color-chat-accent]/10 min-h-11 px-[14px] py-2 text-[13px] text-[--color-chat-accent] transition hover:-translate-y-px hover:border-[--color-chat-accent]/50 hover:bg-[--color-chat-accent]/25 focus-visible:outline-2 focus-visible:outline-[--color-chat-accent] focus-visible:outline-offset-2"
+          className="rounded-full border border-chat-accent/30 bg-chat-accent/10 min-h-11 px-[14px] py-2 text-[13px] text-chat-accent transition hover:-translate-y-px hover:border-chat-accent/50 hover:bg-chat-accent/25 focus-visible:outline-2 focus-visible:outline-chat-accent focus-visible:outline-offset-2"
         >
           {q}
         </button>

@@ -45,7 +45,7 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
   if (isUser) {
     return (
       <div className="flex justify-end animate-qna-msg-in">
-        <div className="max-w-[88%] md:max-w-[80%] rounded-2xl rounded-br-md bg-[--color-chat-surface] px-4 py-[11px] text-[15px] leading-6 text-white shadow-sm">
+        <div className="max-w-[88%] md:max-w-[80%] rounded-2xl rounded-br-md bg-chat-surface px-4 py-[11px] text-[15px] leading-6 text-white shadow-sm">
           <p className="whitespace-pre-wrap">{message.content}</p>
         </div>
       </div>
@@ -59,7 +59,7 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
           'max-w-[88%] md:max-w-[80%] rounded-2xl rounded-bl-md px-[18px] py-[14px] text-[15px] leading-7 shadow-sm',
           isError
             ? 'border-l-[3px] border-error-500 bg-red-50 text-red-900'
-            : 'bg-[--color-chat-bubble] text-[--color-chat-bubble-text]',
+            : 'bg-chat-bubble text-chat-bubble-text',
         )}
       >
         {isError ? (
@@ -70,18 +70,18 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                 strong: ({ children }) => (
-                  <strong className="font-bold text-[--color-chat-surface]">{children}</strong>
+                  <strong className="font-bold text-chat-surface">{children}</strong>
                 ),
                 em: ({ children }) => (
-                  <em className="italic text-[--color-chat-surface]">{children}</em>
+                  <em className="italic text-chat-surface">{children}</em>
                 ),
                 ul: ({ children }) => (
-                  <ul className="my-1.5 list-disc pl-[1.4em] marker:text-[--color-chat-soft]">
+                  <ul className="my-1.5 list-disc pl-[1.4em] marker:text-chat-soft">
                     {children}
                   </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className="my-1.5 list-decimal pl-[1.4em] marker:text-[--color-chat-soft]">
+                  <ol className="my-1.5 list-decimal pl-[1.4em] marker:text-chat-soft">
                     {children}
                   </ol>
                 ),
@@ -91,18 +91,18 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-[--color-chat-surface] underline underline-offset-2 hover:text-[--color-chat-surface-deep]"
+                    className="font-medium text-chat-surface underline underline-offset-2 hover:text-chat-surface-deep"
                   >
                     {children}
                   </a>
                 ),
                 code: ({ children }) => (
-                  <code className="rounded bg-[--color-chat-source-bg] px-[7px] py-[2px] font-mono text-[0.88em] text-[--color-chat-surface]">
+                  <code className="rounded bg-chat-source-bg px-[7px] py-[2px] font-mono text-[0.88em] text-chat-surface">
                     {children}
                   </code>
                 ),
                 blockquote: ({ children }) => (
-                  <blockquote className="my-2 border-l-[3px] border-[--color-chat-soft] pl-3 italic text-slate-600">
+                  <blockquote className="my-2 border-l-[3px] border-chat-soft pl-3 italic text-slate-600">
                     {children}
                   </blockquote>
                 ),
@@ -118,18 +118,18 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
               <span
                 data-qna-cursor
                 aria-hidden="true"
-                className="ml-0.5 inline-block h-[1em] w-[2px] -mb-0.5 bg-[--color-chat-surface] animate-qna-cursor-blink"
+                className="ml-0.5 inline-block h-[1em] w-[2px] -mb-0.5 bg-chat-surface animate-qna-cursor-blink"
               />
             )}
           </div>
         )}
 
         {!isError && message.sources && message.sources.length > 0 && (
-          <div className="mt-3 rounded-[10px] bg-[--color-chat-source-bg] px-[14px] py-3 text-[13px] text-[--color-chat-bubble-text]">
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[--color-chat-surface]">
+          <div className="mt-3 rounded-[10px] bg-chat-source-bg px-[14px] py-3 text-[13px] text-chat-bubble-text">
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-surface">
               출처
             </p>
-            <ul className="m-0 list-disc pl-[1.2em] marker:text-[--color-chat-soft]">
+            <ul className="m-0 list-disc pl-[1.2em] marker:text-chat-soft">
               {message.sources.map((src, i) => (
                 <li key={i} className="my-0.5">
                   {src}
@@ -146,8 +146,8 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
               aria-label="답변 복사"
               onClick={handleCopy}
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-[--color-chat-bubble-text]',
-                copied && 'bg-[--color-chat-source-bg] text-[--color-chat-surface]',
+                'flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-chat-bubble-text',
+                copied && 'bg-chat-source-bg text-chat-surface',
               )}
             >
               {copied ? (
@@ -165,7 +165,7 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
               type="button"
               aria-label="답변 재생성"
               onClick={() => onRetry(message.id)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[--color-chat-surface] px-3 py-1.5 text-[13px] font-medium text-white transition hover:bg-[--color-chat-surface-deep]"
+              className="inline-flex items-center gap-1.5 rounded-md bg-chat-surface px-3 py-1.5 text-[13px] font-medium text-white transition hover:bg-chat-surface-deep"
             >
               <RotateCcw className="h-3.5 w-3.5" /> 재시도
             </button>

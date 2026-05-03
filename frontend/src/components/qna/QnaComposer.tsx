@@ -38,7 +38,7 @@ export function QnaComposer({ disabled, placeholder, onSubmit, readOnly, onFocus
         readOnly={readOnly}
         placeholder={placeholder}
         className={cn(
-          'h-11 w-full rounded-[14px] border border-[--color-chat-accent]/20 bg-[--color-chat-accent]/10 pl-4 pr-12 text-[15px] text-white outline-none transition-colors placeholder:text-[--color-chat-accent]/55 focus:bg-[--color-chat-accent]/18 focus-visible:outline-2 focus-visible:outline-[--color-chat-accent]',
+          'h-11 w-full rounded-[14px] border border-chat-accent/20 bg-chat-accent/10 pl-4 pr-12 text-[15px] text-white outline-none transition-colors placeholder:text-chat-accent/55 focus:bg-chat-accent/18 focus-visible:outline-2 focus-visible:outline-chat-accent',
           readOnly && 'cursor-pointer',
         )}
       />
@@ -46,7 +46,7 @@ export function QnaComposer({ disabled, placeholder, onSubmit, readOnly, onFocus
         type="submit"
         disabled={disabled || !value.trim()}
         aria-label="질문 전송"
-        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[--color-chat-accent] transition hover:bg-[--color-chat-accent]/15 disabled:opacity-40"
+        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-chat-accent transition hover:bg-chat-accent/15 disabled:opacity-40"
       >
         <Send className="h-4 w-4" />
       </button>

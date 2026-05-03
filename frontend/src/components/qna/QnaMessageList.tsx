@@ -77,7 +77,7 @@ export function QnaMessageList({ messages, onCopy, onRetry }: Props) {
           type="button"
           aria-label="가장 최근 메시지로 이동"
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-3 right-3 md:bottom-4 md:right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[--color-chat-surface] shadow-lg shadow-[--color-chat-surface-deep]/30 transition hover:bg-slate-50 animate-qna-jump-in"
+          className="absolute bottom-3 right-3 md:bottom-4 md:right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-chat-surface shadow-lg shadow-chat-surface-deep/30 transition hover:bg-slate-50 animate-qna-jump-in"
         >
           <ChevronDown className="h-4 w-4" />
         </button>
