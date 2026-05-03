@@ -2,6 +2,7 @@ package com.youthfit.eligibility.domain.service;
 
 import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
+import com.youthfit.eligibility.domain.model.RuleConfidence;
 import com.youthfit.eligibility.domain.model.RuleOperator;
 import com.youthfit.user.domain.model.EligibilityProfile;
 import com.youthfit.user.domain.model.EmploymentKind;
@@ -189,6 +190,97 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+        }
+    }
+
+    @Nested
+    @DisplayName("RuleConfidence")
+    class Confidence {
+
+        @Test
+        @DisplayName("HIGH 신뢰도 + 매칭이면 LIKELY_ELIGIBLE 을 반환하고 confidenceNote 는 null 이다")
+        void highConfidence_matching_returnsLikelyEligible() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.HIGH);
+            EligibilityProfile profile = profileWithAge(29);
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
+            assertThat(result.confidenceNote()).isNull();
+        }
+
+        @Test
+        @DisplayName("HIGH 신뢰도 + 미매칭이면 LIKELY_INELIGIBLE 을 반환한다")
+        void highConfidence_notMatching_returnsLikelyIneligible() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.HIGH);
+            EligibilityProfile profile = profileWithAge(40);
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
+            assertThat(result.confidenceNote()).isNull();
+        }
+
+        @Test
+        @DisplayName("LOW 신뢰도 + 매칭이면 UNCERTAIN 으로 다운그레이드되고 confidenceNote 가 채워진다")
+        void lowConfidence_matching_isDowngradedToUncertain() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.LOW);
+            EligibilityProfile profile = profileWithAge(29);
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+            assertThat(result.confidenceNote()).isEqualTo("근거가 모호함");
+        }
+
+        @Test
+        @DisplayName("LOW 신뢰도 + 미매칭이면 UNCERTAIN 으로 다운그레이드되고 confidenceNote 가 채워진다")
+        void lowConfidence_notMatching_isDowngradedToUncertain() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.LOW);
+            EligibilityProfile profile = profileWithAge(40);
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+            assertThat(result.confidenceNote()).isEqualTo("근거가 모호함");
+        }
+
+        @Test
+        @DisplayName("MEDIUM 신뢰도는 HIGH 와 동일하게 동작한다")
+        void mediumConfidence_behavesLikeHigh() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.MEDIUM);
+            EligibilityProfile profile = profileWithAge(29);
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
+            assertThat(result.confidenceNote()).isNull();
+        }
+
+        @Test
+        @DisplayName("프로필 필드값이 누락되면 신뢰도와 무관하게 UNCERTAIN 을 반환한다")
+        void missingProfileField_returnsUncertain_regardlessOfConfidence() {
+            EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.HIGH);
+            EligibilityProfile profile = baseProfile();
+
+            CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
+
+            assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+            assertThat(result.confidenceNote()).isNull();
+        }
+
+        private EligibilityRule ageRuleWithConfidence(RuleConfidence confidence) {
+            EligibilityRule rule = EligibilityRule.builder()
+                    .policyId(1L)
+                    .field("age")
+                    .operator(RuleOperator.BETWEEN)
+                    .value("19~34")
+                    .label("연령")
+                    .sourceReference("자격 요건 > 연령")
+                    .confidence(confidence)
+                    .build();
+            ReflectionTestUtils.setField(rule, "id", 1L);
+            return rule;
         }
     }
 
