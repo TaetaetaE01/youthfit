@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Copy, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -17,13 +17,26 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
   const [copied, setCopied] = useState(false);
   const [announceCopy, setAnnounceCopy] = useState(false);
 
+  const timersRef = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      timersRef.current.forEach((id) => window.clearTimeout(id));
+      timersRef.current = [];
+    },
+    [],
+  );
+
   const handleCopy = async () => {
     try {
       await onCopy(message.content);
+      timersRef.current.forEach((id) => window.clearTimeout(id));
+      timersRef.current = [];
       setCopied(true);
       setAnnounceCopy(true);
-      window.setTimeout(() => setCopied(false), 1500);
-      window.setTimeout(() => setAnnounceCopy(false), 1500);
+      timersRef.current.push(
+        window.setTimeout(() => setCopied(false), 1500),
+        window.setTimeout(() => setAnnounceCopy(false), 1500),
+      );
     } catch {
       // 클립보드 실패 시 silent (드물게 권한 거부)
     }
@@ -111,7 +124,7 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
           </div>
         )}
 
-        {message.sources && message.sources.length > 0 && (
+        {!isError && message.sources && message.sources.length > 0 && (
           <div className="mt-3 rounded-[10px] bg-[--color-chat-source-bg] px-[14px] py-3 text-[13px] text-[--color-chat-bubble-text]">
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[--color-chat-surface]">
               출처

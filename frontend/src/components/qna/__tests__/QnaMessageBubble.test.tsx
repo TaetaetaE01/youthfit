@@ -88,4 +88,21 @@ describe('QnaMessageBubble', () => {
     expect(screen.queryByRole('button', { name: '답변 복사' })).toBeNull();
     expect(screen.queryByRole('button', { name: '답변 재생성' })).toBeNull();
   });
+
+  it('error status 에서는 sources 가 있어도 출처 박스를 렌더하지 않는다', () => {
+    render(
+      <QnaMessageBubble
+        message={{
+          ...baseAssistant,
+          status: 'error',
+          content: '오류',
+          sources: ['청년정책 시행계획 p.12-13'],
+        }}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText('출처')).toBeNull();
+    expect(screen.queryByText('청년정책 시행계획 p.12-13')).toBeNull();
+  });
 });
