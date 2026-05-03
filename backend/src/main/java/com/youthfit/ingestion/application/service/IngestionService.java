@@ -3,6 +3,8 @@ package com.youthfit.ingestion.application.service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.youthfit.common.config.CostGuard;
+import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
+import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
@@ -47,6 +49,7 @@ public class IngestionService {
     private final PolicyPeriodExtractor policyPeriodExtractor;
     private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
     private final GuideGenerationService guideGenerationService;
+    private final EligibilityRuleGenerationService eligibilityRuleGenerationService;
     private final AttachmentDownloadService attachmentDownloadService;
     private final CostGuard costGuard;
 
@@ -96,6 +99,7 @@ public class IngestionService {
 
         PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
         triggerGuideGeneration(ingestionResult.policyId(), command.title());
+        triggerRuleGeneration(ingestionResult.policyId());
         triggerAttachmentDownload(ingestionResult.policyId());
 
         return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
@@ -215,6 +219,15 @@ public class IngestionService {
         } catch (Exception e) {
             // ingestion 자체는 성공시킨다.
             log.warn("가이드 생성 실패: policyId={}", policyId, e);
+        }
+    }
+
+    private void triggerRuleGeneration(Long policyId) {
+        if (policyId == null) return;
+        try {
+            eligibilityRuleGenerationService.generateRules(new GenerateEligibilityRulesCommand(policyId));
+        } catch (Exception e) {
+            log.warn("적합도 룰 추출 실패: policyId={}", policyId, e);
         }
     }
 

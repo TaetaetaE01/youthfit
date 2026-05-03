@@ -1,6 +1,8 @@
 package com.youthfit.ingestion.application.service;
 
 import com.youthfit.common.config.CostGuard;
+import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
+import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.service.GuideGenerationService;
 import com.youthfit.policy.domain.model.Policy;
@@ -34,6 +36,7 @@ public class AttachmentReindexService {
     private final PolicyAttachmentRepository attachmentRepository;
     private final RagIndexingService ragIndexingService;
     private final GuideGenerationService guideGenerationService;
+    private final EligibilityRuleGenerationService eligibilityRuleGenerationService;
     private final CostGuard costGuard;
 
     @Setter
@@ -63,6 +66,12 @@ public class AttachmentReindexService {
         if (result.updated()) {
             guideGenerationService.generateGuide(new GenerateGuideCommand(resolvedId, policy.getTitle(), null));
             log.info("guide regenerated: policyId={}", resolvedId);
+            try {
+                eligibilityRuleGenerationService.generateRules(new GenerateEligibilityRulesCommand(resolvedId));
+                log.info("룰 재추출 완료: policyId={}", resolvedId);
+            } catch (Exception e) {
+                log.warn("룰 재추출 실패: policyId={}", resolvedId, e);
+            }
         }
     }
 
