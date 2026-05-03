@@ -78,4 +78,11 @@ describe('QnaChatSection (통합)', () => {
       expect(screen.getByText('청년정책 시행계획 p.20')).toBeInTheDocument();
     });
   });
+
+  it('미인증 사용자가 composer 포커스 → onLoginPrompt 호출', () => {
+    const onLoginPrompt = vi.fn();
+    render(<QnaChatSection isAuthenticated={false} policyId={1} onLoginPrompt={onLoginPrompt} />);
+    fireEvent.focus(screen.getByPlaceholderText('로그인 후 질문할 수 있어요'));
+    expect(onLoginPrompt).toHaveBeenCalledTimes(1);
+  });
 });

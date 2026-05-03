@@ -34,7 +34,7 @@ export function QnaChatSection({ isAuthenticated, policyId, onLoginPrompt }: Pro
 
       <div className="mb-4">
         {isEmpty ? (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center px-4 text-center">
+          <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[--color-chat-accent]/15">
               <MessageSquare className="h-6 w-6 text-[--color-chat-accent]" />
             </div>
