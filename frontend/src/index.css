@@ -26,6 +26,15 @@
   /* Shadows */
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
   --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Chat (Q&A) — 챗봇 전용 토큰. 시스템 전역 brand 마이그레이션은 별도 spec */
+  --color-chat-surface-deep: #0F2854;
+  --color-chat-surface: #1C4D8D;
+  --color-chat-soft: #4988C4;
+  --color-chat-accent: #BDE8F5;
+  --color-chat-bubble: #FFFFFF;
+  --color-chat-bubble-text: #0F2854;
+  --color-chat-source-bg: #EFF7FA;
 }
 
 /* Animations */
@@ -53,6 +62,27 @@
   0% { background-color: rgb(254 240 138); }
   100% { background-color: transparent; }
 }
+@keyframes qna-msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes qna-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+@keyframes qna-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes qna-check-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes qna-jump-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 .source-highlight {
   animation: highlight-fade 1.5s ease-out;
@@ -70,6 +100,36 @@
 @utility animate-cta-glow {
   animation: cta-glow 3s ease-in-out infinite;
 }
+@utility animate-qna-msg-in {
+  animation: qna-msg-in 320ms ease-out both;
+}
+@utility animate-qna-typing-bounce {
+  animation: qna-typing-bounce 1.2s infinite ease-in-out;
+}
+@utility animate-qna-cursor-blink {
+  animation: qna-cursor-blink 1s infinite;
+}
+@utility animate-qna-check-pop {
+  animation: qna-check-pop 280ms ease-out;
+}
+@utility animate-qna-jump-in {
+  animation: qna-jump-in 240ms ease-out;
+}
+
+/* 챗봇 스크롤바: 6px sky 톤 반투명 */
+@utility scrollbar-qna {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(189, 232, 245, 0.3) transparent;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(189, 232, 245, 0.3);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(189, 232, 245, 0.5);
+  }
+}
 
 /* Smooth scroll */
 html {
@@ -79,4 +139,25 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* a11y: 모션 줄임 모드에서 챗봇 애니메이션 비활성/정적 처리 */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes qna-msg-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes qna-typing-bounce {
+    0%, 100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes qna-cursor-blink {
+    0%, 100% { opacity: 1; }
+  }
+  @keyframes qna-jump-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes qna-check-pop {
+    from, to { transform: scale(1); opacity: 1; }
+  }
 }

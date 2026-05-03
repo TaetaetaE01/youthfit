@@ -145,16 +145,6 @@ export interface EligibilityResponse {
   disclaimer: string;
 }
 
-/* ── Q&A ── */
-
-export interface QnaMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: string[];
-  loading?: boolean;
-}
-
 /* ── Bookmark ── */
 
 export interface BookmarkPolicy {
