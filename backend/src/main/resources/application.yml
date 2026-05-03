@@ -77,9 +77,10 @@ youthfit:
     cache-ttl-hours: ${QNA_CACHE_TTL_HOURS:24}
     # 한국어 임베딩 cosine distance. 실측 분포는 0.7~0.75. 더 엄격: 0.72~0.75, 더 관대: 0.80~0.85. RagSearchService 로그로 운영값 조정.
     relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.78}
-    # 의미 캐시 히트 컷오프 (cosine distance). text-embedding-3-small + 한국어 단문 환경에서 의미 동일 질문도
-     # 어휘/존댓말 차이로 0.15~0.30 분포가 흔해 0.15 는 너무 엄격 → 0.22 로 완화. 더 엄격: 0.18, 더 관대: 0.25.
-    semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.22}
+    # 의미 캐시 히트 컷오프 (cosine distance). 한국어 단문은 표면 어휘 다양성에 임베딩이 매우 민감해
+     # 의미 동일 질문도 0.40~0.55 분포가 흔함. QnaService 가 임베딩 입력에 정책명+카테고리 prefix 를
+     # 붙여 같은 정책 단문 간 거리를 좁히고, threshold 는 그에 맞춰 0.30 으로 운영. 더 엄격: 0.25, 더 관대: 0.35.
+    semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.30}
 
 attachment:
   storage:

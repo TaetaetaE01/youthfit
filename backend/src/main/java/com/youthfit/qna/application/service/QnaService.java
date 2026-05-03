@@ -112,12 +112,13 @@ public class QnaService {
             return;
         }
 
-        // ② 임베딩 1회
-        float[] queryEmbedding;
+        // ② 의미 캐시용 임베딩 (정책 컨텍스트 prefix). 같은 정책의 단문 질문 간 거리를 좁혀
+        //    text-embedding-3-small + 한국어 단문 한계를 보완.
+        float[] cacheEmbedding;
         try {
-            queryEmbedding = embeddingProvider.embed(command.question());
+            cacheEmbedding = embeddingProvider.embed(buildCacheQuery(policy, command.question()));
         } catch (Exception e) {
-            log.error("Q&A 임베딩 호출 실패: policyId={}", command.policyId(), e);
+            log.error("Q&A 의미 캐시용 임베딩 호출 실패: policyId={}", command.policyId(), e);
             sendErrorEvent(emitter, LLM_ERROR_MESSAGE);
             historyWriter.markFailed(historyId, QnaFailedReason.LLM_ERROR);
             emitter.completeWithError(e);
@@ -127,7 +128,7 @@ public class QnaService {
         // ③ 의미 캐시
         Optional<CachedAnswer> semantic;
         try {
-            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding);
+            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), cacheEmbedding);
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 findSimilar 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
             semantic = Optional.empty();
@@ -137,9 +138,20 @@ public class QnaService {
             return;
         }
 
-        // ④ RAG (임베딩 재사용)
+        // ④ RAG 검색용 임베딩은 prefix 없이 호출 — RAG 청크 인덱스가 prefix 없는 텍스트로 만들어졌기 때문.
+        float[] ragEmbedding;
+        try {
+            ragEmbedding = embeddingProvider.embed(command.question());
+        } catch (Exception e) {
+            log.error("Q&A RAG용 임베딩 호출 실패: policyId={}", command.policyId(), e);
+            sendErrorEvent(emitter, LLM_ERROR_MESSAGE);
+            historyWriter.markFailed(historyId, QnaFailedReason.LLM_ERROR);
+            emitter.completeWithError(e);
+            return;
+        }
+
         List<PolicyDocumentChunkResult> chunks = ragSearchService.searchRelevantChunks(
-                new SearchChunksCommand(command.policyId(), command.question()), queryEmbedding);
+                new SearchChunksCommand(command.policyId(), command.question()), ragEmbedding);
 
         if (chunks.isEmpty()) {
             rejectAndComplete(emitter, historyId, NO_INDEXED_MESSAGE, QnaFailedReason.NO_INDEXED_DOCUMENT);
@@ -201,7 +213,7 @@ public class QnaService {
         }
         String sourceHash = policyDocumentRepository.findSourceHashByPolicyId(command.policyId()).orElse("UNKNOWN");
         try {
-            semanticQnaCache.put(command.policyId(), command.question(), sourceHash, queryEmbedding, answer);
+            semanticQnaCache.put(command.policyId(), command.question(), sourceHash, cacheEmbedding, answer);
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 put 실패: policyId={}", command.policyId(), e);
         }
@@ -233,6 +245,12 @@ public class QnaService {
         sendDoneEvent(emitter);
         emitter.complete();
         historyWriter.markFailed(historyId, reason);
+    }
+
+    static String buildCacheQuery(Policy policy, String question) {
+        String title = policy.getTitle() != null ? policy.getTitle() : "";
+        String category = policy.getCategory() == null ? "" : policy.getCategory().name();
+        return "[정책: " + title + " / " + category + "] " + question;
     }
 
     private String buildContext(List<PolicyDocumentChunkResult> chunks) {
