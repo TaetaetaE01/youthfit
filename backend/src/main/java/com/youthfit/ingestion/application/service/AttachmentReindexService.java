@@ -66,12 +66,16 @@ public class AttachmentReindexService {
         if (result.updated()) {
             guideGenerationService.generateGuide(new GenerateGuideCommand(resolvedId, policy.getTitle(), null));
             log.info("guide regenerated: policyId={}", resolvedId);
-            try {
-                eligibilityRuleGenerationService.generateRules(new GenerateEligibilityRulesCommand(resolvedId));
-                log.info("룰 재추출 완료: policyId={}", resolvedId);
-            } catch (Exception e) {
-                log.warn("룰 재추출 실패: policyId={}", resolvedId, e);
-            }
+            triggerRuleGeneration(resolvedId);
+        }
+    }
+
+    private void triggerRuleGeneration(Long policyId) {
+        if (policyId == null) return;
+        try {
+            eligibilityRuleGenerationService.generateRules(new GenerateEligibilityRulesCommand(policyId));
+        } catch (Exception e) {
+            log.warn("룰 재추출 실패: policyId={}", policyId, e);
         }
     }
 
