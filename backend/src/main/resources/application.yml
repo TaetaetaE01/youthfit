@@ -60,6 +60,10 @@ openai:
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_QNA_MODEL:gpt-4o-mini}
     max-tokens: ${OPENAI_QNA_MAX_TOKENS:1024}
+  eligibility-rule:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_ELIGIBILITY_RULE_MODEL:gpt-4o-mini}
+    max-tokens: ${OPENAI_ELIGIBILITY_RULE_MAX_TOKENS:2000}
   ingestion:
     period:
       api-key: ${OPENAI_API_KEY:}

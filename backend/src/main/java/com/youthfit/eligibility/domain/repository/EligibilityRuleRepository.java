@@ -7,4 +7,8 @@ import java.util.List;
 public interface EligibilityRuleRepository {
 
     List<EligibilityRule> findAllByPolicyId(Long policyId);
+
+    void deleteAllByPolicyId(Long policyId);
+
+    void saveAll(List<EligibilityRule> rules);
 }

@@ -1,6 +1,7 @@
 package com.youthfit.eligibility.domain.service;
 
 import com.youthfit.eligibility.domain.model.EligibilityRule;
+import com.youthfit.eligibility.domain.model.RuleConfidence;
 import com.youthfit.eligibility.domain.model.RuleOperator;
 import com.youthfit.user.domain.model.EligibilityProfile;
 
@@ -12,6 +13,9 @@ public class EligibilityEvaluator {
         Object userValue = extractFieldValue(profile, rule.getField());
         if (userValue == null) {
             return CriterionEvaluation.uncertain(rule);
+        }
+        if (rule.getConfidence() == RuleConfidence.LOW) {
+            return CriterionEvaluation.lowConfidenceUncertain(rule);
         }
         boolean matched = evaluateOperator(rule.getOperator(), userValue, rule.getValue());
         return matched
