@@ -7,7 +7,8 @@ public record CriterionResponse(
         String label,
         String result,
         String reason,
-        String sourceReference
+        String sourceReference,
+        String confidenceNote
 ) {
 
     public static CriterionResponse from(CriterionResult criterionResult) {
@@ -16,7 +17,8 @@ public record CriterionResponse(
                 criterionResult.label(),
                 criterionResult.result().name(),
                 criterionResult.reason(),
-                criterionResult.sourceReference()
+                criterionResult.sourceReference(),
+                criterionResult.confidenceNote()
         );
     }
 }

@@ -8,7 +8,8 @@ public record CriterionResult(
         String label,
         EligibilityResult result,
         String reason,
-        String sourceReference
+        String sourceReference,
+        String confidenceNote
 ) {
 
     public static CriterionResult from(CriterionEvaluation evaluation) {
@@ -17,7 +18,8 @@ public record CriterionResult(
                 evaluation.label(),
                 evaluation.result(),
                 evaluation.reason(),
-                evaluation.sourceReference()
+                evaluation.sourceReference(),
+                evaluation.confidenceNote()
         );
     }
 }
