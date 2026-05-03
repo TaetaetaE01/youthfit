@@ -487,37 +487,39 @@ function QnaChatSection({
       fetchQnaAnswer(
         policyId,
         text,
-        (chunk) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content + chunk }
-                : m,
-            ),
-          );
-        },
-        (sources) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, sources } : m,
-            ),
-          );
-        },
-        () => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, status: 'done' as const } : m,
-            ),
-          );
-        },
-        () => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, status: 'error' as const, content: '답변을 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' }
-                : m,
-            ),
-          );
+        {
+          onChunk: (chunk) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: m.content + chunk }
+                  : m,
+              ),
+            );
+          },
+          onSources: (sources) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, sources } : m,
+              ),
+            );
+          },
+          onDone: () => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, status: 'done' as const } : m,
+              ),
+            );
+          },
+          onError: () => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, status: 'error' as const, content: '답변을 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+                  : m,
+              ),
+            );
+          },
         },
         accessToken,
       );
