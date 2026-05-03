@@ -22,10 +22,7 @@ export function QnaComposer({ disabled, placeholder, onSubmit, readOnly, onFocus
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (
-      e.key === 'Enter' &&
-      (e.nativeEvent as KeyboardEvent['nativeEvent'] & { isComposing?: boolean }).isComposing
-    ) {
+    if (e.key === 'Enter' && e.nativeEvent.isComposing) {
       e.preventDefault();
     }
   };
