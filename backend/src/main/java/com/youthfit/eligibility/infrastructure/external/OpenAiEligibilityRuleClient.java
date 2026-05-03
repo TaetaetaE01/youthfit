@@ -121,7 +121,11 @@ public class OpenAiEligibilityRuleClient implements EligibilityRuleLlmProvider {
 
         try {
             JsonNode root = objectMapper.readTree(responseBody);
-            String content = root.path("choices").get(0).path("message").path("content").asText();
+            JsonNode choices = root.path("choices");
+            if (!choices.isArray() || choices.isEmpty()) {
+                throw new IllegalStateException("OpenAI 응답에 choices 배열이 없거나 비어있음");
+            }
+            String content = choices.get(0).path("message").path("content").asText();
             JsonNode parsed = objectMapper.readTree(content);
             JsonNode rules = parsed.path("rules");
             if (!rules.isArray()) {
