@@ -11,10 +11,21 @@ class QuestionNormalizerTest {
     private final QuestionNormalizer normalizer = new QuestionNormalizer();
 
     @Test
-    @DisplayName("앞뒤 공백·중간 다중 공백 제거 + 소문자화")
+    @DisplayName("앞뒤 공백·중간 다중 공백 제거 + 소문자화 + 끝부호(?! .) 제거")
     void normalizeText_collapsesAndLowercases() {
         String result = normalizer.normalize("  재학생도   가능한가요?  ");
-        assertThat(result).isEqualTo("재학생도 가능한가요?");
+        assertThat(result).isEqualTo("재학생도 가능한가요");
+    }
+
+    @Test
+    @DisplayName("끝부호 개수/종류가 달라도 같은 캐시 키로 변환된다")
+    void cacheKey_ignoresTrailingPunctuation() {
+        String key1 = normalizer.cacheKey(10L, "누가 받을 수 있어 ?");
+        String key2 = normalizer.cacheKey(10L, "누가 받을 수 있어 ??");
+        String key3 = normalizer.cacheKey(10L, "누가 받을 수 있어!");
+        String key4 = normalizer.cacheKey(10L, "누가 받을 수 있어.");
+
+        assertThat(key1).isEqualTo(key2).isEqualTo(key3).isEqualTo(key4);
     }
 
     @Test
