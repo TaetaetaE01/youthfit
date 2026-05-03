@@ -28,11 +28,13 @@ export function QnaMessageList({ messages, onCopy, onRetry }: Props) {
     el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   };
 
+  // chunk-by-chunk SSE 업데이트도 smooth follow 가 동작하도록
+  // 마지막 메시지의 content 길이까지 의존성에 포함 (정적 변수로 추출)
+  const lastContentLength = messages.at(-1)?.content.length ?? 0;
+
   useLayoutEffect(() => {
     if (isNearBottom) scrollToBottom(messages.length <= 2 ? false : true);
-    // intentionally only depend on length / last content len so chunk-by-chunk
-    // updates also trigger smooth follow when user is near bottom
-  }, [messages.length, messages.at(-1)?.content.length, isNearBottom]);
+  }, [messages.length, lastContentLength, isNearBottom]);
 
   useEffect(() => {
     const el = scrollRef.current;

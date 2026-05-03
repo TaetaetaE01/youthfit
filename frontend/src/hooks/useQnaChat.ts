@@ -17,7 +17,11 @@ export function useQnaChat(policyId: number): UseQnaChat {
   const [messages, setMessages] = useState<QnaMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<QnaMessage[]>(messages);
-  messagesRef.current = messages;
+
+  // 최신 messages 스냅샷을 ref 에 동기화 (retry 콜백에서 stale closure 회피용)
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const isStreaming = messages.some((m) => m.status === 'streaming');
 
