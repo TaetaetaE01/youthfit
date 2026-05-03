@@ -14,7 +14,12 @@ public class QuestionNormalizer {
 
     public String normalize(String question) {
         if (question == null) return "";
-        return question.trim().toLowerCase().replaceAll("\\s+", " ");
+        return question
+                .trim()
+                .toLowerCase()
+                .replaceAll("[?!.]+", "")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     public String cacheKey(Long policyId, String question) {
