@@ -54,5 +54,8 @@ credentials/
 ### oh-my-claudecode ###
 .omc/
 
+### Superpowers brainstorming companion (visual mockups) ###
+.superpowers/
+
 ### OS ###
 .DS_Store
