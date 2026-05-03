@@ -47,8 +47,8 @@ import type {
   EligibilityResponse,
   EligibilityResult,
   CriterionItem,
-  QnaMessage,
 } from '@/types/policy';
+import type { QnaMessage } from '@/types/qna';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -470,6 +470,7 @@ function QnaChatSection({
         id: `user-${Date.now()}`,
         role: 'user',
         content: text,
+        status: 'done',
       };
 
       const assistantId = `assistant-${Date.now()}`;
@@ -477,7 +478,8 @@ function QnaChatSection({
         id: assistantId,
         role: 'assistant',
         content: '',
-        loading: true,
+        status: 'streaming',
+        questionRef: userMsg.id,
       };
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -504,7 +506,7 @@ function QnaChatSection({
         () => {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, loading: false } : m,
+              m.id === assistantId ? { ...m, status: 'done' as const } : m,
             ),
           );
         },
@@ -512,7 +514,7 @@ function QnaChatSection({
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, loading: false, content: '답변을 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+                ? { ...m, status: 'error' as const, content: '답변을 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' }
                 : m,
             ),
           );
@@ -577,7 +579,7 @@ function QnaChatSection({
                   </ul>
                 </div>
               )}
-              {msg.loading && (
+              {msg.status === 'streaming' && (
                 <span className="mt-1 inline-block h-4 w-1 animate-pulse bg-white/60" />
               )}
             </div>
