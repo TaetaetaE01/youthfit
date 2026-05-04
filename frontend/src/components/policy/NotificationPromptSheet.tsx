@@ -76,6 +76,8 @@ export default function NotificationPromptSheet({
           daysBeforeDeadline: existingSettings?.daysBeforeDeadline ?? DEFAULT_DAYS_BEFORE,
           recommendationEnabled:
             existingSettings?.recommendationEnabled ?? false,
+          interestCategories: existingSettings?.interestCategories ?? [],
+          interestRegions: existingSettings?.interestRegions ?? [],
         });
       }
       await subscribePolicy.mutateAsync(policyId);

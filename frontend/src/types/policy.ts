@@ -1,3 +1,5 @@
+import type { RegionSidoCode } from '@/lib/labels/region';
+
 export type PolicyCategory =
   | 'JOBS'
   | 'HOUSING'
@@ -225,6 +227,8 @@ export interface NotificationSettings {
   emailEnabled: boolean;
   daysBeforeDeadline: number;
   recommendationEnabled: boolean;
+  interestCategories: PolicyCategory[];
+  interestRegions: RegionSidoCode[];
 }
 
 /* ── Common ── */
