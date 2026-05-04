@@ -52,7 +52,8 @@ public class RedirectAttachmentService {
             return new AttachmentRedirectResult.StreamResponse(
                     storage.get(storageKey),
                     mediaType,
-                    attachment.getName());
+                    attachment.getName(),
+                    attachment.getFileHash());
         }
 
         String externalUrl = attachment.getUrl();

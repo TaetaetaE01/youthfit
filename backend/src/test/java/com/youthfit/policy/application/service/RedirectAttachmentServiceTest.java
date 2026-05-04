@@ -41,10 +41,11 @@ class RedirectAttachmentServiceTest {
     }
 
     @Test
-    @DisplayName("storageKey 는 있지만 presign 실패(Local 등) → StreamResponse")
+    @DisplayName("storageKey 는 있지만 presign 실패(Local 등) → StreamResponse, fileHash 가 ETag 재료로 전달된다")
     void givenStorageKeyButPresignEmpty_whenResolve_thenStreamResponse() {
         PolicyAttachment att = mockAttachment(12L, "key-12", "https://orig.example/x.pdf",
                 "application/pdf");
+        Mockito.when(att.getFileHash()).thenReturn("hash-abc");
         Mockito.when(repo.findById(12L)).thenReturn(Optional.of(att));
         Mockito.when(storage.exists("key-12")).thenReturn(true);
         Mockito.when(storage.presign(Mockito.eq("key-12"), Mockito.any(Duration.class)))
@@ -58,6 +59,7 @@ class RedirectAttachmentServiceTest {
         var stream = (AttachmentRedirectResult.StreamResponse) result;
         assertThat(stream.mediaType()).isEqualTo("application/pdf");
         assertThat(stream.filename()).contains("x.pdf");
+        assertThat(stream.fileHash()).isEqualTo("hash-abc");
     }
 
     @Test
