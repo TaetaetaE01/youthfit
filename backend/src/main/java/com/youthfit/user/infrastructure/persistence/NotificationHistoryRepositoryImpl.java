@@ -6,6 +6,8 @@ import com.youthfit.user.domain.repository.NotificationHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 @RequiredArgsConstructor
 public class NotificationHistoryRepositoryImpl implements NotificationHistoryRepository {
@@ -20,5 +22,10 @@ public class NotificationHistoryRepositoryImpl implements NotificationHistoryRep
     @Override
     public boolean existsByUserIdAndPolicyIdAndNotificationType(Long userId, Long policyId, NotificationType notificationType) {
         return jpaRepository.existsByUserIdAndPolicyIdAndNotificationType(userId, policyId, notificationType);
+    }
+
+    @Override
+    public Optional<NotificationHistory> findById(Long id) {
+        return jpaRepository.findById(id);
     }
 }
