@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, Spring Context (ApplicationEventPublisher, `@TransactionalEventListener`), Spring TaskExecutor (`@EnableAsync`, `ThreadPoolTaskExecutor`), JUnit 5, Mockito, AssertJ, Lombok.
 
-**Spec:** `docs/superpowers/specs/2026-05-04-llm-async-events-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-05-04-llm-async-events-design.md`
 
 ---
 
