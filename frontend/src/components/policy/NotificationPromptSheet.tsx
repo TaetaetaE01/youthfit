@@ -74,8 +74,8 @@ export default function NotificationPromptSheet({
         await updateNotification.mutateAsync({
           emailEnabled: true,
           daysBeforeDeadline: existingSettings?.daysBeforeDeadline ?? DEFAULT_DAYS_BEFORE,
-          eligibilityRecommendationEnabled:
-            existingSettings?.eligibilityRecommendationEnabled ?? false,
+          recommendationEnabled:
+            existingSettings?.recommendationEnabled ?? false,
         });
       }
       await subscribePolicy.mutateAsync(policyId);

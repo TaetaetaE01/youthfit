@@ -191,7 +191,7 @@ export default function MyPage() {
   /* ── Notification state (local optimistic) ── */
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [daysBeforeDeadline, setDaysBeforeDeadline] = useState(7);
-  const [eligibilityRecommendationEnabled, setEligibilityRecommendationEnabled] = useState(false);
+  const [recommendationEnabled, setRecommendationEnabled] = useState(false);
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
   /* ── Notification tab shared email editor ── */
@@ -211,7 +211,7 @@ export default function MyPage() {
     if (notificationData) {
       setEmailEnabled(notificationData.emailEnabled);
       setDaysBeforeDeadline(notificationData.daysBeforeDeadline);
-      setEligibilityRecommendationEnabled(notificationData.eligibilityRecommendationEnabled);
+      setRecommendationEnabled(notificationData.recommendationEnabled);
     }
   }, [notificationData]);
 
@@ -324,15 +324,15 @@ export default function MyPage() {
       updateNotificationMutation.mutate({
         emailEnabled: true,
         daysBeforeDeadline,
-        eligibilityRecommendationEnabled,
+        recommendationEnabled,
       });
       setNotificationToast(`마감 ${daysBeforeDeadline}일 전 알려드릴게요`);
     } else if (pendingEnable === 'recommendation') {
-      setEligibilityRecommendationEnabled(true);
+      setRecommendationEnabled(true);
       updateNotificationMutation.mutate({
         emailEnabled,
         daysBeforeDeadline,
-        eligibilityRecommendationEnabled: true,
+        recommendationEnabled: true,
       });
       setNotificationToast('자격이 맞는 새 정책이 나오면 알려드릴게요');
     } else {
@@ -387,7 +387,7 @@ export default function MyPage() {
     updateNotificationMutation.mutate({
       emailEnabled: newEnabled,
       daysBeforeDeadline,
-      eligibilityRecommendationEnabled,
+      recommendationEnabled,
     });
   };
 
@@ -396,7 +396,7 @@ export default function MyPage() {
     updateNotificationMutation.mutate({
       emailEnabled,
       daysBeforeDeadline: days,
-      eligibilityRecommendationEnabled,
+      recommendationEnabled,
     });
   };
 
@@ -406,12 +406,12 @@ export default function MyPage() {
       handleStartEditNotifEmail();
       return;
     }
-    const newEnabled = !eligibilityRecommendationEnabled;
-    setEligibilityRecommendationEnabled(newEnabled);
+    const newEnabled = !recommendationEnabled;
+    setRecommendationEnabled(newEnabled);
     updateNotificationMutation.mutate({
       emailEnabled,
       daysBeforeDeadline,
-      eligibilityRecommendationEnabled: newEnabled,
+      recommendationEnabled: newEnabled,
     });
   };
 
@@ -886,18 +886,18 @@ export default function MyPage() {
                     </div>
                     <button
                       role="switch"
-                      aria-checked={eligibilityRecommendationEnabled}
+                      aria-checked={recommendationEnabled}
                       aria-label="맞춤 정책 추천 받기"
                       onClick={handleRecommendationToggle}
                       className={cn(
                         'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-                        eligibilityRecommendationEnabled && profile?.email ? 'bg-brand-800' : 'bg-neutral-300',
+                        recommendationEnabled && profile?.email ? 'bg-brand-800' : 'bg-neutral-300',
                       )}
                     >
                       <span
                         className={cn(
                           'pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                          eligibilityRecommendationEnabled && profile?.email ? 'translate-x-[22px]' : 'translate-x-0.5',
+                          recommendationEnabled && profile?.email ? 'translate-x-[22px]' : 'translate-x-0.5',
                         )}
                       />
                     </button>
