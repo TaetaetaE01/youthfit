@@ -71,7 +71,7 @@ class NotificationScheduleServiceTest {
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
-            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, "DEADLINE"))
+            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, NotificationType.DEADLINE))
                     .willReturn(false);
 
             // when
@@ -96,7 +96,7 @@ class NotificationScheduleServiceTest {
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
-            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, "DEADLINE"))
+            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, NotificationType.DEADLINE))
                     .willReturn(true);
 
             // when

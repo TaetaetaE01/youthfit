@@ -29,14 +29,15 @@ public class NotificationHistory {
     @Column(name = "policy_id", nullable = false)
     private Long policyId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "notification_type", nullable = false, length = 20)
-    private String notificationType;
+    private NotificationType notificationType;
 
     @CreatedDate
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt;
 
-    public NotificationHistory(Long userId, Long policyId, String notificationType) {
+    public NotificationHistory(Long userId, Long policyId, NotificationType notificationType) {
         this.userId = userId;
         this.policyId = policyId;
         this.notificationType = notificationType;
