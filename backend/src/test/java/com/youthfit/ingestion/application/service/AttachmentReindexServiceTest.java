@@ -2,7 +2,7 @@ package com.youthfit.ingestion.application.service;
 
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
-import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ class AttachmentReindexServiceTest {
     @Mock private PolicyRepository policyRepository;
     @Mock private PolicyAttachmentRepository attachmentRepository;
     @Mock private RagIndexingService ragIndexingService;
-    @Mock private GuideGenerationService guideGenerationService;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Spy private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
     @InjectMocks private AttachmentReindexService sut;
 
@@ -46,7 +47,6 @@ class AttachmentReindexServiceTest {
         Policy policy = mock(Policy.class);
         when(policy.getId()).thenReturn(1L);
         when(policy.getBody()).thenReturn("정책 본문");
-        when(policy.getTitle()).thenReturn("title");
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
 
         PolicyAttachment a1 = pa(11L, "공고문.pdf", "내용 A");
@@ -62,7 +62,10 @@ class AttachmentReindexServiceTest {
         assertThat(content).contains("=== 첨부 attachment-id=11 name=\"공고문.pdf\" ===");
         assertThat(content).contains("내용 A");
 
-        verify(guideGenerationService).generateGuide(any());
+        ArgumentCaptor<PolicyAttachmentReindexedEvent> evt =
+                ArgumentCaptor.forClass(PolicyAttachmentReindexedEvent.class);
+        verify(eventPublisher).publishEvent(evt.capture());
+        assertThat(evt.getValue().policyId()).isEqualTo(1L);
     }
 
     @Test
@@ -103,7 +106,7 @@ class AttachmentReindexServiceTest {
     }
 
     @Test
-    void reindex_updated_false_면_가이드_재생성_안함() {
+    void reindex_updated_false_면_PolicyAttachmentReindexedEvent_발행_안함() {
         Policy policy = mock(Policy.class);
         when(policy.getId()).thenReturn(1L);
         when(policy.getBody()).thenReturn("body");
@@ -113,7 +116,7 @@ class AttachmentReindexServiceTest {
 
         sut.reindex(1L);
 
-        verify(guideGenerationService, never()).generateGuide(any());
+        verify(eventPublisher, never()).publishEvent(any(PolicyAttachmentReindexedEvent.class));
     }
 
     @Test
@@ -121,7 +124,6 @@ class AttachmentReindexServiceTest {
         Policy policy = mock(Policy.class);
         when(policy.getId()).thenReturn(1L);
         when(policy.getBody()).thenReturn("본문");
-        when(policy.getTitle()).thenReturn("t");
         when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
 
         PolicyAttachment big1 = pa(101L, "a.pdf", "X".repeat(150_000));
