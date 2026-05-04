@@ -102,6 +102,6 @@
 
 ## 8. 참고 (References)
 
-- 관련 spec: `docs/superpowers/specs/2026-04-30-qna-v0-ready.md`
+- 관련 spec: `docs/superpowers/specs/DONE_2026-04-30-qna-v0-ready-design.md`
 - 관련 운영 노트: `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md`
 - Spring Security 문서: `DelegatingSecurityContextExecutorService` (Concurrency support)

@@ -2,7 +2,7 @@
 
 - **상태**: 이관 완료 → `docs/superpowers/specs/DONE_2026-05-01-qna-quality-improvements-design.md` (PR #56 머지)
 - **작성일**: 2026-05-01
-- **참고**: v0 의미 캐시(`2026-05-01-semantic-qna-cache-design.md`) 검증 중 발견된 이슈
+- **참고**: v0 의미 캐시(`DONE_2026-05-01-semantic-qna-cache-design.md`) 검증 중 발견된 이슈
 
 > **이관 메모 (2026-05-01)**: 본 TODO 는 사이클 진입 spec 으로 흡수되었다. 결정 로그 / 변경 범위 / 비범위 / 위험 / 검증은 사이클 spec 을 정본으로 본다. 본 파일은 history 보존 목적으로 유지.
 
@@ -131,5 +131,5 @@ v0 의미 캐시 도커 검증 단계에서 사용자 테스트 결과, **의미
 
 ## 참고
 
-- v0 의미 캐시: `docs/superpowers/specs/2026-05-01-semantic-qna-cache-design.md`, `docs/superpowers/plans/2026-05-01-semantic-qna-cache.md`
+- v0 의미 캐시: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`, `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`
 - 의미 캐시 v1 (intent 기반): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`

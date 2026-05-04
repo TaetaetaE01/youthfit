@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 19 + TypeScript 6, Tailwind CSS v4 (`@theme`/`@utility` 패턴), Vitest + Testing Library, react-markdown (신규), zustand (기존 authStore).
 
-**Spec:** `docs/superpowers/specs/2026-05-03-qna-chat-ui-improvement-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-05-03-qna-chat-ui-improvement-design.md`
 
 ---
 
@@ -2245,7 +2245,7 @@ EOF
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-05-03-qna-chat-ui-improvement.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/DONE_2026-05-03-qna-chat-ui-improvement.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration.
 

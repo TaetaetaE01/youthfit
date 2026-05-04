@@ -2,7 +2,7 @@
 
 - **상태**: TODO (v1 후보, 시점 미정)
 - **대상 모듈**: `backend/qna`, `backend/rag`
-- **선행 작업**: v0 출시 완료 (`docs/superpowers/specs/2026-05-01-semantic-qna-cache-design.md`, `docs/superpowers/plans/2026-05-01-semantic-qna-cache.md`)
+- **선행 작업**: v0 출시 완료 (`docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`, `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`)
 
 ## 1. 배경
 
@@ -86,6 +86,6 @@ v0 의미 캐시는 출시되었지만 다음과 같은 한계가 관찰된다.
 
 ## 8. 참고
 
-- v0 spec: `docs/superpowers/specs/2026-05-01-semantic-qna-cache-design.md`
-- v0 plan: `docs/superpowers/plans/2026-05-01-semantic-qna-cache.md`
+- v0 spec: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`
+- v0 plan: `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`
 - v0 출시 직전 추가된 source_hash 스냅샷·로깅 강화 작업 (이 문서와 같은 커밋)

@@ -3,7 +3,7 @@
 - **상태**: 완료 (PR #56 머지, 2026-05-02)
 - **작성일**: 2026-05-01
 - **대상 모듈**: `backend/qna`
-- **선행 작업**: v0 의미 캐시 출시 (`DONE` 예정 — `2026-05-01-semantic-qna-cache-design.md`, PR #55 머지)
+- **선행 작업**: v0 의미 캐시 출시 (`DONE_2026-05-01-semantic-qna-cache-design.md`, PR #55 머지)
 - **이관 출처**: `docs/superpowers/specs/v1-qna-quality-improvements.md` (본 spec 으로 흡수)
 
 ## 1. 배경
@@ -279,8 +279,8 @@ cd backend
 
 ## 13. 참고
 
-- v0 의미 캐시 spec: `docs/superpowers/specs/2026-05-01-semantic-qna-cache-design.md`
-- v0 의미 캐시 plan: `docs/superpowers/plans/2026-05-01-semantic-qna-cache.md`
+- v0 의미 캐시 spec: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`
+- v0 의미 캐시 plan: `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`
 - v1 의미 캐시 (intent 기반): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`
 - 본 spec 의 출발점 메모: `docs/superpowers/specs/v1-qna-quality-improvements.md` (이 spec 으로 흡수됨, history 보존 위해 유지)
 

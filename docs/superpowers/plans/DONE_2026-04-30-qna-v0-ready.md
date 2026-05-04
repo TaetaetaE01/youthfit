@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, Spring Data JPA + Hibernate Vector, PostgreSQL + pgvector, Redis 7 (spring-boot-starter-data-redis), JUnit 5 + Mockito + AssertJ.
 
-**Spec:** `docs/superpowers/specs/2026-04-30-qna-v0-ready-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-04-30-qna-v0-ready-design.md`
 
 ---
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, JPA, PostgreSQL 17 + pgvector(1536), JUnit 5, Mockito, AssertJ.
 
-**Spec:** `docs/superpowers/specs/2026-05-01-semantic-qna-cache-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`
 
 ---
 

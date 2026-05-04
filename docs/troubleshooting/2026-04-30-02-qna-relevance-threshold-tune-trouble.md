@@ -108,6 +108,6 @@
 
 ## 8. 참고 (References)
 
-- 관련 spec: `docs/superpowers/specs/2026-04-30-qna-v0-ready.md` §4.6 ("운영 데이터로 조정")
+- 관련 spec: `docs/superpowers/specs/DONE_2026-04-30-qna-v0-ready-design.md` §4.6 ("운영 데이터로 조정")
 - 관련 운영 노트: `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` §4
 - 임베딩 모델: OpenAI `text-embedding-3-small` (한국어), pgvector cosine distance
