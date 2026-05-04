@@ -55,3 +55,44 @@ psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-01-qna-questio
 2. 백엔드 재배포
 
 DDL 미적용 상태로 배포되면 `qna_question_cache`를 매핑한 엔티티 검증(`ddl-auto: validate`)에서 부팅 실패한다.
+
+## 이메일 발송 (AWS SES, 2026-05-05)
+
+### 환경변수 슬롯 (`.env`)
+
+```bash
+EMAIL_TRANSPORT=ses                       # logging | ses
+MAIL_FROM_ADDRESS=...                     # SES 콘솔에서 검증한 발신 주소
+MAIL_FROM_NAME=YouthFit
+MAIL_BASE_URL=https://your-domain.tld     # 본문 링크 base
+AWS_SES_REGION=ap-northeast-2
+AWS_SES_ACCESS_KEY_ID=AKIA...             # IAM 사용자 (ses:SendEmail 만 허용)
+AWS_SES_SECRET_ACCESS_KEY=...
+```
+
+### 운영 절차
+
+1. AWS 콘솔에서 IAM 사용자 `youthfit-ses-sender` 생성 — 정책 `ses:SendEmail`, `ses:SendRawEmail` 만 허용
+2. SES 콘솔에서 `MAIL_FROM_ADDRESS` 와 (sandbox 모드 시) 모든 수신자 이메일 검증
+3. `.env` 슬롯 채우기 (커밋 금지 — `.gitignore` 확인)
+4. 운영 PG 에 `backend/src/main/resources/sql/2026-05-05-notification-history-status.sql` 적용
+5. 백엔드 재배포
+6. dry-run: `EMAIL_TRANSPORT=logging` 으로 띄워서 렌더된 HTML 로그 확인 → OK 면 `EMAIL_TRANSPORT=ses` 로 전환
+7. 검증된 수신자 1명에게 dry-run 발송으로 본문/CTA 확인
+
+### Sandbox 모드 한계
+
+SES 신규 계정은 기본 sandbox: 수신자 모두 검증 필수 + 일일 200통 / 초당 1통 제한.
+운영급(베타/공개) 발송 전 sandbox 해제 신청 필요.
+
+### 트러블슈팅
+
+- `EmailSendException: SES 발송 실패` 로그 누적 → SES 콘솔에서 발신자 검증 상태 확인
+- `notification_history.status='FAILED'` 영구 누적 → 일시적 실패면 SQL 로 reset 가능:
+  ```sql
+  DELETE FROM notification_history WHERE status = 'FAILED' AND failed_at < NOW() - INTERVAL '7 days';
+  ```
+- 24시간 이상 PENDING 행 → 운영자 수동 정리 (JVM crash 등으로 잔존):
+  ```sql
+  DELETE FROM notification_history WHERE status = 'PENDING' AND created_at < NOW() - INTERVAL '24 hours';
+  ```
