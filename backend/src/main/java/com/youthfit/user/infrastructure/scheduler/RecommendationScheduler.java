@@ -13,7 +13,7 @@ public class RecommendationScheduler {
 
     private final RecommendationDispatchService dispatchService;
 
-    @Scheduled(cron = "0 0 9 ? * MON")
+    @Scheduled(cron = "0 0 9 * * MON", zone = "Asia/Seoul")
     public void sendWeekly() {
         log.info("주간 추천 알림 스케줄러 실행");
         dispatchService.dispatchWeekly();

@@ -39,6 +39,9 @@ public class RecommendationOneDispatcher {
     private final EmailSender emailSender;
     private final PolicyRecommender recommender;
 
+    // v0: 사용자당 후보 N건 × judgeEligibility/exists 호출 (N+1 패턴).
+    //     룰 평가는 LLM 호출 없이 인메모리 매칭이라 v0 규모에서 안전.
+    //     스케일 시 batch judge 또는 추천 사전 인덱스로 개선.
     @Transactional
     public void dispatchOne(NotificationSetting setting) {
         Long userId = setting.getUserId();
