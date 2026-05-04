@@ -59,3 +59,7 @@ credentials/
 
 ### OS ###
 .DS_Store
+
+
+### Worktrees ###
+.worktrees/

@@ -25,14 +25,20 @@ public class NotificationSetting extends BaseTimeEntity {
     @Column(name = "days_before_deadline", nullable = false)
     private int daysBeforeDeadline;
 
+    @Column(name = "recommendation_enabled", nullable = false)
+    private boolean recommendationEnabled;
+
     public NotificationSetting(Long userId) {
         this.userId = userId;
         this.emailEnabled = true;
         this.daysBeforeDeadline = 7;
+        this.recommendationEnabled = false;
     }
 
-    public void updateSetting(boolean emailEnabled, int daysBeforeDeadline) {
+    public void updateSetting(boolean emailEnabled, int daysBeforeDeadline,
+                              boolean recommendationEnabled) {
         this.emailEnabled = emailEnabled;
         this.daysBeforeDeadline = daysBeforeDeadline;
+        this.recommendationEnabled = recommendationEnabled;
     }
 }

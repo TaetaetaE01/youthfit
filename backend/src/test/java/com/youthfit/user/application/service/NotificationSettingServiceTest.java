@@ -37,36 +37,32 @@ class NotificationSettingServiceTest {
         @Test
         @DisplayName("기존 설정이 있으면 해당 설정을 반환한다")
         void existingSetting_returnsIt() {
-            // given
             NotificationSetting setting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.of(setting));
 
-            // when
             NotificationSettingResult result = notificationSettingService.findNotificationSetting(1L);
 
-            // then
             assertThat(result.emailEnabled()).isTrue();
             assertThat(result.daysBeforeDeadline()).isEqualTo(7);
+            assertThat(result.recommendationEnabled()).isFalse();
             then(notificationSettingRepository).should(never()).save(any());
         }
 
         @Test
         @DisplayName("기존 설정이 없으면 기본 설정을 생성하여 반환한다")
         void noSetting_createsDefault() {
-            // given
             NotificationSetting newSetting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.empty());
             given(notificationSettingRepository.save(any()))
                     .willReturn(newSetting);
 
-            // when
             NotificationSettingResult result = notificationSettingService.findNotificationSetting(1L);
 
-            // then
             assertThat(result.emailEnabled()).isTrue();
             assertThat(result.daysBeforeDeadline()).isEqualTo(7);
+            assertThat(result.recommendationEnabled()).isFalse();
             then(notificationSettingRepository).should().save(any());
         }
     }
@@ -76,39 +72,50 @@ class NotificationSettingServiceTest {
     class UpdateNotificationSetting {
 
         @Test
-        @DisplayName("기존 설정이 있으면 값을 변경하고 반환한다")
+        @DisplayName("기존 설정이 있으면 세 필드를 모두 변경하고 반환한다")
         void existingSetting_updatesAndReturns() {
-            // given
             NotificationSetting setting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.of(setting));
-            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 3);
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 3, true);
 
-            // when
             NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
 
-            // then
             assertThat(result.emailEnabled()).isFalse();
             assertThat(result.daysBeforeDeadline()).isEqualTo(3);
+            assertThat(result.recommendationEnabled()).isTrue();
         }
 
         @Test
         @DisplayName("기존 설정이 없으면 새로 생성한 뒤 값을 변경하고 반환한다")
         void noSetting_createsAndUpdates() {
-            // given
             NotificationSetting newSetting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.empty());
             given(notificationSettingRepository.save(any()))
                     .willReturn(newSetting);
-            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 5);
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 5, true);
 
-            // when
             NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
 
-            // then
             assertThat(result.emailEnabled()).isFalse();
             assertThat(result.daysBeforeDeadline()).isEqualTo(5);
+            assertThat(result.recommendationEnabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("recommendationEnabled만 단독으로 변경할 수 있다")
+        void update_recommendationOnly() {
+            NotificationSetting setting = new NotificationSetting(1L);
+            given(notificationSettingRepository.findByUserId(1L))
+                    .willReturn(Optional.of(setting));
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(true, 7, true);
+
+            NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
+
+            assertThat(result.emailEnabled()).isTrue();
+            assertThat(result.daysBeforeDeadline()).isEqualTo(7);
+            assertThat(result.recommendationEnabled()).isTrue();
         }
     }
 }

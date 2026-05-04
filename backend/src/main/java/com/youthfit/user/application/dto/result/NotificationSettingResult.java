@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record NotificationSettingResult(
         boolean emailEnabled,
         int daysBeforeDeadline,
+        boolean recommendationEnabled,
         LocalDateTime updatedAt
 ) {
 
@@ -14,6 +15,7 @@ public record NotificationSettingResult(
         return new NotificationSettingResult(
                 setting.isEmailEnabled(),
                 setting.getDaysBeforeDeadline(),
+                setting.isRecommendationEnabled(),
                 setting.getUpdatedAt()
         );
     }

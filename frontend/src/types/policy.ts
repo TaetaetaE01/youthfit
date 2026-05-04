@@ -224,7 +224,7 @@ export interface UpdateProfileRequest {
 export interface NotificationSettings {
   emailEnabled: boolean;
   daysBeforeDeadline: number;
-  eligibilityRecommendationEnabled: boolean;
+  recommendationEnabled: boolean;
 }
 
 /* ── Common ── */
