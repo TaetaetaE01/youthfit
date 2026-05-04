@@ -87,6 +87,16 @@ youthfit:
      # threshold 는 의미 동일 미세 변형(예: 부호/공백 차이)만 잡힐 정도로 보수적으로 운영. 근본 해결은
      # query rewriting(LLM 정규화) 도입 후 재검토.
     semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.20}
+  email:
+    transport: ${EMAIL_TRANSPORT:logging}
+    from:
+      address: ${MAIL_FROM_ADDRESS:}
+      name:    ${MAIL_FROM_NAME:YouthFit}
+    base-url: ${MAIL_BASE_URL:http://localhost:5173}
+    ses:
+      region:            ${AWS_SES_REGION:ap-northeast-2}
+      access-key-id:     ${AWS_SES_ACCESS_KEY_ID:}
+      secret-access-key: ${AWS_SES_SECRET_ACCESS_KEY:}
 
 attachment:
   storage:
@@ -137,6 +147,8 @@ youthfit:
   cost-guard:
     # local 기본: 토큰 절약을 위해 정책 7·30 만 LLM/임베딩 호출 허용. shell 또는 .env 의 POLICY_ALLOWLIST 로 override 가능.
     policy-allowlist: ${POLICY_ALLOWLIST:7,30}
+  email:
+    transport: ${EMAIL_TRANSPORT:logging}
 
 ---
 spring:
@@ -152,3 +164,7 @@ spring:
 logging:
   level:
     com.youthfit: INFO
+
+youthfit:
+  email:
+    transport: ${EMAIL_TRANSPORT:ses}
