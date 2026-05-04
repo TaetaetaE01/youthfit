@@ -77,7 +77,7 @@ class NotificationSettingServiceTest {
             NotificationSetting setting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.of(setting));
-            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 3, true);
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 3, true, java.util.Set.of(), java.util.Set.of());
 
             NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
 
@@ -94,7 +94,7 @@ class NotificationSettingServiceTest {
                     .willReturn(Optional.empty());
             given(notificationSettingRepository.save(any()))
                     .willReturn(newSetting);
-            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 5, true);
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(false, 5, true, java.util.Set.of(), java.util.Set.of());
 
             NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
 
@@ -109,7 +109,7 @@ class NotificationSettingServiceTest {
             NotificationSetting setting = new NotificationSetting(1L);
             given(notificationSettingRepository.findByUserId(1L))
                     .willReturn(Optional.of(setting));
-            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(true, 7, true);
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(true, 7, true, java.util.Set.of(), java.util.Set.of());
 
             NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
 
