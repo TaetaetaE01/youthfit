@@ -9,7 +9,10 @@ public record UpdateNotificationSettingRequest(
         Boolean emailEnabled,
 
         @NotNull(message = "알림 시점(daysBeforeDeadline)은 필수입니다")
-        Integer daysBeforeDeadline
+        Integer daysBeforeDeadline,
+
+        @NotNull(message = "추천 알림 수신 여부는 필수입니다")
+        Boolean recommendationEnabled
 ) {
 
     @AssertTrue(message = "알림 시점은 3, 7, 14 중 하나여야 합니다")
@@ -21,6 +24,6 @@ public record UpdateNotificationSettingRequest(
     }
 
     public UpdateNotificationSettingCommand toCommand() {
-        return new UpdateNotificationSettingCommand(emailEnabled, daysBeforeDeadline);
+        return new UpdateNotificationSettingCommand(emailEnabled, daysBeforeDeadline, recommendationEnabled);
     }
 }
