@@ -98,9 +98,9 @@ public class EligibilityService {
 
     private GroupedCriteria groupByResult(List<CriterionResult> results) {
         return new GroupedCriteria(
-                results.stream().filter(r -> "LIKELY_INELIGIBLE".equals(r.result())).toList(),
-                results.stream().filter(r -> "UNCERTAIN".equals(r.result())).toList(),
-                results.stream().filter(r -> "LIKELY_ELIGIBLE".equals(r.result())).toList()
+                results.stream().filter(r -> EligibilityResult.LIKELY_INELIGIBLE.name().equals(r.result())).toList(),
+                results.stream().filter(r -> EligibilityResult.UNCERTAIN.name().equals(r.result())).toList(),
+                results.stream().filter(r -> EligibilityResult.LIKELY_ELIGIBLE.name().equals(r.result())).toList()
         );
     }
 
