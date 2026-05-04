@@ -1,10 +1,7 @@
 package com.youthfit.ingestion.application.service;
 
 import com.youthfit.common.config.CostGuard;
-import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
-import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
-import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
-import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -17,6 +14,7 @@ import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,8 +33,7 @@ public class AttachmentReindexService {
     private final PolicyRepository policyRepository;
     private final PolicyAttachmentRepository attachmentRepository;
     private final RagIndexingService ragIndexingService;
-    private final GuideGenerationService guideGenerationService;
-    private final EligibilityRuleGenerationService eligibilityRuleGenerationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final CostGuard costGuard;
 
     @Setter
@@ -64,18 +61,8 @@ public class AttachmentReindexService {
         log.info("reindex policyId={} chunks={} updated={}", resolvedId, result.chunkCount(), result.updated());
 
         if (result.updated()) {
-            guideGenerationService.generateGuide(new GenerateGuideCommand(resolvedId, policy.getTitle(), null));
-            log.info("guide regenerated: policyId={}", resolvedId);
-            triggerRuleGeneration(resolvedId);
-        }
-    }
-
-    private void triggerRuleGeneration(Long policyId) {
-        if (policyId == null) return;
-        try {
-            eligibilityRuleGenerationService.generateRules(new GenerateEligibilityRulesCommand(policyId));
-        } catch (Exception e) {
-            log.warn("룰 재추출 실패: policyId={}", policyId, e);
+            eventPublisher.publishEvent(new PolicyAttachmentReindexedEvent(resolvedId));
+            log.info("attachment reindex event published: policyId={}", resolvedId);
         }
     }
 
