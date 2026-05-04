@@ -26,6 +26,8 @@ public class NotificationSettingService {
         NotificationSetting setting = notificationSettingRepository.findByUserId(userId)
                 .orElseGet(() -> notificationSettingRepository.save(new NotificationSetting(userId)));
         setting.updateSetting(command.emailEnabled(), command.daysBeforeDeadline(), command.recommendationEnabled());
+        setting.replaceInterestCategories(command.interestCategories());
+        setting.replaceInterestRegions(command.interestRegions());
         return NotificationSettingResult.from(setting);
     }
 }
