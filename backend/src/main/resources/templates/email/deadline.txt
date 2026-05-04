@@ -1,0 +1,12 @@
+[YouthFit] [(${policy.title})] 마감이 다가옵니다
+
+북마크하신 정책의 신청 마감일이 임박했습니다.
+
+정책명: [(${policy.title})]
+신청 마감일: [(${policy.applyEnd})]
+
+자세히 보기: [(${baseUrl})]/policies/[(${policy.id})]
+
+------
+이 메일은 YouthFit 의 마감일 알림 기능에 의해 발송되었습니다.
+알림 해제: [(${baseUrl})]/settings/notifications
