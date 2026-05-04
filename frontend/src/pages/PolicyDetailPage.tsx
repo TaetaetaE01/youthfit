@@ -6,10 +6,7 @@ import {
   MapPin,
   Calendar,
   ChevronRight,
-  CheckCircle,
   AlertCircle,
-  XCircle,
-  Loader2,
   ExternalLink,
   Building2,
   Phone,
@@ -40,43 +37,8 @@ import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBo
 import { useUnsubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 import { QnaChatSection } from '@/components/qna/QnaChatSection';
 import { getRegionName } from '@/types/policy';
-import type {
-  PolicyDetail,
-  EligibilityResponse,
-  EligibilityResult,
-  CriterionItem,
-} from '@/types/policy';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const RESULT_CONFIG: Record<
-  EligibilityResult,
-  { icon: typeof CheckCircle; color: string; label: string }
-> = {
-  LIKELY_ELIGIBLE: {
-    icon: CheckCircle,
-    color: 'text-success-500',
-    label: '해당 가능성 높음',
-  },
-  UNCERTAIN: {
-    icon: AlertCircle,
-    color: 'text-warning-500',
-    label: '추가 확인 필요',
-  },
-  LIKELY_INELIGIBLE: {
-    icon: XCircle,
-    color: 'text-error-500',
-    label: '해당 가능성 낮음',
-  },
-};
-
-const OVERALL_COLOR: Record<EligibilityResult, string> = {
-  LIKELY_ELIGIBLE: 'text-success-500',
-  UNCERTAIN: 'text-warning-500',
-  LIKELY_INELIGIBLE: 'text-error-500',
-};
+import type { PolicyDetail, EligibilityResponse } from '@/types/policy';
+import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -280,115 +242,6 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Eligibility Card
-// ---------------------------------------------------------------------------
-
-function EligibilityCard({
-  isAuthenticated,
-  eligibility,
-  loading,
-  onCheck,
-  onLoginPrompt,
-  sourceUrl,
-}: {
-  isAuthenticated: boolean;
-  eligibility: EligibilityResponse | null;
-  loading: boolean;
-  onCheck: () => void;
-  onLoginPrompt: () => void;
-  sourceUrl: string | null;
-}) {
-  return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="mb-4 text-xl font-semibold text-neutral-900">
-        내 적합도 확인
-      </h2>
-
-      {!isAuthenticated && (
-        <button
-          onClick={onLoginPrompt}
-          className="flex h-11 w-full items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          내 적합도 확인하기
-        </button>
-      )}
-
-      {isAuthenticated && !eligibility && !loading && (
-        <button
-          onClick={onCheck}
-          className="flex h-11 w-full items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          내 적합도 확인하기
-        </button>
-      )}
-
-      {isAuthenticated && loading && (
-        <div className="flex flex-col items-center gap-3 py-6">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-800" />
-          <p className="text-sm text-neutral-500">적합도를 분석하고 있어요...</p>
-        </div>
-      )}
-
-      {isAuthenticated && eligibility && !loading && (
-        <div>
-          {/* Overall result */}
-          <div className="mb-4 text-center">
-            <p className={cn('text-lg font-bold', OVERALL_COLOR[eligibility.overallResult])}>
-              {RESULT_CONFIG[eligibility.overallResult].label}
-            </p>
-          </div>
-
-          <ul className="space-y-3">
-            {eligibility.criteria.map((item: CriterionItem, idx: number) => {
-              const cfg = RESULT_CONFIG[item.result];
-              const Icon = cfg.icon;
-              return (
-                <li key={idx} className="flex items-start gap-3">
-                  <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', cfg.color)} />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">
-                      {item.label}
-                    </p>
-                    <p className="text-xs text-neutral-500">{cfg.label}</p>
-                    <p className="mt-0.5 text-xs text-neutral-400">
-                      {item.reason}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {eligibility.missingFields.length > 0 && (
-            <div className="mt-4 rounded-lg bg-gray-50 p-3">
-              <p className="text-xs font-medium text-neutral-600">
-                추가 정보가 필요해요
-              </p>
-              <p className="mt-1 text-xs text-neutral-500">
-                {eligibility.missingFields.join(', ')}
-              </p>
-            </div>
-          )}
-          <p className="mt-4 text-xs text-neutral-500">
-            {eligibility.disclaimer}
-          </p>
-          {sourceUrl && (
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-brand-800 px-4 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-100"
-            >
-              공식 신청 채널에서 확인
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
-        </div>
-      )}
     </section>
   );
 }
