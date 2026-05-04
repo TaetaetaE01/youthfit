@@ -6,7 +6,6 @@ import com.youthfit.user.domain.model.RegionSidoCode;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.Collections;
 import java.util.Set;
 
 public record UpdateNotificationSettingRequest(
@@ -30,7 +29,7 @@ public record UpdateNotificationSettingRequest(
     }
 
     @AssertTrue(message = "추천 알림 활성화 시 카테고리 또는 지역을 1개 이상 선택해야 합니다")
-    public boolean isInterestNotEmptyWhenRecommendationEnabled() {
+    public boolean isInterestSelectionValid() {
         if (recommendationEnabled == null || !recommendationEnabled) return true;
         int totalSize = (interestCategories == null ? 0 : interestCategories.size())
                 + (interestRegions == null ? 0 : interestRegions.size());
@@ -42,8 +41,8 @@ public record UpdateNotificationSettingRequest(
                 emailEnabled,
                 daysBeforeDeadline,
                 recommendationEnabled,
-                interestCategories == null ? Collections.emptySet() : interestCategories,
-                interestRegions == null ? Collections.emptySet() : interestRegions
+                interestCategories,
+                interestRegions
         );
     }
 }

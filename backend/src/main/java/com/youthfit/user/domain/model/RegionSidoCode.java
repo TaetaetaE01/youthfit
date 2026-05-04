@@ -1,10 +1,5 @@
 package com.youthfit.user.domain.model;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@Getter
-@RequiredArgsConstructor
 public enum RegionSidoCode implements LabeledEnum {
     SEOUL("서울", "11"),
     BUSAN("부산", "26"),
@@ -27,9 +22,18 @@ public enum RegionSidoCode implements LabeledEnum {
     private final String displayName;
     private final String legalDongPrefix;
 
+    RegionSidoCode(String displayName, String legalDongPrefix) {
+        this.displayName = displayName;
+        this.legalDongPrefix = legalDongPrefix;
+    }
+
     @Override
     public String displayName() {
         return displayName;
+    }
+
+    public String legalDongPrefix() {
+        return legalDongPrefix;
     }
 
     public boolean matches(String policyRegionCode) {
@@ -39,9 +43,6 @@ public enum RegionSidoCode implements LabeledEnum {
         if (this.name().equals(policyRegionCode)) {
             return true;
         }
-        if (legalDongPrefix != null && policyRegionCode.startsWith(legalDongPrefix)) {
-            return true;
-        }
-        return false;
+        return legalDongPrefix != null && policyRegionCode.startsWith(legalDongPrefix);
     }
 }
