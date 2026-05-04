@@ -117,5 +117,47 @@ class NotificationSettingServiceTest {
             assertThat(result.daysBeforeDeadline()).isEqualTo(7);
             assertThat(result.recommendationEnabled()).isTrue();
         }
+
+        @Test
+        @DisplayName("관심 카테고리·지역도 함께 저장된다")
+        void interestsAreReplaced() {
+            NotificationSetting setting = new NotificationSetting(1L);
+            given(notificationSettingRepository.findByUserId(1L))
+                    .willReturn(Optional.of(setting));
+
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(
+                    true, 7, true,
+                    java.util.Set.of(com.youthfit.policy.domain.model.Category.HOUSING),
+                    java.util.Set.of(com.youthfit.user.domain.model.RegionSidoCode.SEOUL));
+
+            NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
+
+            assertThat(result.interestCategories())
+                    .containsExactly(com.youthfit.policy.domain.model.Category.HOUSING);
+            assertThat(result.interestRegions())
+                    .containsExactly(com.youthfit.user.domain.model.RegionSidoCode.SEOUL);
+        }
+
+        @Test
+        @DisplayName("기존 관심 분야는 새 입력으로 대체된다")
+        void interestsAreReplacedNotMerged() {
+            NotificationSetting setting = new NotificationSetting(1L);
+            setting.replaceInterestCategories(java.util.Set.of(
+                    com.youthfit.policy.domain.model.Category.HOUSING,
+                    com.youthfit.policy.domain.model.Category.JOBS));
+            given(notificationSettingRepository.findByUserId(1L))
+                    .willReturn(Optional.of(setting));
+
+            UpdateNotificationSettingCommand command = new UpdateNotificationSettingCommand(
+                    true, 7, true,
+                    java.util.Set.of(com.youthfit.policy.domain.model.Category.EDUCATION),
+                    java.util.Set.of());
+
+            NotificationSettingResult result = notificationSettingService.updateNotificationSetting(1L, command);
+
+            assertThat(result.interestCategories())
+                    .containsExactly(com.youthfit.policy.domain.model.Category.EDUCATION);
+            assertThat(result.interestRegions()).isEmpty();
+        }
     }
 }
