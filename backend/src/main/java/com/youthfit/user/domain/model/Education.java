@@ -1,6 +1,6 @@
 package com.youthfit.user.domain.model;
 
-public enum Education {
+public enum Education implements LabeledEnum {
     UNDER_HIGH("고졸 미만"),
     HIGH_SCHOOL_IN("고교 재학"),
     HIGH_SCHOOL_EXPECTED("고졸 예정"),

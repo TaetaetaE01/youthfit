@@ -1,6 +1,6 @@
 package com.youthfit.user.domain.model;
 
-public enum MajorField {
+public enum MajorField implements LabeledEnum {
     HUMANITIES("인문계열"),
     SOCIAL("사회계열"),
     ECONOMICS("상경계열"),

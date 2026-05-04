@@ -1,6 +1,6 @@
 package com.youthfit.user.domain.model;
 
-public enum EmploymentKind {
+public enum EmploymentKind implements LabeledEnum {
     EMPLOYEE("재직자"),
     SELF_EMPLOYED("자영업자"),
     UNEMPLOYED("미취업자"),

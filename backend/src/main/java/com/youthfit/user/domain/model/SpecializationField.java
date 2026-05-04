@@ -1,6 +1,6 @@
 package com.youthfit.user.domain.model;
 
-public enum SpecializationField {
+public enum SpecializationField implements LabeledEnum {
     SME("중소기업"),
     WOMAN("여성"),
     BASIC_LIVELIHOOD("기초생활수급자"),

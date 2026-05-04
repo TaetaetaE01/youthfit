@@ -1,6 +1,6 @@
 package com.youthfit.user.domain.model;
 
-public enum MaritalStatus {
+public enum MaritalStatus implements LabeledEnum {
     MARRIED("기혼"),
     SINGLE("미혼");
 
