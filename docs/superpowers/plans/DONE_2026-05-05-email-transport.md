@@ -8,7 +8,7 @@
 
 **Tech Stack:** Spring Boot 4.0.5, Java 21, Thymeleaf, AWS SDK v2 (`software.amazon.awssdk:sesv2`), JUnit 5 + Mockito + AssertJ, PostgreSQL 17.
 
-**Spec:** `docs/superpowers/specs/2026-05-05-email-transport-design.md`
+**Spec:** `docs/superpowers/specs/DONE_2026-05-05-email-transport-design.md`
 
 **커밋 규칙:** Conventional Commits (`feat`, `fix`, `chore`, `docs`, `test`). 각 Task 끝에 단일 커밋. 사용자 룰: 매 Task 후 `./gradlew build` 통과 확인 후 커밋.
 
