@@ -43,10 +43,6 @@ class SesEmailSenderTest {
     void setUp() {
         sesEmailSender = new SesEmailSender(sesClient, renderer,
                 "noreply@youthfit.example.com", "YouthFit");
-        given(renderer.renderDeadline(any()))
-                .willReturn(new EmailContent("[YouthFit] 마감", "<html>마감</html>", "마감 텍스트"));
-        given(renderer.renderRecommendation(any()))
-                .willReturn(new EmailContent("[YouthFit] 추천", "<html>추천</html>", "추천 텍스트"));
     }
 
     @Test
@@ -54,6 +50,8 @@ class SesEmailSenderTest {
     void sendDeadlineNotification_buildsRequestCorrectly() {
         // given
         Policy policy = createPolicy(10L);
+        given(renderer.renderDeadline(any()))
+                .willReturn(new EmailContent("[YouthFit] 마감", "<html>마감</html>", "마감 텍스트"));
 
         // when
         sesEmailSender.sendDeadlineNotification("user@example.com", policy);
@@ -76,6 +74,8 @@ class SesEmailSenderTest {
     void sendRecommendationNotification_buildsRequestCorrectly() {
         // given
         Policy policy = createPolicy(10L);
+        given(renderer.renderRecommendation(any()))
+                .willReturn(new EmailContent("[YouthFit] 추천", "<html>추천</html>", "추천 텍스트"));
 
         // when
         sesEmailSender.sendRecommendationNotification("user@example.com", List.of(policy));
@@ -94,6 +94,8 @@ class SesEmailSenderTest {
     void sesV2Exception_translatedToEmailSendException() {
         // given
         Policy policy = createPolicy(10L);
+        given(renderer.renderDeadline(any()))
+                .willReturn(new EmailContent("[YouthFit] 마감", "<html>마감</html>", "마감 텍스트"));
         willThrow(SesV2Exception.builder().message("AccessDenied").build())
                 .given(sesClient).sendEmail(any(SendEmailRequest.class));
 

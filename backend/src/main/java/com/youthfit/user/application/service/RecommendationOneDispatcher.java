@@ -8,6 +8,7 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.port.EmailSender;
+import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.EligibilityProfile;
 import com.youthfit.user.domain.model.NotificationHistory;
 import com.youthfit.user.domain.model.NotificationSetting;
@@ -21,8 +22,8 @@ import com.youthfit.user.domain.service.PolicyRecommender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -36,13 +37,15 @@ public class RecommendationOneDispatcher {
     private final BookmarkRepository bookmarkRepository;
     private final NotificationHistoryRepository historyRepository;
     private final EligibilityService eligibilityService;
+    private final NotificationDispatchService dispatchService;
     private final EmailSender emailSender;
     private final PolicyRecommender recommender;
 
-    // v0: 사용자당 후보 N건 × judgeEligibility/exists 호출 (N+1 패턴).
-    //     룰 평가는 LLM 호출 없이 인메모리 매칭이라 v0 규모에서 안전.
-    //     스케일 시 batch judge 또는 추천 사전 인덱스로 개선.
-    @Transactional
+    /**
+     * v0: 사용자당 후보 N건 × judgeEligibility/exists 호출 (N+1 패턴).
+     * 메서드 레벨 @Transactional 제거 — SES 외부 IO 동안 DB 커넥션 점유 방지.
+     * 상태 전이는 NotificationDispatchService 의 REQUIRES_NEW 메서드들이 담당.
+     */
     public void dispatchOne(NotificationSetting setting) {
         Long userId = setting.getUserId();
 
@@ -74,14 +77,33 @@ public class RecommendationOneDispatcher {
                 .toList();
 
         List<Policy> picks = recommender.sortAndLimit(eligible);
-        if (picks.isEmpty()) {
-            return;
-        }
+        if (picks.isEmpty()) return;
 
-        emailSender.sendRecommendationNotification(user.getEmail(), picks);
-
+        // 발송 전에 모든 pick 에 대해 PENDING 행 예약
+        List<NotificationHistory> reserved = new ArrayList<>();
+        List<Policy> toSend = new ArrayList<>();
         for (Policy p : picks) {
-            historyRepository.save(new NotificationHistory(userId, p.getId(), NotificationType.RECOMMENDATION));
+            NotificationHistory h = dispatchService.reservePending(userId, p.getId(), NotificationType.RECOMMENDATION);
+            if (h != null) {
+                reserved.add(h);
+                toSend.add(p);
+            }
+        }
+        if (toSend.isEmpty()) return;   // 모두 이미 처리됨
+
+        try {
+            emailSender.sendRecommendationNotification(user.getEmail(), toSend);
+            for (NotificationHistory h : reserved) {
+                dispatchService.markSent(h.getId());
+            }
+            log.info("추천 알림 발송 완료 userId={} count={}", userId, toSend.size());
+        } catch (EmailSendException e) {
+            for (NotificationHistory h : reserved) {
+                dispatchService.markFailed(h.getId(), e.getMessage());
+            }
+            log.error("추천 알림 발송 실패 userId={} count={}", userId, toSend.size(), e);
+        } catch (Exception e) {
+            log.error("추천 알림 처리 중 예외 userId={}", userId, e);
         }
     }
 }
