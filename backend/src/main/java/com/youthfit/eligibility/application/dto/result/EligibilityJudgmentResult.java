@@ -1,15 +1,13 @@
 package com.youthfit.eligibility.application.dto.result;
 
-import com.youthfit.eligibility.domain.model.EligibilityResult;
-
-import java.util.List;
+import com.youthfit.eligibility.domain.model.view.SummaryView;
 
 public record EligibilityJudgmentResult(
         Long policyId,
         String policyTitle,
-        EligibilityResult overallResult,
-        List<CriterionResult> criteria,
-        List<String> missingFields,
+        String overallResult,
+        SummaryView summary,
+        GroupedCriteria criteria,
         String disclaimer
 ) {
 
