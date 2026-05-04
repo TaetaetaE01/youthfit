@@ -4,7 +4,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
-import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.common.event.PolicyUpsertedEvent;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
@@ -22,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,7 +31,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -48,7 +48,7 @@ class IngestionServiceTest {
     private PolicyPeriodLlmProvider policyPeriodLlmProvider;
 
     @Mock
-    private GuideGenerationService guideGenerationService;
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private AttachmentDownloadService attachmentDownloadService;
@@ -183,8 +183,8 @@ class IngestionServiceTest {
         }
 
         @Test
-        @DisplayName("정책 등록 후 가이드 생성을 호출한다")
-        void 정책_등록_후_가이드_생성을_호출한다() {
+        @DisplayName("정책 등록 후 PolicyUpsertedEvent 를 발행한다 (policyId, title 포함)")
+        void 정책_등록_후_PolicyUpsertedEvent_를_발행한다() {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
@@ -194,23 +194,26 @@ class IngestionServiceTest {
             ingestionService.receivePolicy(command);
 
             // Then
-            then(guideGenerationService).should()
-                    .generateGuide(argThat(cmd -> cmd.policyId().equals(42L)));
+            ArgumentCaptor<PolicyUpsertedEvent> captor = ArgumentCaptor.forClass(PolicyUpsertedEvent.class);
+            then(eventPublisher).should().publishEvent(captor.capture());
+            assertThat(captor.getValue().policyId()).isEqualTo(42L);
+            assertThat(captor.getValue().title()).isEqualTo(command.title());
         }
 
         @Test
-        @DisplayName("가이드 생성 실패해도 ingestion은 성공")
-        void 가이드_생성_실패해도_ingestion은_성공() {
+        @DisplayName("가이드/룰은 더 이상 직접 호출되지 않는다 (이벤트 발행만 일어난다)")
+        void 가이드와_룰은_직접_호출되지_않는다() {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(new PolicyIngestionResult(42L, true));
-            given(guideGenerationService.generateGuide(any()))
-                    .willThrow(new RuntimeException("LLM 장애"));
 
-            // When & Then: 예외가 위로 전파되지 않아야 함
+            // When
             assertThatCode(() -> ingestionService.receivePolicy(command))
                     .doesNotThrowAnyException();
+
+            // Then: eventPublisher 외엔 LLM 의존이 주입되지 않으므로, 단순히 publish 가 한 번 일어났는지로 검증
+            then(eventPublisher).should().publishEvent(any(PolicyUpsertedEvent.class));
         }
 
         private IngestPolicyCommand commandWithoutPeriod(String body) {
