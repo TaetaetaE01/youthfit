@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -35,6 +36,11 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     public Page<Policy> searchByKeyword(String keyword, PolicyStatus status, Pageable pageable) {
         return jpaRepository.findAll(
                 PolicySpecification.withKeyword(keyword, status), pageable);
+    }
+
+    @Override
+    public List<Policy> findAllByStatus(PolicyStatus status) {
+        return jpaRepository.findAllByStatus(status);
     }
 
     @Override

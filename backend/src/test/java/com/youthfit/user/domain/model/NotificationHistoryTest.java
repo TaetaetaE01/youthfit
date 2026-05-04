@@ -12,19 +12,19 @@ class NotificationHistoryTest {
     @DisplayName("알림 이력 생성 시 userId, policyId, notificationType이 설정된다")
     void create_setsAllFields() {
         // given & when
-        NotificationHistory history = new NotificationHistory(1L, 100L, "DEADLINE");
+        NotificationHistory history = new NotificationHistory(1L, 100L, NotificationType.DEADLINE);
 
         // then
         assertThat(history.getUserId()).isEqualTo(1L);
         assertThat(history.getPolicyId()).isEqualTo(100L);
-        assertThat(history.getNotificationType()).isEqualTo("DEADLINE");
+        assertThat(history.getNotificationType()).isEqualTo(NotificationType.DEADLINE);
     }
 
     @Test
     @DisplayName("생성 직후 id와 sentAt은 null이다")
     void create_idAndSentAtAreNull() {
         // given & when
-        NotificationHistory history = new NotificationHistory(1L, 100L, "DEADLINE");
+        NotificationHistory history = new NotificationHistory(1L, 100L, NotificationType.DEADLINE);
 
         // then
         assertThat(history.getId()).isNull();

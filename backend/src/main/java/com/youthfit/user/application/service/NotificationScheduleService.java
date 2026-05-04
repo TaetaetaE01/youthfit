@@ -5,6 +5,7 @@ import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.port.EmailSender;
 import com.youthfit.user.domain.model.NotificationHistory;
 import com.youthfit.user.domain.model.NotificationSetting;
+import com.youthfit.user.domain.model.NotificationType;
 import com.youthfit.user.domain.model.PolicyNotificationSubscription;
 import com.youthfit.user.domain.model.User;
 import com.youthfit.user.domain.repository.NotificationHistoryRepository;
@@ -24,8 +25,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class NotificationScheduleService {
-
-    private static final String NOTIFICATION_TYPE_DEADLINE = "DEADLINE";
 
     private final NotificationSettingRepository notificationSettingRepository;
     private final PolicyNotificationSubscriptionRepository subscriptionRepository;
@@ -62,13 +61,13 @@ public class NotificationScheduleService {
                 }
 
                 if (notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(
-                        userId, policy.getId(), NOTIFICATION_TYPE_DEADLINE)) {
+                        userId, policy.getId(), NotificationType.DEADLINE)) {
                     continue;
                 }
 
                 emailSender.sendDeadlineNotification(user.getEmail(), policy);
                 notificationHistoryRepository.save(
-                        new NotificationHistory(userId, policy.getId(), NOTIFICATION_TYPE_DEADLINE));
+                        new NotificationHistory(userId, policy.getId(), NotificationType.DEADLINE));
             }
         }
     }

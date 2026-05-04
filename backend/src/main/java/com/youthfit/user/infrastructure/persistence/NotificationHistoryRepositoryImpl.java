@@ -1,6 +1,7 @@
 package com.youthfit.user.infrastructure.persistence;
 
 import com.youthfit.user.domain.model.NotificationHistory;
+import com.youthfit.user.domain.model.NotificationType;
 import com.youthfit.user.domain.repository.NotificationHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -17,7 +18,7 @@ public class NotificationHistoryRepositoryImpl implements NotificationHistoryRep
     }
 
     @Override
-    public boolean existsByUserIdAndPolicyIdAndNotificationType(Long userId, Long policyId, String notificationType) {
+    public boolean existsByUserIdAndPolicyIdAndNotificationType(Long userId, Long policyId, NotificationType notificationType) {
         return jpaRepository.existsByUserIdAndPolicyIdAndNotificationType(userId, policyId, notificationType);
     }
 }
