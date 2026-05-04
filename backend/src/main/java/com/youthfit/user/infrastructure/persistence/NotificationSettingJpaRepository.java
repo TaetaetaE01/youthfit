@@ -11,4 +11,6 @@ public interface NotificationSettingJpaRepository extends JpaRepository<Notifica
     Optional<NotificationSetting> findByUserId(Long userId);
 
     List<NotificationSetting> findAllByEmailEnabled(boolean emailEnabled);
+
+    List<NotificationSetting> findAllByRecommendationEnabled(boolean recommendationEnabled);
 }

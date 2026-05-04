@@ -11,5 +11,7 @@ public interface NotificationSettingRepository {
 
     List<NotificationSetting> findAllByEmailEnabled(boolean emailEnabled);
 
+    List<NotificationSetting> findAllByRecommendationEnabled(boolean recommendationEnabled);
+
     NotificationSetting save(NotificationSetting notificationSetting);
 }

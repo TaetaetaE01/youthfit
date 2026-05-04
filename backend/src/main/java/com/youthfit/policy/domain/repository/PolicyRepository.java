@@ -6,6 +6,7 @@ import com.youthfit.policy.domain.model.PolicyStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PolicyRepository {
@@ -16,6 +17,8 @@ public interface PolicyRepository {
                                    Pageable pageable);
 
     Page<Policy> searchByKeyword(String keyword, PolicyStatus status, Pageable pageable);
+
+    List<Policy> findAllByStatus(PolicyStatus status);
 
     Policy save(Policy policy);
 }

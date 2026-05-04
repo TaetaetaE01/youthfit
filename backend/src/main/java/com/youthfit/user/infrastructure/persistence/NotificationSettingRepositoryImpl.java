@@ -25,6 +25,11 @@ public class NotificationSettingRepositoryImpl implements NotificationSettingRep
     }
 
     @Override
+    public List<NotificationSetting> findAllByRecommendationEnabled(boolean recommendationEnabled) {
+        return jpaRepository.findAllByRecommendationEnabled(recommendationEnabled);
+    }
+
+    @Override
     public NotificationSetting save(NotificationSetting notificationSetting) {
         return jpaRepository.save(notificationSetting);
     }
