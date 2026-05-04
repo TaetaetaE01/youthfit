@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import InterestCategoryChips from './InterestCategoryChips';
 import InterestRegionChips from './InterestRegionChips';
@@ -17,6 +17,8 @@ interface Props {
   saving?: boolean;
 }
 
+const arrayKey = (arr: readonly string[]) => JSON.stringify([...arr].sort());
+
 export default function RecommendationSection({
   enabled,
   categories,
@@ -30,19 +32,31 @@ export default function RecommendationSection({
   const [draftCategories, setDraftCategories] = useState<PolicyCategory[]>(categories);
   const [draftRegions, setDraftRegions] = useState<RegionSidoCode[]>(regions);
 
+  // Sync draft from props only when the actual *value* changed (not just reference).
+  // Refetch can hand us a new array with identical contents — without this guard,
+  // useEffect would clobber unsaved chip edits.
+  const lastCategoriesKey = useRef(arrayKey(categories));
   useEffect(() => {
-    setDraftCategories(categories);
+    const next = arrayKey(categories);
+    if (next !== lastCategoriesKey.current) {
+      setDraftCategories(categories);
+      lastCategoriesKey.current = next;
+    }
   }, [categories]);
 
+  const lastRegionsKey = useRef(arrayKey(regions));
   useEffect(() => {
-    setDraftRegions(regions);
+    const next = arrayKey(regions);
+    if (next !== lastRegionsKey.current) {
+      setDraftRegions(regions);
+      lastRegionsKey.current = next;
+    }
   }, [regions]);
 
-  const dirty =
-    JSON.stringify([...draftCategories].sort()) !== JSON.stringify([...categories].sort()) ||
-    JSON.stringify([...draftRegions].sort()) !== JSON.stringify([...regions].sort());
   const totalSelected = draftCategories.length + draftRegions.length;
-  const canSave = enabled && dirty && totalSelected > 0;
+  // canSave: dirty 검사를 빼서 enabled OFF→ON 후 기존 선택값 그대로 다시 저장할 수 있게 한다.
+  // 백엔드는 동일 PUT을 idempotent하게 처리하므로 한 번 더 저장해도 안전.
+  const canSave = enabled && totalSelected > 0;
   const showInterestArea = enabled && hasEmail;
 
   return (
