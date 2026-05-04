@@ -4,9 +4,9 @@ import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.eligibility.application.dto.command.JudgeEligibilityCommand;
 import com.youthfit.eligibility.application.dto.result.EligibilityJudgmentResult;
-import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
 import com.youthfit.eligibility.domain.model.RuleOperator;
+import com.youthfit.eligibility.domain.model.UncertainReason;
 import com.youthfit.eligibility.domain.repository.EligibilityRuleRepository;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
@@ -66,9 +66,10 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
-            assertThat(result.criteria()).hasSize(2);
-            assertThat(result.missingFields()).isEmpty();
+            assertThat(result.overallResult()).isEqualTo("LIKELY_ELIGIBLE");
+            assertThat(result.criteria().eligible()).hasSize(2);
+            assertThat(result.criteria().uncertain()).isEmpty();
+            assertThat(result.criteria().ineligible()).isEmpty();
         }
 
         @Test
@@ -87,11 +88,11 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
+            assertThat(result.overallResult()).isEqualTo("LIKELY_INELIGIBLE");
         }
 
         @Test
-        @DisplayName("필드값이 누락되면 UNCERTAIN을 반환하고 missingFields에 포함한다")
+        @DisplayName("필드값이 누락되면 UNCERTAIN을 반환하고 uncertain criteria에 포함한다")
         void missingField_returnsUncertain() {
             // given
             EligibilityProfile profile = createMockProfile(29, "1100000000", null);
@@ -106,8 +107,10 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.UNCERTAIN);
-            assertThat(result.missingFields()).containsExactly("annualIncome");
+            assertThat(result.overallResult()).isEqualTo("UNCERTAIN");
+            assertThat(result.criteria().uncertain())
+                    .extracting(c -> c.uncertainReason() == null ? null : c.uncertainReason().name())
+                    .contains("MISSING_FIELD");
         }
 
         @Test
@@ -126,7 +129,7 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
+            assertThat(result.overallResult()).isEqualTo("LIKELY_INELIGIBLE");
         }
 
         @Test
@@ -141,8 +144,10 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
-            assertThat(result.criteria()).isEmpty();
+            assertThat(result.overallResult()).isEqualTo("LIKELY_ELIGIBLE");
+            assertThat(result.criteria().eligible()).isEmpty();
+            assertThat(result.criteria().uncertain()).isEmpty();
+            assertThat(result.criteria().ineligible()).isEmpty();
         }
 
         @Test
@@ -193,8 +198,62 @@ class EligibilityServiceTest {
             EligibilityJudgmentResult result = eligibilityService.judgeEligibility(1L, new JudgeEligibilityCommand(1L));
 
             // then
-            assertThat(result.overallResult()).isEqualTo(EligibilityResult.UNCERTAIN);
-            assertThat(result.missingFields()).containsExactly("age");
+            assertThat(result.overallResult()).isEqualTo("UNCERTAIN");
+            assertThat(result.criteria().uncertain())
+                    .extracting(c -> c.uncertainReason() == null ? null : c.uncertainReason().name())
+                    .containsExactly("MISSING_FIELD");
+        }
+
+        @Test
+        @DisplayName("MISSING_FIELD UNCERTAIN과 AMBIGUOUS_SOURCE UNCERTAIN을 구분해 응답에 노출한다")
+        void uncertainReasonsSeparated() {
+            // annualIncome은 null → MISSING_FIELD
+            // specializationField는 WOMAN 으로 세팅하고 LOW 신뢰도 룰 → AMBIGUOUS_SOURCE
+            EligibilityProfile profile = createMockProfile(29, null, null);
+            profile.changeSpecializationField(com.youthfit.user.domain.model.SpecializationField.WOMAN);
+            Policy policy = createMockPolicy();
+            EligibilityRule lowConfidenceRule = EligibilityRule.builder()
+                    .policyId(1L).field("specializationField").operator(RuleOperator.EQ)
+                    .value("WOMAN").label("특화 분야")
+                    .confidence(com.youthfit.eligibility.domain.model.RuleConfidence.LOW).build();
+            ReflectionTestUtils.setField(lowConfidenceRule, "id", 99L);
+            List<EligibilityRule> rules = List.of(
+                    createRule("annualIncome", RuleOperator.LTE, "50000000", "가구 소득"),
+                    lowConfidenceRule
+            );
+            setupMocks(profile, policy, rules);
+
+            EligibilityJudgmentResult result = eligibilityService.judgeEligibility(
+                    1L, new JudgeEligibilityCommand(1L)
+            );
+
+            assertThat(result.overallResult()).isEqualTo("UNCERTAIN");
+            assertThat(result.criteria().uncertain()).hasSize(2);
+            assertThat(result.criteria().uncertain())
+                    .extracting(c -> c.uncertainReason() == null ? null : c.uncertainReason().name())
+                    .containsExactlyInAnyOrder("MISSING_FIELD", "AMBIGUOUS_SOURCE");
+        }
+
+        @Test
+        @DisplayName("응답의 CriterionResult는 requirement·userValue·verdictText·source를 채워서 돌려준다")
+        void responseShapeIsHumanFriendly() {
+            EligibilityProfile profile = createMockProfile(29, "1100000000", 30000000L);
+            Policy policy = createMockPolicy();
+            List<EligibilityRule> rules = List.of(
+                    createRule("age", RuleOperator.BETWEEN, "19~34", "연령")
+            );
+            setupMocks(profile, policy, rules);
+
+            EligibilityJudgmentResult result = eligibilityService.judgeEligibility(
+                    1L, new JudgeEligibilityCommand(1L)
+            );
+
+            assertThat(result.criteria().eligible()).hasSize(1);
+            var c = result.criteria().eligible().get(0);
+            assertThat(c.requirement().displayText()).isEqualTo("만 19세 이상 34세 이하");
+            assertThat(c.userValue().displayText()).isEqualTo("만 29세");
+            assertThat(c.verdictText()).isEqualTo("연령 조건을 충족해요");
+            assertThat(c.source()).isNotNull();
         }
     }
 

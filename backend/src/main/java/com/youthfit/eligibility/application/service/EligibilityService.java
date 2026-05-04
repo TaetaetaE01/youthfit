@@ -5,11 +5,19 @@ import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.eligibility.application.dto.command.JudgeEligibilityCommand;
 import com.youthfit.eligibility.application.dto.result.CriterionResult;
 import com.youthfit.eligibility.application.dto.result.EligibilityJudgmentResult;
+import com.youthfit.eligibility.application.dto.result.GroupedCriteria;
 import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
+import com.youthfit.eligibility.domain.model.view.SourceView;
+import com.youthfit.eligibility.domain.model.view.SummaryView;
+import com.youthfit.eligibility.domain.model.view.RequirementView;
+import com.youthfit.eligibility.domain.model.view.UserValueView;
 import com.youthfit.eligibility.domain.repository.EligibilityRuleRepository;
 import com.youthfit.eligibility.domain.service.CriterionEvaluation;
 import com.youthfit.eligibility.domain.service.EligibilityEvaluator;
+import com.youthfit.eligibility.domain.service.RequirementFormatter;
+import com.youthfit.eligibility.domain.service.UserValueFormatter;
+import com.youthfit.eligibility.domain.service.VerdictTextGenerator;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.domain.model.EligibilityProfile;
@@ -27,7 +35,12 @@ public class EligibilityService {
     private final EligibilityRuleRepository eligibilityRuleRepository;
     private final EligibilityProfileRepository eligibilityProfileRepository;
     private final PolicyRepository policyRepository;
+
     private final EligibilityEvaluator evaluator = new EligibilityEvaluator();
+    private final RequirementFormatter requirementFormatter = new RequirementFormatter();
+    private final UserValueFormatter userValueFormatter = new UserValueFormatter();
+    private final VerdictTextGenerator verdictGenerator = new VerdictTextGenerator();
+    private final SummaryHeadlineGenerator summaryGenerator = new SummaryHeadlineGenerator();
 
     @Transactional(readOnly = true)
     public EligibilityJudgmentResult judgeEligibility(Long userId, JudgeEligibilityCommand command) {
@@ -43,24 +56,51 @@ public class EligibilityService {
                 .map(rule -> evaluator.evaluateRule(rule, profile))
                 .toList();
 
-        List<CriterionResult> criteria = evaluations.stream()
-                .map(CriterionResult::from)
+        List<CriterionResult> results = evaluations.stream()
+                .map(this::toCriterionResult)
                 .toList();
 
-        List<String> missingFields = evaluations.stream()
-                .filter(e -> e.result() == EligibilityResult.UNCERTAIN)
-                .map(CriterionEvaluation::field)
-                .toList();
-
-        EligibilityResult overallResult = determineOverall(evaluations);
+        GroupedCriteria grouped = groupByResult(results);
+        SummaryView summary = summaryGenerator.generate(evaluations);
+        EligibilityResult overall = determineOverall(evaluations);
 
         return new EligibilityJudgmentResult(
                 policy.getId(),
                 policy.getTitle(),
-                overallResult,
-                criteria,
-                missingFields,
+                overall.name(),
+                summary,
+                grouped,
                 EligibilityJudgmentResult.DISCLAIMER_TEXT
+        );
+    }
+
+    private CriterionResult toCriterionResult(CriterionEvaluation eval) {
+        EligibilityRule rule = eval.rule();
+        RequirementView requirement = requirementFormatter.format(
+                rule.getField(), rule.getOperator(), rule.getValue()
+        );
+        UserValueView userValue = userValueFormatter.format(rule.getField(), eval.userValue());
+        String verdictText = verdictGenerator.generate(
+                eval.result(), eval.uncertainReason(), rule.getLabel(), requirement, userValue
+        );
+        SourceView source = new SourceView(rule.getSourceReference());
+        return new CriterionResult(
+                rule.getField(),
+                rule.getLabel(),
+                eval.result().name(),
+                eval.uncertainReason(),
+                requirement,
+                userValue,
+                verdictText,
+                source
+        );
+    }
+
+    private GroupedCriteria groupByResult(List<CriterionResult> results) {
+        return new GroupedCriteria(
+                results.stream().filter(r -> EligibilityResult.LIKELY_INELIGIBLE.name().equals(r.result())).toList(),
+                results.stream().filter(r -> EligibilityResult.UNCERTAIN.name().equals(r.result())).toList(),
+                results.stream().filter(r -> EligibilityResult.LIKELY_ELIGIBLE.name().equals(r.result())).toList()
         );
     }
 

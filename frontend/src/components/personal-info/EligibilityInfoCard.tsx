@@ -17,7 +17,7 @@ import {
 } from '@/types/personalInfo';
 import { useSidoList, useSigunguList } from '@/hooks/queries/useRegions';
 
-type RowKey =
+export type RowKey =
   | 'region'
   | 'age'
   | 'marital'
@@ -31,6 +31,7 @@ interface EligibilityInfoCardProps {
   profile: EligibilityProfile;
   onUpdate: (data: UpdateEligibilityProfileRequest) => void;
   isUpdating?: boolean;
+  initialOpen?: RowKey | null;
 }
 
 const MARITAL_LIST: MaritalStatus[] = ['MARRIED', 'SINGLE'];
@@ -182,8 +183,12 @@ function GroupHeading({ children }: { children: ReactNode }) {
   );
 }
 
-export default function EligibilityInfoCard({ profile, onUpdate, isUpdating }: EligibilityInfoCardProps) {
-  const [open, setOpen] = useState<RowKey | null>(null);
+export default function EligibilityInfoCard({ profile, onUpdate, isUpdating, initialOpen }: EligibilityInfoCardProps) {
+  const [open, setOpen] = useState<RowKey | null>(initialOpen ?? null);
+
+  useEffect(() => {
+    if (initialOpen) setOpen(initialOpen);
+  }, [initialOpen]);
 
   const [ageDraft, setAgeDraft] = useState('');
   const [incomeMinDraft, setIncomeMinDraft] = useState('');
@@ -279,6 +284,7 @@ export default function EligibilityInfoCard({ profile, onUpdate, isUpdating }: E
 
   return (
     <section
+      id="eligibility-info-card"
       aria-label="적합도 판정 정보"
       className="rounded-2xl bg-white p-6 shadow-card"
     >

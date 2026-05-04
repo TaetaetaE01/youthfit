@@ -128,20 +128,52 @@ export interface Guide {
 
 /* ── Eligibility ── */
 
+export type UncertainReason = 'MISSING_FIELD' | 'AMBIGUOUS_SOURCE' | null;
+
+export interface RequirementView {
+  operator: string;
+  displayText: string;
+}
+
+export interface UserValueView {
+  raw: string;
+  displayText: string;
+}
+
+export interface SourceView {
+  snippet: string | null;
+}
+
 export interface CriterionItem {
   field: string;
   label: string;
   result: EligibilityResult;
-  reason: string;
-  sourceReference: string;
+  uncertainReason: UncertainReason;
+  requirement: RequirementView;
+  userValue: UserValueView | null;
+  verdictText: string;
+  source: SourceView;
+}
+
+export interface GroupedCriteria {
+  ineligible: CriterionItem[];
+  uncertain: CriterionItem[];
+  eligible: CriterionItem[];
+}
+
+export interface SummaryView {
+  headline: string;
+  eligibleCount: number;
+  uncertainCount: number;
+  ineligibleCount: number;
 }
 
 export interface EligibilityResponse {
   policyId: number;
   policyTitle: string;
   overallResult: EligibilityResult;
-  criteria: CriterionItem[];
-  missingFields: string[];
+  summary: SummaryView;
+  criteria: GroupedCriteria;
   disclaimer: string;
 }
 

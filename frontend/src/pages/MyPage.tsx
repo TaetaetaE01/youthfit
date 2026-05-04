@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   User,
   Pencil,
@@ -25,6 +25,7 @@ import type { Bookmark } from '@/types/policy';
 import { STATUS_LABELS, CATEGORY_LABELS } from '@/types/policy';
 import type { PolicyCategory, PolicyStatus } from '@/types/policy';
 import EligibilityInfoCard from '@/components/personal-info/EligibilityInfoCard';
+import type { RowKey } from '@/components/personal-info/EligibilityInfoCard';
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
 
@@ -141,6 +142,18 @@ export default function MyPage() {
   useEffect(() => {
     if (!isAuthenticated) navigate('/login?redirect=/mypage', { replace: true });
   }, [isAuthenticated, navigate]);
+
+  /* ── Focus query param ── */
+  const [searchParams] = useSearchParams();
+  const focusKey = (searchParams.get('focus') as RowKey | null) ?? null;
+
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = document.getElementById('eligibility-info-card');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [focusKey]);
 
   /* ── Data fetching ── */
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -587,6 +600,7 @@ export default function MyPage() {
               profile={eligibilityProfile}
               onUpdate={(data) => updateEligibilityMutation.mutate(data)}
               isUpdating={updateEligibilityMutation.isPending}
+              initialOpen={focusKey}
             />
           )}
 

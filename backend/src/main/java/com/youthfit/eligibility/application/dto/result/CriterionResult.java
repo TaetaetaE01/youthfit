@@ -1,25 +1,17 @@
 package com.youthfit.eligibility.application.dto.result;
 
-import com.youthfit.eligibility.domain.model.EligibilityResult;
-import com.youthfit.eligibility.domain.service.CriterionEvaluation;
+import com.youthfit.eligibility.domain.model.UncertainReason;
+import com.youthfit.eligibility.domain.model.view.RequirementView;
+import com.youthfit.eligibility.domain.model.view.SourceView;
+import com.youthfit.eligibility.domain.model.view.UserValueView;
 
 public record CriterionResult(
         String field,
         String label,
-        EligibilityResult result,
-        String reason,
-        String sourceReference,
-        String confidenceNote
-) {
-
-    public static CriterionResult from(CriterionEvaluation evaluation) {
-        return new CriterionResult(
-                evaluation.field(),
-                evaluation.label(),
-                evaluation.result(),
-                evaluation.reason(),
-                evaluation.sourceReference(),
-                evaluation.confidenceNote()
-        );
-    }
-}
+        String result,
+        UncertainReason uncertainReason,
+        RequirementView requirement,
+        UserValueView userValue,
+        String verdictText,
+        SourceView source
+) {}
