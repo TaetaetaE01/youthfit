@@ -7,7 +7,6 @@ import {
   Bell,
   Loader2,
   AlertCircle,
-  Sparkles,
   Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -24,8 +23,10 @@ import { useUpdateEligibilityProfile } from '@/hooks/mutations/useUpdateEligibil
 import type { Bookmark } from '@/types/policy';
 import { STATUS_LABELS, CATEGORY_LABELS } from '@/types/policy';
 import type { PolicyCategory, PolicyStatus } from '@/types/policy';
+import type { RegionSidoCode } from '@/lib/labels/region';
 import EligibilityInfoCard from '@/components/personal-info/EligibilityInfoCard';
 import type { RowKey } from '@/components/personal-info/EligibilityInfoCard';
+import RecommendationSection from '@/components/notification/RecommendationSection';
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
 
@@ -192,6 +193,8 @@ export default function MyPage() {
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [daysBeforeDeadline, setDaysBeforeDeadline] = useState(7);
   const [recommendationEnabled, setRecommendationEnabled] = useState(false);
+  const [interestCategories, setInterestCategories] = useState<PolicyCategory[]>([]);
+  const [interestRegions, setInterestRegions] = useState<RegionSidoCode[]>([]);
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
   /* ── Notification tab shared email editor ── */
@@ -212,6 +215,8 @@ export default function MyPage() {
       setEmailEnabled(notificationData.emailEnabled);
       setDaysBeforeDeadline(notificationData.daysBeforeDeadline);
       setRecommendationEnabled(notificationData.recommendationEnabled);
+      setInterestCategories(notificationData.interestCategories ?? []);
+      setInterestRegions(notificationData.interestRegions ?? []);
     }
   }, [notificationData]);
 
@@ -325,16 +330,15 @@ export default function MyPage() {
         emailEnabled: true,
         daysBeforeDeadline,
         recommendationEnabled,
+        interestCategories,
+        interestRegions,
       });
       setNotificationToast(`마감 ${daysBeforeDeadline}일 전 알려드릴게요`);
     } else if (pendingEnable === 'recommendation') {
+      // 토글 UI만 ON으로 전환. 실제 저장은 사용자가 관심 분야를 1개 이상 선택하고
+      // [저장]을 눌렀을 때 발생한다 (백엔드 검증: recommendationEnabled=true이면 최소 1개 필요).
       setRecommendationEnabled(true);
-      updateNotificationMutation.mutate({
-        emailEnabled,
-        daysBeforeDeadline,
-        recommendationEnabled: true,
-      });
-      setNotificationToast('자격이 맞는 새 정책이 나오면 알려드릴게요');
+      setNotificationToast('관심 분야를 선택하고 저장해주세요');
     } else {
       setNotificationToast('이메일을 등록했어요');
     }
@@ -388,6 +392,8 @@ export default function MyPage() {
       emailEnabled: newEnabled,
       daysBeforeDeadline,
       recommendationEnabled,
+      interestCategories,
+      interestRegions,
     });
   };
 
@@ -397,22 +403,58 @@ export default function MyPage() {
       emailEnabled,
       daysBeforeDeadline: days,
       recommendationEnabled,
+      interestCategories,
+      interestRegions,
     });
   };
 
-  const handleRecommendationToggle = () => {
+  const handleRecommendationToggle = (next: boolean) => {
     if (!profile?.email) {
       setPendingEnable('recommendation');
       handleStartEditNotifEmail();
       return;
     }
-    const newEnabled = !recommendationEnabled;
-    setRecommendationEnabled(newEnabled);
+    if (next) {
+      // ON으로 전환: UI state만 갱신. 관심 분야가 비어 있으면 백엔드가 400을 반환하므로
+      // 사용자가 칩을 선택하고 [저장]을 눌렀을 때 PUT을 보낸다.
+      setRecommendationEnabled(true);
+      return;
+    }
+    // OFF로 전환: 즉시 서버에 반영 (관심 분야는 그대로 유지).
+    setRecommendationEnabled(false);
     updateNotificationMutation.mutate({
       emailEnabled,
       daysBeforeDeadline,
-      recommendationEnabled: newEnabled,
+      recommendationEnabled: false,
+      interestCategories,
+      interestRegions,
     });
+    setNotificationToast('맞춤 정책 추천을 껐어요');
+  };
+
+  const handleSaveRecommendation = (
+    nextCategories: PolicyCategory[],
+    nextRegions: RegionSidoCode[],
+  ) => {
+    updateNotificationMutation.mutate(
+      {
+        emailEnabled,
+        daysBeforeDeadline,
+        recommendationEnabled: true,
+        interestCategories: nextCategories,
+        interestRegions: nextRegions,
+      },
+      {
+        onSuccess: () => {
+          setInterestCategories(nextCategories);
+          setInterestRegions(nextRegions);
+          setNotificationToast('관심 분야를 저장했어요');
+        },
+        onError: () => {
+          setNotificationToast('저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+        },
+      },
+    );
   };
 
   const handleLogout = () => {
@@ -858,51 +900,16 @@ export default function MyPage() {
                 </div>
 
                 {/* 맞춤 정책 추천 */}
-                <div
-                  className={cn(
-                    'rounded-2xl bg-white p-6 shadow-card transition-opacity',
-                    !profile?.email && 'opacity-70',
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
-                      <Sparkles className="h-4 w-4 text-brand-800" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-neutral-900">맞춤 정책 추천</h3>
-                      <p className="mt-1 text-sm text-neutral-500">
-                        적합도 판정 정보를 바탕으로 자격이 맞을 가능성이 높은 새 정책을 이메일로 추천해 드려요.
-                      </p>
-                      {!profile?.email && (
-                        <p className="mt-2 text-xs text-neutral-500">
-                          활성화하려면 위에서 이메일을 먼저 등록해주세요.
-                        </p>
-                      )}
-                      {profile?.email && !extraFilled && (
-                        <p className="mt-2 text-xs text-warning-500">
-                          적합도 판정 정보를 먼저 입력하면 더 정확한 추천을 받을 수 있어요.
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      role="switch"
-                      aria-checked={recommendationEnabled}
-                      aria-label="맞춤 정책 추천 받기"
-                      onClick={handleRecommendationToggle}
-                      className={cn(
-                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-                        recommendationEnabled && profile?.email ? 'bg-brand-800' : 'bg-neutral-300',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                          recommendationEnabled && profile?.email ? 'translate-x-[22px]' : 'translate-x-0.5',
-                        )}
-                      />
-                    </button>
-                  </div>
-                </div>
+                <RecommendationSection
+                  enabled={recommendationEnabled}
+                  categories={interestCategories}
+                  regions={interestRegions}
+                  hasEligibilityProfile={extraFilled}
+                  hasEmail={!!profile?.email}
+                  onToggle={handleRecommendationToggle}
+                  onSave={handleSaveRecommendation}
+                  saving={updateNotificationMutation.isPending}
+                />
               </div>
             </div>
           </div>
