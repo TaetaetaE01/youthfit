@@ -50,10 +50,10 @@ class RegionSidoCodeTest {
         @Test
         @DisplayName("displayName과 legalDongPrefix가 정의되어 있다")
         void labelsAreDefined() {
-            assertThat(RegionSidoCode.SEOUL.getDisplayName()).isEqualTo("서울");
-            assertThat(RegionSidoCode.SEOUL.getLegalDongPrefix()).isEqualTo("11");
-            assertThat(RegionSidoCode.JEJU.getDisplayName()).isEqualTo("제주");
-            assertThat(RegionSidoCode.JEJU.getLegalDongPrefix()).isEqualTo("50");
+            assertThat(RegionSidoCode.SEOUL.displayName()).isEqualTo("서울");
+            assertThat(RegionSidoCode.SEOUL.legalDongPrefix()).isEqualTo("11");
+            assertThat(RegionSidoCode.JEJU.displayName()).isEqualTo("제주");
+            assertThat(RegionSidoCode.JEJU.legalDongPrefix()).isEqualTo("50");
         }
 
         @Test
