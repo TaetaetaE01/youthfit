@@ -4,8 +4,13 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.user.application.port.EmailSender;
-import com.youthfit.user.domain.model.*;
-import com.youthfit.user.domain.repository.NotificationHistoryRepository;
+import com.youthfit.user.domain.exception.EmailSendException;
+import com.youthfit.user.domain.model.AuthProvider;
+import com.youthfit.user.domain.model.NotificationHistory;
+import com.youthfit.user.domain.model.NotificationSetting;
+import com.youthfit.user.domain.model.NotificationType;
+import com.youthfit.user.domain.model.PolicyNotificationSubscription;
+import com.youthfit.user.domain.model.User;
 import com.youthfit.user.domain.repository.NotificationSettingRepository;
 import com.youthfit.user.domain.repository.PolicyNotificationSubscriptionRepository;
 import com.youthfit.user.domain.repository.UserRepository;
@@ -26,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
 @DisplayName("NotificationScheduleService")
@@ -35,69 +41,56 @@ class NotificationScheduleServiceTest {
     @InjectMocks
     private NotificationScheduleService notificationScheduleService;
 
-    @Mock
-    private NotificationSettingRepository notificationSettingRepository;
-
-    @Mock
-    private PolicyNotificationSubscriptionRepository subscriptionRepository;
-
-    @Mock
-    private PolicyRepository policyRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private NotificationHistoryRepository notificationHistoryRepository;
-
-    @Mock
-    private EmailSender emailSender;
+    @Mock private NotificationSettingRepository notificationSettingRepository;
+    @Mock private PolicyNotificationSubscriptionRepository subscriptionRepository;
+    @Mock private PolicyRepository policyRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private NotificationDispatchService dispatchService;
+    @Mock private EmailSender emailSender;
 
     @Nested
     @DisplayName("sendDeadlineNotifications")
     class SendDeadlineNotifications {
 
         @Test
-        @DisplayName("마감 임박 구독 정책에 대해 이메일을 발송하고 이력을 저장한다")
-        void eligiblePolicy_sendsEmailAndSavesHistory() {
+        @DisplayName("마감 임박 정책에 대해 reservePending → 발송 → markSent 흐름")
+        void eligiblePolicy_reservesAndSends() {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
             PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(3));
+            NotificationHistory pending = NotificationHistory.pending(1L, 10L, NotificationType.DEADLINE);
+            ReflectionTestUtils.setField(pending, "id", 999L);
 
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of(setting));
+            given(notificationSettingRepository.findAllByEmailEnabled(true)).willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
-            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, NotificationType.DEADLINE))
-                    .willReturn(false);
+            given(dispatchService.reservePending(1L, 10L, NotificationType.DEADLINE)).willReturn(pending);
 
             // when
             notificationScheduleService.sendDeadlineNotifications();
 
             // then
             then(emailSender).should().sendDeadlineNotification(eq("test@example.com"), eq(policy));
-            then(notificationHistoryRepository).should().save(any(NotificationHistory.class));
+            then(dispatchService).should().markSent(999L);
         }
 
         @Test
-        @DisplayName("이미 발송 이력이 있으면 중복 발송하지 않는다")
-        void alreadySent_skipsEmail() {
+        @DisplayName("reservePending 이 null 이면 발송 안 함 (이미 처리됨)")
+        void reservePendingNull_skipsSend() {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
             PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(3));
 
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of(setting));
+            given(notificationSettingRepository.findAllByEmailEnabled(true)).willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
-            given(notificationHistoryRepository.existsByUserIdAndPolicyIdAndNotificationType(1L, 10L, NotificationType.DEADLINE))
-                    .willReturn(true);
+            given(dispatchService.reservePending(1L, 10L, NotificationType.DEADLINE)).willReturn(null);
 
             // when
             notificationScheduleService.sendDeadlineNotifications();
@@ -107,88 +100,86 @@ class NotificationScheduleServiceTest {
         }
 
         @Test
-        @DisplayName("사용자를 찾을 수 없으면 건너뛴다")
-        void userNotFound_skips() {
+        @DisplayName("EmailSendException 발생 시 markFailed 호출")
+        void emailSendException_callsMarkFailed() {
             // given
             NotificationSetting setting = new NotificationSetting(1L);
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of(setting));
-            given(userRepository.findById(1L)).willReturn(Optional.empty());
+            User user = createUser(1L);
+            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
+            Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(3));
+            NotificationHistory pending = NotificationHistory.pending(1L, 10L, NotificationType.DEADLINE);
+            ReflectionTestUtils.setField(pending, "id", 999L);
+
+            given(notificationSettingRepository.findAllByEmailEnabled(true)).willReturn(List.of(setting));
+            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
+            given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
+            given(dispatchService.reservePending(1L, 10L, NotificationType.DEADLINE)).willReturn(pending);
+            willThrow(new EmailSendException("SES 발송 실패: test@example.com", new RuntimeException()))
+                    .given(emailSender).sendDeadlineNotification(any(), any());
 
             // when
             notificationScheduleService.sendDeadlineNotifications();
 
             // then
+            then(dispatchService).should().markFailed(eq(999L), any());
+            then(dispatchService).should(never()).markSent(any());
+        }
+
+        @Test
+        @DisplayName("사용자 없음 → 건너뛰기")
+        void userNotFound_skips() {
+            given(notificationSettingRepository.findAllByEmailEnabled(true))
+                    .willReturn(List.of(new NotificationSetting(1L)));
+            given(userRepository.findById(1L)).willReturn(Optional.empty());
+
+            notificationScheduleService.sendDeadlineNotifications();
+
             then(subscriptionRepository).should(never()).findAllByUserId(any());
             then(emailSender).should(never()).sendDeadlineNotification(any(), any());
         }
 
         @Test
-        @DisplayName("정책을 찾을 수 없으면 건너뛴다")
+        @DisplayName("정책 없음 → 건너뛰기")
         void policyNotFound_skips() {
-            // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
-
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of(setting));
+            given(notificationSettingRepository.findAllByEmailEnabled(true)).willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
+            given(subscriptionRepository.findAllByUserId(1L))
+                    .willReturn(List.of(new PolicyNotificationSubscription(1L, 10L)));
             given(policyRepository.findById(10L)).willReturn(Optional.empty());
 
-            // when
             notificationScheduleService.sendDeadlineNotifications();
 
-            // then
             then(emailSender).should(never()).sendDeadlineNotification(any(), any());
         }
 
         @Test
-        @DisplayName("마감일이 먼 정책은 알림 대상에서 제외된다")
+        @DisplayName("마감 먼 정책 → 건너뛰기")
         void farDeadline_skips() {
-            // given
             NotificationSetting setting = new NotificationSetting(1L);
             User user = createUser(1L);
-            PolicyNotificationSubscription subscription = new PolicyNotificationSubscription(1L, 10L);
             Policy policy = createOpenPolicyWithDeadline(10L, LocalDate.now().plusDays(30));
-
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of(setting));
+            given(notificationSettingRepository.findAllByEmailEnabled(true)).willReturn(List.of(setting));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(subscriptionRepository.findAllByUserId(1L)).willReturn(List.of(subscription));
+            given(subscriptionRepository.findAllByUserId(1L))
+                    .willReturn(List.of(new PolicyNotificationSubscription(1L, 10L)));
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
 
-            // when
             notificationScheduleService.sendDeadlineNotifications();
 
-            // then
-            then(emailSender).should(never()).sendDeadlineNotification(any(), any());
-        }
-
-        @Test
-        @DisplayName("활성 설정이 없으면 아무 작업도 하지 않는다")
-        void noActiveSettings_doesNothing() {
-            // given
-            given(notificationSettingRepository.findAllByEmailEnabled(true))
-                    .willReturn(List.of());
-
-            // when
-            notificationScheduleService.sendDeadlineNotifications();
-
-            // then
+            then(dispatchService).should(never()).reservePending(any(), any(), any());
             then(emailSender).should(never()).sendDeadlineNotification(any(), any());
         }
     }
-
-    // ── 헬퍼 메서드 ──
 
     private User createUser(Long id) {
         User user = User.builder()
                 .email("test@example.com")
                 .nickname("테스터")
                 .authProvider(AuthProvider.KAKAO)
-                .providerId("kakao_123")
+                .providerId("kakao_" + id)
                 .build();
         ReflectionTestUtils.setField(user, "id", id);
         return user;
