@@ -4,6 +4,7 @@ import com.youthfit.user.domain.model.NotificationHistory;
 import com.youthfit.user.domain.model.NotificationType;
 import com.youthfit.user.domain.repository.NotificationHistoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationDispatchService {
@@ -34,15 +36,26 @@ public class NotificationDispatchService {
         }
     }
 
+    /**
+     * PENDING 행을 SENT 로 전이한다. 멱등하지 않음 — 이미 SENT/FAILED 인 경우 IllegalStateException 을 던진다.
+     * 호출자(스케줄러/디스패처)는 이를 catch 하지 않고 자연 전파시켜 잘못된 흐름을 노출한다.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markSent(Long historyId) {
         repository.findById(historyId)
-                .ifPresent(h -> h.markSent(LocalDateTime.now()));
+                .ifPresentOrElse(
+                        h -> h.markSent(LocalDateTime.now()),
+                        () -> log.error("NotificationHistory 누락 (state divergence): id={}", historyId));
     }
 
+    /**
+     * PENDING 행을 FAILED 로 전이하고 실패 사유를 저장한다. 멱등하지 않음 — 이미 SENT/FAILED 인 경우 IllegalStateException 을 던진다.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long historyId, String reason) {
         repository.findById(historyId)
-                .ifPresent(h -> h.markFailed(LocalDateTime.now(), reason));
+                .ifPresentOrElse(
+                        h -> h.markFailed(LocalDateTime.now(), reason),
+                        () -> log.error("NotificationHistory 누락 (state divergence): id={}", historyId));
     }
 }

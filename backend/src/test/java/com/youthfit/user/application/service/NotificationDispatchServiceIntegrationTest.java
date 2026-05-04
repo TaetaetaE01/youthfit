@@ -10,12 +10,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("NotificationDispatchService 통합 테스트")
 @SpringBootTest
@@ -91,5 +89,29 @@ class NotificationDispatchServiceIntegrationTest {
         assertThat(found.get().getStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(found.get().getFailedAt()).isNotNull();
         assertThat(found.get().getFailureReason()).isEqualTo("SES 호출 실패");
+    }
+
+    @Test
+    @DisplayName("이미 SENT 인 행에 markSent 재호출 시 IllegalStateException")
+    void markSent_alreadySent_throws() {
+        // given
+        NotificationHistory pending = dispatchService.reservePending(1L, 100L, NotificationType.DEADLINE);
+        dispatchService.markSent(pending.getId());
+
+        // when & then
+        assertThatThrownBy(() -> dispatchService.markSent(pending.getId()))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("이미 FAILED 인 행에 markFailed 재호출 시 IllegalStateException")
+    void markFailed_alreadyFailed_throws() {
+        // given
+        NotificationHistory pending = dispatchService.reservePending(1L, 100L, NotificationType.DEADLINE);
+        dispatchService.markFailed(pending.getId(), "1차 실패");
+
+        // when & then
+        assertThatThrownBy(() -> dispatchService.markFailed(pending.getId(), "2차 실패"))
+                .isInstanceOf(IllegalStateException.class);
     }
 }
