@@ -7,7 +7,7 @@ public enum SpecializationField {
     SINGLE_PARENT("한부모가정"),
     DISABLED("장애인"),
     FARMER("농업인"),
-    MILITARY("군 복무"),
+    MILITARY("군인"),
     LOCAL_TALENT("지역인재"),
     OTHER("기타");
 

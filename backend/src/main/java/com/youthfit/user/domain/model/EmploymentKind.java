@@ -1,14 +1,14 @@
 package com.youthfit.user.domain.model;
 
 public enum EmploymentKind {
-    EMPLOYEE("직장인"),
-    SELF_EMPLOYED("자영업"),
-    UNEMPLOYED("미취업"),
+    EMPLOYEE("재직자"),
+    SELF_EMPLOYED("자영업자"),
+    UNEMPLOYED("미취업자"),
     FREELANCER("프리랜서"),
-    DAILY_WORKER("일용직"),
-    ENTREPRENEUR("창업가"),
-    PART_TIME("아르바이트"),
-    FARMER("농업인"),
+    DAILY_WORKER("일용근로자"),
+    ENTREPRENEUR("(예비)창업자"),
+    PART_TIME("단기근로자"),
+    FARMER("영농종사자"),
     OTHER("기타");
 
     private final String displayName;
