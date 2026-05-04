@@ -13,13 +13,15 @@ public record CriterionResult(
 ) {
 
     public static CriterionResult from(CriterionEvaluation evaluation) {
+        // TODO Task 8: rebuild this with RequirementFormatter/UserValueFormatter/VerdictTextGenerator.
+        // Temporary stub to keep the build green between Task 6 and Task 8.
         return new CriterionResult(
                 evaluation.field(),
                 evaluation.label(),
                 evaluation.result(),
-                evaluation.reason(),
-                evaluation.sourceReference(),
-                evaluation.confidenceNote()
+                "",
+                evaluation.rule().getSourceReference(),
+                null
         );
     }
 }

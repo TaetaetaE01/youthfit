@@ -4,6 +4,7 @@ import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
 import com.youthfit.eligibility.domain.model.RuleConfidence;
 import com.youthfit.eligibility.domain.model.RuleOperator;
+import com.youthfit.eligibility.domain.model.UncertainReason;
 import com.youthfit.user.domain.model.EligibilityProfile;
 import com.youthfit.user.domain.model.EmploymentKind;
 import org.junit.jupiter.api.DisplayName;
@@ -178,7 +179,7 @@ class EligibilityEvaluatorTest {
 
             assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
             assertThat(result.field()).isEqualTo("age");
-            assertThat(result.reason()).contains("정보 미입력");
+            assertThat(result.uncertainReason()).isEqualTo(UncertainReason.MISSING_FIELD);
         }
 
         @Test
@@ -198,7 +199,7 @@ class EligibilityEvaluatorTest {
     class Confidence {
 
         @Test
-        @DisplayName("HIGH 신뢰도 + 매칭이면 LIKELY_ELIGIBLE 을 반환하고 confidenceNote 는 null 이다")
+        @DisplayName("HIGH 신뢰도 + 매칭이면 LIKELY_ELIGIBLE 을 반환하고 uncertainReason 은 null 이다")
         void highConfidence_matching_returnsLikelyEligible() {
             EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.HIGH);
             EligibilityProfile profile = profileWithAge(29);
@@ -206,7 +207,7 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
-            assertThat(result.confidenceNote()).isNull();
+            assertThat(result.uncertainReason()).isNull();
         }
 
         @Test
@@ -218,11 +219,11 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
-            assertThat(result.confidenceNote()).isNull();
+            assertThat(result.uncertainReason()).isNull();
         }
 
         @Test
-        @DisplayName("LOW 신뢰도 + 매칭이면 UNCERTAIN 으로 다운그레이드되고 confidenceNote 가 채워진다")
+        @DisplayName("LOW 신뢰도 + 매칭이면 UNCERTAIN 으로 다운그레이드되고 uncertainReason 이 AMBIGUOUS_SOURCE 이다")
         void lowConfidence_matching_isDowngradedToUncertain() {
             EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.LOW);
             EligibilityProfile profile = profileWithAge(29);
@@ -230,11 +231,11 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
-            assertThat(result.confidenceNote()).isEqualTo("근거가 모호함");
+            assertThat(result.uncertainReason()).isEqualTo(UncertainReason.AMBIGUOUS_SOURCE);
         }
 
         @Test
-        @DisplayName("LOW 신뢰도 + 미매칭이면 UNCERTAIN 으로 다운그레이드되고 confidenceNote 가 채워진다")
+        @DisplayName("LOW 신뢰도 + 미매칭이면 UNCERTAIN 으로 다운그레이드되고 uncertainReason 이 AMBIGUOUS_SOURCE 이다")
         void lowConfidence_notMatching_isDowngradedToUncertain() {
             EligibilityRule rule = ageRuleWithConfidence(RuleConfidence.LOW);
             EligibilityProfile profile = profileWithAge(40);
@@ -242,7 +243,7 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
-            assertThat(result.confidenceNote()).isEqualTo("근거가 모호함");
+            assertThat(result.uncertainReason()).isEqualTo(UncertainReason.AMBIGUOUS_SOURCE);
         }
 
         @Test
@@ -254,7 +255,7 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
-            assertThat(result.confidenceNote()).isNull();
+            assertThat(result.uncertainReason()).isNull();
         }
 
         @Test
@@ -266,7 +267,7 @@ class EligibilityEvaluatorTest {
             CriterionEvaluation result = evaluator.evaluateRule(rule, profile);
 
             assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
-            assertThat(result.confidenceNote()).isNull();
+            assertThat(result.uncertainReason()).isEqualTo(UncertainReason.MISSING_FIELD);
         }
 
         private EligibilityRule ageRuleWithConfidence(RuleConfidence confidence) {

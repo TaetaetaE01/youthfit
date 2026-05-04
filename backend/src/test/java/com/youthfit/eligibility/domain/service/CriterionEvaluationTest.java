@@ -2,7 +2,9 @@ package com.youthfit.eligibility.domain.service;
 
 import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
+import com.youthfit.eligibility.domain.model.RuleConfidence;
 import com.youthfit.eligibility.domain.model.RuleOperator;
+import com.youthfit.eligibility.domain.model.UncertainReason;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,72 +13,49 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CriterionEvaluation")
 class CriterionEvaluationTest {
 
+    private final EligibilityRule rule = EligibilityRule.builder()
+            .policyId(1L).field("age").operator(RuleOperator.BETWEEN)
+            .value("19~34").label("연령").sourceReference("자격 요건 > 연령 항목")
+            .confidence(RuleConfidence.HIGH).build();
+
     @Test
-    @DisplayName("eligible 팩토리 - LIKELY_ELIGIBLE 결과와 충족 사유를 생성한다")
-    void eligible_createsEligibleResult() {
-        // given
-        EligibilityRule rule = createRule("age", RuleOperator.BETWEEN, "19~34", "연령");
+    @DisplayName("eligible 헬퍼는 LIKELY_ELIGIBLE에 userValue를 보존한다")
+    void eligibleHelper() {
+        CriterionEvaluation eval = CriterionEvaluation.eligible(rule, 29);
 
-        // when
-        CriterionEvaluation result = CriterionEvaluation.eligible(rule, 25);
-
-        // then
-        assertThat(result.field()).isEqualTo("age");
-        assertThat(result.label()).isEqualTo("연령");
-        assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
-        assertThat(result.reason()).contains("25").contains("충족");
-        assertThat(result.sourceReference()).isEqualTo("자격 요건 > 연령 항목");
+        assertThat(eval.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
+        assertThat(eval.userValue()).isEqualTo(29);
+        assertThat(eval.uncertainReason()).isNull();
+        assertThat(eval.field()).isEqualTo("age");
+        assertThat(eval.label()).isEqualTo("연령");
     }
 
     @Test
-    @DisplayName("ineligible 팩토리 - LIKELY_INELIGIBLE 결과와 미충족 사유를 생성한다")
-    void ineligible_createsIneligibleResult() {
-        // given
-        EligibilityRule rule = createRule("age", RuleOperator.BETWEEN, "19~34", "연령");
+    @DisplayName("ineligible 헬퍼는 LIKELY_INELIGIBLE에 userValue를 보존한다")
+    void ineligibleHelper() {
+        CriterionEvaluation eval = CriterionEvaluation.ineligible(rule, 35);
 
-        // when
-        CriterionEvaluation result = CriterionEvaluation.ineligible(rule, 40);
-
-        // then
-        assertThat(result.result()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
-        assertThat(result.reason()).contains("40").contains("미충족");
+        assertThat(eval.result()).isEqualTo(EligibilityResult.LIKELY_INELIGIBLE);
+        assertThat(eval.userValue()).isEqualTo(35);
+        assertThat(eval.uncertainReason()).isNull();
     }
 
     @Test
-    @DisplayName("uncertain 팩토리 - UNCERTAIN 결과와 정보 미입력 사유를 생성한다")
-    void uncertain_createsUncertainResult() {
-        // given
-        EligibilityRule rule = createRule("age", RuleOperator.BETWEEN, "19~34", "연령");
+    @DisplayName("uncertain 헬퍼는 MISSING_FIELD 사유를 갖는다")
+    void uncertainHelper() {
+        CriterionEvaluation eval = CriterionEvaluation.uncertain(rule);
 
-        // when
-        CriterionEvaluation result = CriterionEvaluation.uncertain(rule);
-
-        // then
-        assertThat(result.result()).isEqualTo(EligibilityResult.UNCERTAIN);
-        assertThat(result.reason()).contains("정보 미입력");
+        assertThat(eval.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+        assertThat(eval.userValue()).isNull();
+        assertThat(eval.uncertainReason()).isEqualTo(UncertainReason.MISSING_FIELD);
     }
 
     @Test
-    @DisplayName("eligible 팩토리 - 문자열 값도 포맷팅된다")
-    void eligible_formatsStringValue() {
-        // given
-        EligibilityRule rule = createRule("region", RuleOperator.EQ, "11", "거주지");
+    @DisplayName("lowConfidenceUncertain 헬퍼는 AMBIGUOUS_SOURCE 사유를 갖는다")
+    void lowConfidenceUncertainHelper() {
+        CriterionEvaluation eval = CriterionEvaluation.lowConfidenceUncertain(rule);
 
-        // when
-        CriterionEvaluation result = CriterionEvaluation.eligible(rule, "서울");
-
-        // then
-        assertThat(result.reason()).contains("서울");
-    }
-
-    private EligibilityRule createRule(String field, RuleOperator operator, String value, String label) {
-        return EligibilityRule.builder()
-                .policyId(1L)
-                .field(field)
-                .operator(operator)
-                .value(value)
-                .label(label)
-                .sourceReference("자격 요건 > " + label + " 항목")
-                .build();
+        assertThat(eval.result()).isEqualTo(EligibilityResult.UNCERTAIN);
+        assertThat(eval.uncertainReason()).isEqualTo(UncertainReason.AMBIGUOUS_SOURCE);
     }
 }
