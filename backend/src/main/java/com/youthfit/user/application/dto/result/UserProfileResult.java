@@ -1,5 +1,6 @@
 package com.youthfit.user.application.dto.result;
 
+import com.youthfit.user.domain.model.Role;
 import com.youthfit.user.domain.model.User;
 
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ public record UserProfileResult(
         String email,
         String nickname,
         String profileImageUrl,
+        Role role,
         LocalDateTime createdAt
 ) {
     public static UserProfileResult from(User user) {
@@ -17,6 +19,7 @@ public record UserProfileResult(
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
+                user.getRole(),
                 user.getCreatedAt()
         );
     }
