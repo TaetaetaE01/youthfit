@@ -1,11 +1,14 @@
 package com.youthfit.user.application.dto.result;
 
 import com.youthfit.user.domain.model.AuthProvider;
+import com.youthfit.user.domain.model.Role;
 import com.youthfit.user.domain.model.User;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("UserProfileResult DTO 변환")
 class UserProfileResultTest {
@@ -33,5 +36,20 @@ class UserProfileResultTest {
             softly.assertThat(result.nickname()).isEqualTo("테스트유저");
             softly.assertThat(result.profileImageUrl()).isEqualTo("https://img.example.com/profile.jpg");
         });
+    }
+
+    @Test
+    @DisplayName("from(User)는 User의 role을 그대로 매핑한다")
+    void from_mapsRole() {
+        User user = User.builder()
+                .email("a@x.com")
+                .nickname("nick")
+                .authProvider(AuthProvider.KAKAO)
+                .providerId("p1")
+                .build();
+
+        UserProfileResult result = UserProfileResult.from(user);
+
+        assertThat(result.role()).isEqualTo(Role.USER);
     }
 }
