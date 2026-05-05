@@ -93,6 +93,8 @@ youthfit:
       address: ${MAIL_FROM_ADDRESS:}
       name:    ${MAIL_FROM_NAME:YouthFit}
     base-url: ${MAIL_BASE_URL:http://localhost:5173}
+    attempt:
+      retention-days: ${YOUTHFIT_EMAIL_ATTEMPT_RETENTION_DAYS:90}
     ses:
       region:            ${AWS_SES_REGION:ap-northeast-2}
       access-key-id:     ${AWS_SES_ACCESS_KEY_ID:}

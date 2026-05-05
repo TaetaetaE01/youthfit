@@ -44,6 +44,11 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     }
 
     @Override
+    public List<Policy> findAllById(Iterable<Long> ids) {
+        return jpaRepository.findAllById(ids);
+    }
+
+    @Override
     public Policy save(Policy policy) {
         return jpaRepository.save(policy);
     }

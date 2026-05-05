@@ -51,7 +51,7 @@ const GROUPS: MenuGroup[] = [
   {
     title: '추적',
     items: [
-      { to: '/admin/email', label: '이메일 발송', icon: Mail, soon: true },
+      { to: '/admin/email', label: '이메일 발송', icon: Mail },
       { to: '/admin/qna-cache', label: 'Q&A 캐시 로그', icon: MessageSquareText, soon: true },
       { to: '/admin/llm-cost', label: 'LLM 비용', icon: Zap, soon: true },
       { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download, soon: true },

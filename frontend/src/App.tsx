@@ -10,6 +10,8 @@ import LoginPage from '@/pages/LoginPage';
 import KakaoCallbackPage from '@/pages/KakaoCallbackPage';
 import MyPage from '@/pages/MyPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import AdminEmailLogPage from '@/pages/admin/AdminEmailLogPage';
+import AdminEmailDetailPage from '@/pages/admin/AdminEmailDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +41,8 @@ export default function App() {
           <Route element={<RequireAdmin />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
-              {/* 후속 spec에서 자식 라우트 추가 */}
+              <Route path="email" element={<AdminEmailLogPage />} />
+              <Route path="email/:attemptId" element={<AdminEmailDetailPage />} />
             </Route>
           </Route>
         </Routes>

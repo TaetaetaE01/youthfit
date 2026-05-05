@@ -2,7 +2,7 @@ package com.youthfit.user.application.service;
 
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.application.port.EmailSender;
+import com.youthfit.user.application.email.EmailDispatcher;
 import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.NotificationHistory;
 import com.youthfit.user.domain.model.NotificationSetting;
@@ -30,7 +30,7 @@ public class NotificationScheduleService {
     private final PolicyRepository policyRepository;
     private final UserRepository userRepository;
     private final NotificationDispatchService dispatchService;
-    private final EmailSender emailSender;
+    private final EmailDispatcher emailDispatcher;
 
     /**
      * 메서드 레벨 @Transactional 제거 — SES 외부 IO 동안 DB 커넥션 점유 방지.
@@ -75,12 +75,11 @@ public class NotificationScheduleService {
         }
 
         try {
-            emailSender.sendDeadlineNotification(user.getEmail(), policy);
-            dispatchService.markSent(history.getId());
+            emailDispatcher.dispatchDeadline(history, user, policy);
             log.info("마감일 알림 발송 완료 userId={} policyId={} historyId={}",
                     userId, policyId, history.getId());
         } catch (EmailSendException e) {
-            dispatchService.markFailed(history.getId(), e.getMessage());
+            // dispatcher 가 attempt + markFailed 처리 후 rethrow — 스케줄러는 swallow 하고 다음 항목 진행
             log.error("마감일 알림 발송 실패 userId={} policyId={} historyId={}",
                     userId, policyId, history.getId(), e);
         } catch (Exception e) {

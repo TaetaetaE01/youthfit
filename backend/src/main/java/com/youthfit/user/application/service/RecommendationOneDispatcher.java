@@ -7,7 +7,7 @@ import com.youthfit.eligibility.domain.model.EligibilityResult;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.application.port.EmailSender;
+import com.youthfit.user.application.email.EmailDispatcher;
 import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.EligibilityProfile;
 import com.youthfit.user.domain.model.NotificationHistory;
@@ -38,7 +38,7 @@ public class RecommendationOneDispatcher {
     private final NotificationHistoryRepository historyRepository;
     private final EligibilityService eligibilityService;
     private final NotificationDispatchService dispatchService;
-    private final EmailSender emailSender;
+    private final EmailDispatcher emailDispatcher;
     private final PolicyRecommender recommender;
 
     /**
@@ -91,14 +91,18 @@ public class RecommendationOneDispatcher {
         }
         if (toSend.isEmpty()) return;   // 모두 이미 처리됨
 
+        // 첫 번째 history 를 대표로 EmailDispatcher 에 위임 (send + 적재 + 첫 history 상태 전이)
+        NotificationHistory representative = reserved.get(0);
+        List<NotificationHistory> remaining = reserved.subList(1, reserved.size());
         try {
-            emailSender.sendRecommendationNotification(user.getEmail(), toSend);
-            for (NotificationHistory h : reserved) {
+            emailDispatcher.dispatchRecommendation(representative, user, toSend);
+            for (NotificationHistory h : remaining) {
                 dispatchService.markSent(h.getId());
             }
             log.info("추천 알림 발송 완료 userId={} count={}", userId, toSend.size());
         } catch (EmailSendException e) {
-            for (NotificationHistory h : reserved) {
+            // dispatcher 가 representative history markFailed + attempt 적재 후 rethrow
+            for (NotificationHistory h : remaining) {
                 dispatchService.markFailed(h.getId(), e.getMessage());
             }
             log.error("추천 알림 발송 실패 userId={} count={}", userId, toSend.size(), e);

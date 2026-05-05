@@ -96,3 +96,49 @@ SES 신규 계정은 기본 sandbox: 수신자 모두 검증 필수 + 일일 200
   ```sql
   DELETE FROM notification_history WHERE status = 'PENDING' AND created_at < NOW() - INTERVAL '24 hours';
   ```
+
+## 어드민 이메일 발송 추적 (Spec 2, 2026-05-05)
+
+### 환경변수 슬롯 (`.env`)
+
+```bash
+YOUTHFIT_EMAIL_ATTEMPT_RETENTION_DAYS=90  # EmailSendAttempt 보관 기간 (기본 90일)
+```
+
+### DB 마이그레이션
+
+운영 PG 에 `email_send_attempt` 테이블 수동 적용 (Flyway 미사용):
+
+```bash
+psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-05-email-send-attempt.sql
+```
+
+`ddl-auto: validate` 라 미적용 상태로 배포 시 부팅 실패.
+
+### AWS SES + SNS 운영 작업 (1회)
+
+DELIVERED/BOUNCED/COMPLAINED 추적은 SES Configuration Set + SNS Topic + 백엔드 webhook 으로 동작한다.
+
+1. SES → Configuration Sets → 신규 생성 (예: `youthfit-tracking`)
+2. Event destinations 추가 → Destination type **Amazon SNS** → 새 SNS Topic 생성 (예: `youthfit-ses-events`)
+3. 발행 이벤트 종류 체크: **Delivery, Bounce, Complaint** (Send/Open/Click 은 비용 절약 위해 OFF)
+4. SNS Topic → Subscriptions → Create subscription
+   - Protocol: **HTTPS**
+   - Endpoint: `https://<백엔드 호스트>/api/internal/notifications/ses-event`
+5. 첫 호출 시 SubscribeURL 자동 처리 확인 — 백엔드 로그 `SNS subscription 확인 호출` 1회 출력 + AWS 콘솔에서 subscription 상태가 *Confirmed* 로 전환
+6. SES 발송 시 Configuration Set 적용 (`SesEmailSender` 가 명시 호출하도록 옵션화는 후속 작업 — 현재는 SES default 또는 sender 헤더 통해 적용)
+
+### 보안
+
+- `/api/internal/notifications/ses-event` 는 `permitAll()` (인증은 SNS 메시지 서명 검증으로 처리)
+- 표면 검증 (cert URL 도메인 + signatureVersion=1) 만 현재 코드 — 본격 X.509 서명 검증은 후속 강화 항목
+
+### 보관 정리
+
+매일 03:30 (UTC) `EmailSendAttemptCleanupScheduler` 가 90일 경과 row 삭제. 보관 기간 변경은 위 환경변수.
+
+### 어드민 화면
+
+- `/admin/email` — 일자별 차트 + KPI + 건별 테이블 + 필터 (기간/상태/타입/수신자)
+- `/admin/email/:attemptId` — 메타 + 입력 데이터 + 본문 미리보기 (lazy) + 재발송 (FAILED 만)
+- 어드민 권한 (`ROLE_ADMIN`) 필요 — Spec 1 의 `RequireAdmin` 가드 + `hasRole("ADMIN")` 적용
