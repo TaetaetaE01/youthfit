@@ -11,9 +11,13 @@ import com.youthfit.qna.application.dto.command.AskQuestionCommand;
 import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
+import com.youthfit.qna.application.event.QnaCacheLookupEvent;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import com.youthfit.qna.application.port.SemanticQnaCache;
+import com.youthfit.qna.application.port.dto.SemanticLookupMatch;
+import com.youthfit.qna.application.port.dto.SemanticLookupResult;
+import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.domain.model.QnaFailedReason;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
@@ -25,13 +29,17 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -64,6 +72,9 @@ public class QnaService {
     private final QnaHistoryWriter historyWriter;
     private final QnaProperties qnaProperties;
     private final ObjectMapper objectMapper;
+    private final QnaCacheLookupClassifier lookupClassifier;
+    private final QuestionNormalizer questionNormalizer;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final ExecutorService executor = new DelegatingSecurityContextExecutorService(
             Executors.newVirtualThreadPerTaskExecutor());
@@ -124,17 +135,38 @@ public class QnaService {
             return;
         }
 
-        // ③ 의미 캐시 (minimal adapter — Task B3에서 full classification 로직으로 교체 예정)
-        Optional<CachedAnswer> semantic;
+        // ③ 의미 캐시 — 분류 + 이벤트 발행
+        LocalDateTime lookedUpAt = LocalDateTime.now();
+        String normalized = questionNormalizer.normalize(command.question());
+
+        SemanticLookupResult lookupResult;
         try {
-            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding)
-                    .cachedAnswer();
+            lookupResult = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding);
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 findSimilar 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
-            semantic = Optional.empty();
+            lookupResult = SemanticLookupResult.miss();
         }
-        if (semantic.isPresent()) {
-            sendCachedAnswer(emitter, semantic.get(), historyId);
+
+        LookupResultType resultType = lookupClassifier.classify(lookupResult);
+        SemanticLookupMatch closest = lookupResult.closest().orElse(null);
+        BigDecimal semanticThreshold = BigDecimal.valueOf(qnaProperties.semanticDistanceThreshold())
+                .setScale(5, RoundingMode.HALF_UP);
+        boolean willCallLlm = (resultType != LookupResultType.HIT);
+
+        eventPublisher.publishEvent(new QnaCacheLookupEvent(
+                command.policyId(),
+                command.question(),
+                normalized,
+                resultType,
+                closest != null ? closest.cachedId() : null,
+                closest != null ? closest.similarity() : null,
+                semanticThreshold,
+                willCallLlm,
+                lookedUpAt
+        ));
+
+        if (resultType == LookupResultType.HIT) {
+            sendCachedAnswer(emitter, lookupResult.cachedAnswer().get(), historyId);
             return;
         }
 
