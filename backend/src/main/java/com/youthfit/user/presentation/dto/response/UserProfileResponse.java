@@ -9,6 +9,7 @@ public record UserProfileResponse(
         String email,
         String nickname,
         String profileImageUrl,
+        String role,
         LocalDateTime createdAt
 ) {
     public static UserProfileResponse from(UserProfileResult result) {
@@ -17,6 +18,7 @@ public record UserProfileResponse(
                 result.email(),
                 result.nickname(),
                 result.profileImageUrl(),
+                result.role().name(),
                 result.createdAt()
         );
     }
