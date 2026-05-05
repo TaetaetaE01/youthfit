@@ -9,6 +9,7 @@ import com.youthfit.qna.application.dto.command.AskQuestionCommand;
 import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
+import com.youthfit.qna.application.event.QnaCacheLookupEvent;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import com.youthfit.qna.application.port.SemanticQnaCache;
@@ -349,6 +350,7 @@ class QnaServiceTest {
             verify(qnaAnswerCache, never()).put(anyLong(), anyString(), any());
             verify(semanticQnaCache, never()).put(anyLong(), anyString(), anyString(), any(), any());
             verify(historyWriter).markCompleted(eq(99L), eq("이전 답변(의미 일치)"), anyString());
+            verify(eventPublisher).publishEvent(any(QnaCacheLookupEvent.class));
         }
 
         @Test
@@ -378,6 +380,7 @@ class QnaServiceTest {
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), eq(embedding), any(CachedAnswer.class));
+            verify(eventPublisher).publishEvent(any(QnaCacheLookupEvent.class));
         }
 
         @Test
@@ -405,6 +408,7 @@ class QnaServiceTest {
             Thread.sleep(200);
 
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
+            verify(eventPublisher).publishEvent(any(QnaCacheLookupEvent.class));
         }
     }
 
