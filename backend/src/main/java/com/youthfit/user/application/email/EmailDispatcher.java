@@ -8,7 +8,6 @@ import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.EmailSendAttempt;
 import com.youthfit.user.domain.model.EmailSendStatus;
 import com.youthfit.user.domain.model.NotificationHistory;
-import com.youthfit.user.domain.model.NotificationStatus;
 import com.youthfit.user.domain.model.NotificationType;
 import com.youthfit.user.domain.model.User;
 import com.youthfit.user.domain.repository.EmailSendAttemptRepository;
