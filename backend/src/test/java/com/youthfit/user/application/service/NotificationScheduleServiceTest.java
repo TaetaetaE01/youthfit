@@ -3,7 +3,7 @@ package com.youthfit.user.application.service;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.application.port.EmailSender;
+import com.youthfit.user.application.email.EmailDispatcher;
 import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.AuthProvider;
 import com.youthfit.user.domain.model.NotificationHistory;
@@ -46,7 +46,7 @@ class NotificationScheduleServiceTest {
     @Mock private PolicyRepository policyRepository;
     @Mock private UserRepository userRepository;
     @Mock private NotificationDispatchService dispatchService;
-    @Mock private EmailSender emailSender;
+    @Mock private EmailDispatcher emailDispatcher;
 
     @Nested
     @DisplayName("sendDeadlineNotifications")
@@ -73,8 +73,7 @@ class NotificationScheduleServiceTest {
             notificationScheduleService.sendDeadlineNotifications();
 
             // then
-            then(emailSender).should().sendDeadlineNotification(eq("test@example.com"), eq(policy));
-            then(dispatchService).should().markSent(999L);
+            then(emailDispatcher).should().dispatchDeadline(eq(pending), eq(user), eq(policy));
         }
 
         @Test
@@ -96,7 +95,7 @@ class NotificationScheduleServiceTest {
             notificationScheduleService.sendDeadlineNotifications();
 
             // then
-            then(emailSender).should(never()).sendDeadlineNotification(any(), any());
+            then(emailDispatcher).should(never()).dispatchDeadline(any(), any(), any());
         }
 
         @Test
@@ -116,14 +115,13 @@ class NotificationScheduleServiceTest {
             given(policyRepository.findById(10L)).willReturn(Optional.of(policy));
             given(dispatchService.reservePending(1L, 10L, NotificationType.DEADLINE)).willReturn(pending);
             willThrow(new EmailSendException("SES 발송 실패: test@example.com", new RuntimeException()))
-                    .given(emailSender).sendDeadlineNotification(any(), any());
+                    .given(emailDispatcher).dispatchDeadline(any(), any(), any());
 
             // when
             notificationScheduleService.sendDeadlineNotifications();
 
-            // then
-            then(dispatchService).should().markFailed(eq(999L), any());
-            then(dispatchService).should(never()).markSent(any());
+            // then — dispatcher 내부에서 markFailed 처리, 스케줄러는 예외를 swallow
+            then(emailDispatcher).should().dispatchDeadline(any(), any(), any());
         }
 
         @Test
@@ -136,7 +134,7 @@ class NotificationScheduleServiceTest {
             notificationScheduleService.sendDeadlineNotifications();
 
             then(subscriptionRepository).should(never()).findAllByUserId(any());
-            then(emailSender).should(never()).sendDeadlineNotification(any(), any());
+            then(emailDispatcher).should(never()).dispatchDeadline(any(), any(), any());
         }
 
         @Test
@@ -152,7 +150,7 @@ class NotificationScheduleServiceTest {
 
             notificationScheduleService.sendDeadlineNotifications();
 
-            then(emailSender).should(never()).sendDeadlineNotification(any(), any());
+            then(emailDispatcher).should(never()).dispatchDeadline(any(), any(), any());
         }
 
         @Test
@@ -170,7 +168,7 @@ class NotificationScheduleServiceTest {
             notificationScheduleService.sendDeadlineNotifications();
 
             then(dispatchService).should(never()).reservePending(any(), any(), any());
-            then(emailSender).should(never()).sendDeadlineNotification(any(), any());
+            then(emailDispatcher).should(never()).dispatchDeadline(any(), any(), any());
         }
     }
 

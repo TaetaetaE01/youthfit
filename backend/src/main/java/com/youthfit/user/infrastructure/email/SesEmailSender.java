@@ -2,6 +2,7 @@ package com.youthfit.user.infrastructure.email;
 
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.user.application.dto.result.EmailContent;
+import com.youthfit.user.application.email.EmailSendResult;
 import com.youthfit.user.application.port.EmailSender;
 import com.youthfit.user.application.service.NotificationEmailRenderer;
 import com.youthfit.user.domain.exception.EmailSendException;
@@ -16,6 +17,7 @@ import software.amazon.awssdk.services.sesv2.model.Content;
 import software.amazon.awssdk.services.sesv2.model.Destination;
 import software.amazon.awssdk.services.sesv2.model.Message;
 import software.amazon.awssdk.services.sesv2.model.SendEmailRequest;
+import software.amazon.awssdk.services.sesv2.model.SendEmailResponse;
 
 import java.util.List;
 
@@ -42,20 +44,22 @@ public class SesEmailSender implements EmailSender {
     }
 
     @Override
-    public void sendDeadlineNotification(String recipientEmail, Policy policy) {
+    public EmailSendResult sendDeadlineNotification(String recipientEmail, Policy policy) {
         EmailContent content = renderer.renderDeadline(policy);
-        sendInternal(recipientEmail, content, "DEADLINE");
+        String messageId = sendInternal(recipientEmail, content, "DEADLINE");
+        return new EmailSendResult(messageId, content.subject());
     }
 
     @Override
-    public void sendRecommendationNotification(String recipientEmail, List<Policy> policies) {
+    public EmailSendResult sendRecommendationNotification(String recipientEmail, List<Policy> policies) {
         EmailContent content = renderer.renderRecommendation(policies);
-        sendInternal(recipientEmail, content, "RECOMMENDATION");
+        String messageId = sendInternal(recipientEmail, content, "RECOMMENDATION");
+        return new EmailSendResult(messageId, content.subject());
     }
 
-    private void sendInternal(String recipientEmail, EmailContent content, String type) {
+    private String sendInternal(String recipientEmail, EmailContent content, String type) {
         try {
-            sesClient.sendEmail(SendEmailRequest.builder()
+            SendEmailResponse response = sesClient.sendEmail(SendEmailRequest.builder()
                     .fromEmailAddress(formatFrom(fromAddress, fromName))
                     .destination(Destination.builder().toAddresses(recipientEmail).build())
                     .content(software.amazon.awssdk.services.sesv2.model.EmailContent.builder()
@@ -68,7 +72,8 @@ public class SesEmailSender implements EmailSender {
                                     .build())
                             .build())
                     .build());
-            log.info("SES 발송 성공 to={} type={}", recipientEmail, type);
+            log.info("SES 발송 성공 to={} type={} messageId={}", recipientEmail, type, response.messageId());
+            return response.messageId();
         } catch (SdkException e) {
             log.error("SES 발송 실패 to={} type={}", recipientEmail, type, e);
             throw new EmailSendException("SES 발송 실패: " + recipientEmail, e);

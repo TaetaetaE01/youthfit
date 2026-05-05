@@ -12,6 +12,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.youthfit.user.application.email.EmailSendResult;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -35,27 +38,37 @@ class LoggingEmailSenderTest {
     }
 
     @Test
-    @DisplayName("마감일 알림 발송 시 예외 없이 로그를 출력한다")
+    @DisplayName("마감일 알림 발송 시 예외 없이 로그를 출력하고 EmailSendResult 를 반환한다")
     void sendDeadlineNotification_logsWithoutException() {
         // given
         Policy policy = createPolicy(1L, "청년 취업 지원", LocalDate.of(2026, 6, 30));
 
-        // when & then
+        // when
+        EmailSendResult result = loggingEmailSender.sendDeadlineNotification("test@example.com", policy);
+
+        // then
         assertThatCode(() ->
                 loggingEmailSender.sendDeadlineNotification("test@example.com", policy)
         ).doesNotThrowAnyException();
+        assertThat(result.sesMessageId()).startsWith("logging-");
+        assertThat(result.subject()).isEqualTo("[YouthFit] 마감");
     }
 
     @Test
-    @DisplayName("추천 알림 발송 시 예외 없이 로그를 출력한다")
+    @DisplayName("추천 알림 발송 시 예외 없이 로그를 출력하고 EmailSendResult 를 반환한다")
     void sendRecommendationNotification_logsWithoutException() {
         // given
         Policy policy = createPolicy(1L, "정책1", LocalDate.of(2026, 6, 30));
 
-        // when & then
+        // when
+        EmailSendResult result = loggingEmailSender.sendRecommendationNotification("test@example.com", List.of(policy));
+
+        // then
         assertThatCode(() ->
                 loggingEmailSender.sendRecommendationNotification("test@example.com", List.of(policy))
         ).doesNotThrowAnyException();
+        assertThat(result.sesMessageId()).startsWith("logging-");
+        assertThat(result.subject()).isEqualTo("[YouthFit] 추천");
     }
 
     private Policy createPolicy(Long id, String title, LocalDate applyEnd) {

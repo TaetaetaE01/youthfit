@@ -8,7 +8,7 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.user.application.port.EmailSender;
+import com.youthfit.user.application.email.EmailDispatcher;
 import com.youthfit.user.domain.exception.EmailSendException;
 import com.youthfit.user.domain.model.AuthProvider;
 import com.youthfit.user.domain.model.EligibilityProfile;
@@ -63,7 +63,7 @@ class RecommendationOneDispatcherTest {
     @Mock private NotificationHistoryRepository historyRepository;
     @Mock private EligibilityService eligibilityService;
     @Mock private NotificationDispatchService dispatchService;
-    @Mock private EmailSender emailSender;
+    @Mock private EmailDispatcher emailDispatcher;
     @Spy  private PolicyRecommender recommender = new PolicyRecommender();
 
     private NotificationSetting enabledSetting;
@@ -90,7 +90,7 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(emailSender).should(never()).sendRecommendationNotification(any(), any());
+        then(emailDispatcher).should(never()).dispatchRecommendation(any(), any(), any());
     }
 
     @Test
@@ -105,7 +105,7 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(offSetting);
 
-        then(emailSender).should(never()).sendRecommendationNotification(any(), any());
+        then(emailDispatcher).should(never()).dispatchRecommendation(any(), any(), any());
     }
 
     @Test
@@ -117,7 +117,7 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(emailSender).should(never()).sendRecommendationNotification(any(), any());
+        then(emailDispatcher).should(never()).dispatchRecommendation(any(), any(), any());
     }
 
     @Test
@@ -130,7 +130,7 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(emailSender).should(never()).sendRecommendationNotification(any(), any());
+        then(emailDispatcher).should(never()).dispatchRecommendation(any(), any(), any());
     }
 
     @Test
@@ -157,8 +157,9 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(emailSender).should().sendRecommendationNotification(eq("test@example.com"), any());
-        then(dispatchService).should(times(1)).markSent(anyLong());
+        // 1개 eligible 정책 → dispatcher 1번 호출, remaining 없으므로 dispatchService.markSent 미호출
+        then(emailDispatcher).should(times(1)).dispatchRecommendation(any(), eq(user), any());
+        then(dispatchService).should(never()).markSent(anyLong());
     }
 
     @Test
@@ -177,11 +178,13 @@ class RecommendationOneDispatcherTest {
                         10L, "t", EligibilityResult.LIKELY_ELIGIBLE.name(), null, null, ""));
         givenReservePendingReturnsHistory();
         willThrow(new EmailSendException("SES 실패", new RuntimeException()))
-                .given(emailSender).sendRecommendationNotification(any(), any());
+                .given(emailDispatcher).dispatchRecommendation(any(), any(), any());
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(dispatchService).should(times(1)).markFailed(anyLong(), any());
+        // dispatcher 내부에서 representative history markFailed 처리, remaining 없으므로 dispatchService.markFailed 미호출
+        then(emailDispatcher).should(times(1)).dispatchRecommendation(any(), any(), any());
+        then(dispatchService).should(never()).markFailed(anyLong(), any());
         then(dispatchService).should(never()).markSent(any());
     }
 
@@ -209,8 +212,9 @@ class RecommendationOneDispatcherTest {
 
         dispatcher.dispatchOne(enabledSetting);
 
-        then(emailSender).should().sendRecommendationNotification(eq("test@example.com"), any());
-        then(dispatchService).should(times(5)).markSent(anyLong());
+        // 5 picks → dispatcher 1번 (representative), 나머지 4개는 dispatchService.markSent 직접 호출
+        then(emailDispatcher).should(times(1)).dispatchRecommendation(any(), eq(user), any());
+        then(dispatchService).should(times(4)).markSent(anyLong());
     }
 
     // ── 헬퍼 ──
