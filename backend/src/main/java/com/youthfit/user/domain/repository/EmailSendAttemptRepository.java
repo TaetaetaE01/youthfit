@@ -18,6 +18,8 @@ public interface EmailSendAttemptRepository extends JpaRepository<EmailSendAttem
 
     Optional<EmailSendAttempt> findBySesMessageId(String sesMessageId);
 
+    EmailSendAttempt findTopByOrderByIdDesc();
+
     @Query("""
         SELECT a FROM EmailSendAttempt a
         WHERE a.sentAt BETWEEN :from AND :to
