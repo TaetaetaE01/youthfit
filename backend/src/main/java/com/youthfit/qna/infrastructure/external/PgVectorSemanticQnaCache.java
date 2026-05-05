@@ -3,6 +3,8 @@ package com.youthfit.qna.infrastructure.external;
 import com.youthfit.qna.application.dto.result.CachedAnswer;
 import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.SemanticQnaCache;
+import com.youthfit.qna.application.port.dto.SemanticLookupMatch;
+import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.QnaQuestionCache;
 import com.youthfit.qna.domain.model.SimilarCachedAnswer;
 import com.youthfit.qna.domain.repository.QnaQuestionCacheRepository;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Component;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -31,37 +35,44 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
     private final ObjectMapper objectMapper;
 
     @Override
-    public Optional<CachedAnswer> findSimilar(Long policyId, String userQuestion, float[] queryEmbedding) {
+    public SemanticLookupResult findSimilar(Long policyId, String userQuestion, float[] queryEmbedding) {
         Duration ttl = Duration.ofHours(properties.cacheTtlHours());
-        Optional<SimilarCachedAnswer> closest = repository.findClosestByPolicyId(policyId, queryEmbedding, ttl);
+        Optional<SimilarCachedAnswer> closestOpt = repository.findClosestByPolicyId(policyId, queryEmbedding, ttl);
 
-        if (closest.isEmpty()) {
+        if (closestOpt.isEmpty()) {
             log.info("Q&A 의미 캐시 미스: missReason=NO_ROW, policyId={}, userQuestion=\"{}\"",
                     policyId, userQuestion);
-            return Optional.empty();
+            return SemanticLookupResult.miss();
         }
 
-        SimilarCachedAnswer hit = closest.get();
-        double distance = hit.distance();
-        double similarity = 1.0 - distance;
+        SimilarCachedAnswer c = closestOpt.get();
+        BigDecimal distance = BigDecimal.valueOf(c.distance()).setScale(5, RoundingMode.HALF_UP);
+        BigDecimal similarity = BigDecimal.ONE
+                .subtract(distance.divide(BigDecimal.valueOf(2), 5, RoundingMode.HALF_UP))
+                .max(BigDecimal.ZERO);
+        SemanticLookupMatch match = new SemanticLookupMatch(c.id(), similarity, distance);
 
-        if (distance > properties.semanticDistanceThreshold()) {
+        if (c.distance() > properties.semanticDistanceThreshold()) {
             log.info("Q&A 의미 캐시 미스: missReason=DISTANCE_OVER_THRESHOLD, policyId={}, sourceHash={}, " +
                             "distance={}, similarity={}, userQuestion=\"{}\", cachedQuestion=\"{}\"",
-                    policyId, hit.sourceHash(), distance, similarity, userQuestion, hit.questionText());
-            return Optional.empty();
+                    policyId, c.sourceHash(), c.distance(), similarity, userQuestion, c.questionText());
+            return SemanticLookupResult.belowThreshold(match);
         }
 
         log.info("Q&A 의미 캐시 히트: policyId={}, sourceHash={}, distance={}, similarity={}, " +
                         "userQuestion=\"{}\", cachedQuestion=\"{}\"",
-                policyId, hit.sourceHash(), distance, similarity, userQuestion, hit.questionText());
+                policyId, c.sourceHash(), c.distance(), similarity, userQuestion, c.questionText());
 
+        return SemanticLookupResult.hit(match, toCachedAnswer(policyId, c));
+    }
+
+    private CachedAnswer toCachedAnswer(Long policyId, SimilarCachedAnswer c) {
         try {
-            List<QnaSourceResult> sources = objectMapper.readValue(hit.sourcesJson(), SOURCES_TYPE);
-            return Optional.of(new CachedAnswer(hit.answer(), sources, Instant.now()));
+            List<QnaSourceResult> sources = objectMapper.readValue(c.sourcesJson(), SOURCES_TYPE);
+            return new CachedAnswer(c.answer(), sources, Instant.now());
         } catch (RuntimeException e) {
             log.warn("Q&A 의미 캐시 sources 역직렬화 실패: policyId={}, error={}", policyId, e.toString());
-            return Optional.empty();
+            return new CachedAnswer(c.answer(), List.of(), Instant.now());
         }
     }
 
