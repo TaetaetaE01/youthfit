@@ -12,6 +12,8 @@ import MyPage from '@/pages/MyPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminEmailLogPage from '@/pages/admin/AdminEmailLogPage';
 import AdminEmailDetailPage from '@/pages/admin/AdminEmailDetailPage';
+import AdminQnaCachePage from '@/pages/admin/AdminQnaCachePage';
+import AdminQnaCacheDetailPage from '@/pages/admin/AdminQnaCacheDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +45,8 @@ export default function App() {
               <Route index element={<AdminDashboardPage />} />
               <Route path="email" element={<AdminEmailLogPage />} />
               <Route path="email/:attemptId" element={<AdminEmailDetailPage />} />
+              <Route path="qna-cache" element={<AdminQnaCachePage />} />
+              <Route path="qna-cache/:lookupId" element={<AdminQnaCacheDetailPage />} />
             </Route>
           </Route>
         </Routes>
