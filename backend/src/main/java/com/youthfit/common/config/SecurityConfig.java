@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // 내부 API (API 키 필터로 인증)
+                        .requestMatchers("/api/internal/notifications/ses-event").permitAll()
                         .requestMatchers("/api/internal/**").permitAll()
                         // 어드민 API
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
