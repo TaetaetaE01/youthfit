@@ -215,6 +215,7 @@ export interface UserProfile {
   email: string | null;
   nickname: string;
   profileImageUrl: string | null;
+  role: 'USER' | 'ADMIN';
   createdAt: string;
 }
 
