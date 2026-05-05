@@ -8,7 +8,7 @@ export function RequireAdmin() {
 
   if (!isAuthenticated) {
     const target = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?redirect_to=${target}`} replace />;
+    return <Navigate to={`/login?redirect=${target}`} replace />;
   }
   if (role !== 'ADMIN') {
     return <Navigate to="/" replace />;
