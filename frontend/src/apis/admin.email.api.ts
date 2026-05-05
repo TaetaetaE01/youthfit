@@ -25,7 +25,7 @@ export interface EmailAttemptDetail extends EmailAttemptSummary {
   bounceType: string | null;
 }
 
-export interface EmailDailyStat {
+export interface EmailDailyStat extends Record<string, string | number> {
   date: string;
   sent: number;
   delivered: number;
