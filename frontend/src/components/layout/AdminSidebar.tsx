@@ -6,10 +6,12 @@ import {
   Zap,
   Download,
   ChevronRight,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-type MenuItem = {
+type InternalMenuItem = {
   to: string;
   label: string;
   icon: LucideIcon;
@@ -17,10 +19,27 @@ type MenuItem = {
   soon?: boolean;
 };
 
+type ExternalMenuItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  external: true;
+};
+
+type MenuItem = InternalMenuItem | ExternalMenuItem;
+
 type MenuGroup = {
   title: string;
   items: MenuItem[];
 };
+
+const BACKEND_ORIGIN =
+  (import.meta.env.VITE_BACKEND_URL as string | undefined) ??
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:8080`
+    : 'http://localhost:8080');
+
+const SWAGGER_URL = `${BACKEND_ORIGIN}/swagger-ui.html`;
 
 const GROUPS: MenuGroup[] = [
   {
@@ -38,7 +57,17 @@ const GROUPS: MenuGroup[] = [
       { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download, soon: true },
     ],
   },
+  {
+    title: '외부 도구',
+    items: [
+      { href: SWAGGER_URL, label: 'API 문서 (Swagger)', icon: BookOpen, external: true },
+    ],
+  },
 ];
+
+function isExternal(item: MenuItem): item is ExternalMenuItem {
+  return 'external' in item && item.external === true;
+}
 
 export default function AdminSidebar() {
   return (
@@ -61,39 +90,52 @@ export default function AdminSidebar() {
             </div>
             <ul className="space-y-0.5">
               {group.items.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.end}
-                    onClick={(e) => {
-                      if (item.soon) {
-                        e.preventDefault();
-                        alert(`${item.label} — 준비 중입니다`);
+                <li key={isExternal(item) ? item.href : item.to}>
+                  {isExternal(item) ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="flex-1">{item.label}</span>
+                      <ExternalLink className="h-3.5 w-3.5 opacity-60" aria-hidden />
+                    </a>
+                  ) : (
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      onClick={(e) => {
+                        if (item.soon) {
+                          e.preventDefault();
+                          alert(`${item.label} — 준비 중입니다`);
+                        }
+                      }}
+                      className={({ isActive }) =>
+                        [
+                          'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-white/10 font-semibold text-white'
+                            : 'text-slate-300 hover:bg-white/5 hover:text-white',
+                        ].join(' ')
                       }
-                    }}
-                    className={({ isActive }) =>
-                      [
-                        'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                        isActive
-                          ? 'bg-white/10 font-semibold text-white'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white',
-                      ].join(' ')
-                    }
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="flex-1">{item.label}</span>
-                    {item.soon && (
-                      <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-300">
-                        준비중
-                      </span>
-                    )}
-                    {!item.soon && (
-                      <ChevronRight
-                        className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-60"
-                        aria-hidden
-                      />
-                    )}
-                  </NavLink>
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="flex-1">{item.label}</span>
+                      {item.soon && (
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-300">
+                          준비중
+                        </span>
+                      )}
+                      {!item.soon && (
+                        <ChevronRight
+                          className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-60"
+                          aria-hidden
+                        />
+                      )}
+                    </NavLink>
+                  )}
                 </li>
               ))}
             </ul>

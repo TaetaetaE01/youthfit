@@ -1,6 +1,14 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Search } from 'lucide-react';
+import { Bell, BookOpen, LogOut, Search } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+
+const BACKEND_ORIGIN =
+  (import.meta.env.VITE_BACKEND_URL as string | undefined) ??
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:8080`
+    : 'http://localhost:8080');
+
+const SWAGGER_URL = `${BACKEND_ORIGIN}/swagger-ui.html`;
 
 export default function AdminHeader() {
   const navigate = useNavigate();
@@ -29,6 +37,17 @@ export default function AdminHeader() {
             aria-label="검색 (준비 중)"
           />
         </div>
+
+        <a
+          href={SWAGGER_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-brand-700 hover:bg-brand-50 hover:text-brand-700"
+          title="Swagger UI 새 탭으로 열기"
+        >
+          <BookOpen className="h-4 w-4" aria-hidden />
+          API 문서
+        </a>
 
         <button
           type="button"
