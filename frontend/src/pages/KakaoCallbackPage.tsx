@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { loginWithKakao } from '@/apis/auth.api';
+import { fetchProfile } from '@/apis/user.api';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function KakaoCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const setRole = useAuthStore((s) => s.setRole);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -20,8 +22,14 @@ export default function KakaoCallbackPage() {
     }
 
     loginWithKakao(code)
-      .then((tokens) => {
+      .then(async (tokens) => {
         login(tokens.accessToken);
+        try {
+          const me = await fetchProfile();
+          setRole(me.role ?? null);
+        } catch {
+          setRole(null);
+        }
         navigate(redirect, { replace: true });
       })
       .catch(() => {
