@@ -124,10 +124,11 @@ public class QnaService {
             return;
         }
 
-        // ③ 의미 캐시
+        // ③ 의미 캐시 (minimal adapter — Task B3에서 full classification 로직으로 교체 예정)
         Optional<CachedAnswer> semantic;
         try {
-            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding);
+            semantic = semanticQnaCache.findSimilar(command.policyId(), command.question(), queryEmbedding)
+                    .cachedAnswer();
         } catch (Exception e) {
             log.warn("Q&A 의미 캐시 findSimilar 실패 (정상 흐름 진행): policyId={}", command.policyId(), e);
             semantic = Optional.empty();

@@ -12,6 +12,7 @@ import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import com.youthfit.qna.application.port.SemanticQnaCache;
+import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.QnaFailedReason;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
@@ -320,7 +321,13 @@ class QnaServiceTest {
                     List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
                     Instant.now()
             );
-            given(semanticQnaCache.findSimilar(eq(10L), eq("재학생도 가능?"), eq(embedding))).willReturn(Optional.of(cached));
+            given(semanticQnaCache.findSimilar(eq(10L), eq("재학생도 가능?"), eq(embedding)))
+                    .willReturn(SemanticLookupResult.hit(
+                            new com.youthfit.qna.application.port.dto.SemanticLookupMatch(
+                                    1L,
+                                    java.math.BigDecimal.valueOf(0.925),
+                                    java.math.BigDecimal.valueOf(0.075)
+                            ), cached));
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "재학생도 가능?", 1L);
@@ -345,7 +352,7 @@ class QnaServiceTest {
             given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
             float[] embedding = new float[]{0.3f, 0.4f};
             given(embeddingProvider.embed("질문")).willReturn(embedding);
-            given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(Optional.empty());
+            given(semanticQnaCache.findSimilar(eq(10L), eq("질문"), eq(embedding))).willReturn(SemanticLookupResult.miss());
             given(ragSearchService.searchRelevantChunks(any(), eq(embedding))).willReturn(List.of(chunk(0.2)));
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willReturn("LLM 답변");
@@ -394,7 +401,7 @@ class QnaServiceTest {
         given(historyWriter.startInProgress(anyLong(), anyLong(), anyString())).willReturn(99L);
         given(qnaAnswerCache.get(anyLong(), anyString())).willReturn(Optional.empty());
         given(embeddingProvider.embed(anyString())).willReturn(new float[]{0.1f});
-        given(semanticQnaCache.findSimilar(anyLong(), anyString(), any())).willReturn(Optional.empty());
+        given(semanticQnaCache.findSimilar(anyLong(), anyString(), any())).willReturn(SemanticLookupResult.miss());
         given(policyDocumentRepository.findSourceHashByPolicyId(anyLong())).willReturn(Optional.of("hash-abc"));
     }
 
