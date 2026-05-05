@@ -57,13 +57,13 @@ export interface ListFilter {
 }
 
 export async function getQnaCacheKpi(): Promise<QnaCacheKpi> {
-  const res = await api.get('v1/admin/qna-cache/stats/kpi').json<ApiEnvelope<QnaCacheKpi>>();
+  const res = await api.get('v1/admin/qna-cache/kpi').json<ApiEnvelope<QnaCacheKpi>>();
   return res.data;
 }
 
 export async function getQnaCacheDailyStats(days = 14): Promise<QnaCacheDailyStat[]> {
   const res = await api
-    .get(`v1/admin/qna-cache/stats/daily?days=${days}`)
+    .get(`v1/admin/qna-cache/daily-stats?days=${days}`)
     .json<ApiEnvelope<QnaCacheDailyStat[]>>();
   return res.data;
 }

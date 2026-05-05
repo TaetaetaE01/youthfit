@@ -7,8 +7,8 @@ import com.youthfit.admin.presentation.dto.response.QnaCacheLookupKpiResponse;
 import com.youthfit.admin.presentation.dto.response.QnaCacheLookupSummaryResponse;
 import com.youthfit.qna.domain.model.QnaCacheLookupLog;
 import com.youthfit.qna.domain.repository.QnaCacheLookupLogRepository;
+import com.youthfit.qna.domain.repository.QnaQuestionCacheRepository;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
-import com.youthfit.qna.infrastructure.persistence.QnaQuestionCacheJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +29,7 @@ import java.util.List;
 public class AdminQnaCacheService {
 
     private final QnaCacheLookupLogRepository repository;
-    private final QnaQuestionCacheJpaRepository questionCacheRepository;
+    private final QnaQuestionCacheRepository questionCacheRepository;
     private final QnaProperties qnaProperties;
 
     public QnaCacheLookupKpiResponse kpi() {
@@ -45,13 +45,14 @@ public class AdminQnaCacheService {
         long sevenHits     = ((Number) r[4]).longValue();
         double sevenAvgSim = ((Number) r[5]).doubleValue();
 
+        long sevenTotal             = ((Number) r[6]).longValue();
+
         BigDecimal todayHitRate     = ratio(todayHits, todayTotal);
         BigDecimal yesterdayHitRate = ratio(yestHits, yestTotal);
         BigDecimal estSavings       = qnaProperties.cache().estimatedSavingsPerHitUsd()
                 .multiply(BigDecimal.valueOf(sevenHits))
                 .setScale(4, RoundingMode.HALF_UP);
         BigDecimal avgSim           = BigDecimal.valueOf(sevenAvgSim).setScale(4, RoundingMode.HALF_UP);
-        long sevenTotal             = todayTotal + yestTotal;
 
         return new QnaCacheLookupKpiResponse(
                 todayHitRate, yesterdayHitRate, avgSim, estSavings,

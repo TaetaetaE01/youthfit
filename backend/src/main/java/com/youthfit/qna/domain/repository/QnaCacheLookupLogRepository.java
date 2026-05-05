@@ -65,7 +65,8 @@ public interface QnaCacheLookupLogRepository extends JpaRepository<QnaCacheLooku
           COUNT(*) FILTER (WHERE looked_up_at >= :yesterday AND looked_up_at < :today)        AS yest_total,
           COUNT(*) FILTER (WHERE looked_up_at >= :yesterday AND looked_up_at < :today AND result = 'HIT') AS yest_hits,
           COUNT(*) FILTER (WHERE looked_up_at >= :sevenDaysAgo AND result = 'HIT')            AS seven_hits,
-          COALESCE(AVG(similarity_score) FILTER (WHERE looked_up_at >= :sevenDaysAgo AND result = 'HIT'), 0) AS seven_avg_sim
+          COALESCE(AVG(similarity_score) FILTER (WHERE looked_up_at >= :sevenDaysAgo AND result = 'HIT'), 0) AS seven_avg_sim,
+          COUNT(*) FILTER (WHERE looked_up_at >= :sevenDaysAgo)                               AS seven_total
         FROM qna_cache_lookup_log
         """, nativeQuery = true)
     Object[] aggregateKpi(@Param("today") LocalDateTime today,

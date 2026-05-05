@@ -12,6 +12,8 @@ public interface QnaQuestionCacheRepository {
                                                         float[] queryEmbedding,
                                                         Duration ttl);
 
+    Optional<QnaQuestionCache> findById(Long id);
+
     QnaQuestionCache save(QnaQuestionCache entity);
 
     void deleteByPolicyId(Long policyId);

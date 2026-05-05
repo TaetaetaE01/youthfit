@@ -37,6 +37,11 @@ public class QnaQuestionCacheRepositoryImpl implements QnaQuestionCacheRepositor
     }
 
     @Override
+    public Optional<QnaQuestionCache> findById(Long id) {
+        return jpaRepository.findById(id);
+    }
+
+    @Override
     public QnaQuestionCache save(QnaQuestionCache entity) {
         return jpaRepository.save(entity);
     }
