@@ -20,5 +20,7 @@ public interface PolicyRepository {
 
     List<Policy> findAllByStatus(PolicyStatus status);
 
+    List<Policy> findAllById(Iterable<Long> ids);
+
     Policy save(Policy policy);
 }
