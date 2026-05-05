@@ -1,4 +1,4 @@
-import type { LookupResultType } from '../../../apis/admin.qnaCache.api';
+import type { LookupResultType } from '@/apis/admin.qnaCache.api';
 
 const STYLE: Record<LookupResultType, { label: string; cls: string }> = {
   HIT:             { label: 'HIT',   cls: 'bg-emerald-100 text-emerald-800' },
