@@ -38,7 +38,7 @@ class PgVectorSemanticQnaCacheTest {
     @BeforeEach
     void setUp() {
         // cacheTtlHours=24, relevanceDistanceThreshold=0.4, semanticDistanceThreshold=0.20
-        properties = new QnaProperties(24L, 0.4, THRESHOLD);
+        properties = new QnaProperties(24L, 0.4, THRESHOLD, null);
         cache = new PgVectorSemanticQnaCache(repository, properties, new ObjectMapper());
     }
 

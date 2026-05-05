@@ -87,6 +87,9 @@ youthfit:
      # threshold 는 의미 동일 미세 변형(예: 부호/공백 차이)만 잡힐 정도로 보수적으로 운영. 근본 해결은
      # query rewriting(LLM 정규화) 도입 후 재검토.
     semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.20}
+    cache:
+      estimated-savings-per-hit-usd: ${QNA_CACHE_ESTIMATED_SAVINGS_PER_HIT_USD:0.0015}
+      retention-days: ${QNA_CACHE_RETENTION_DAYS:90}
   email:
     transport: ${EMAIL_TRANSPORT:logging}
     from:
