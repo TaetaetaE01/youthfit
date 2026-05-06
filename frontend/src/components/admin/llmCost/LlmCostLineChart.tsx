@@ -50,7 +50,7 @@ export function LlmCostLineChart({ points }: Props) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="at" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v: number) => `$${v.toFixed(3)}`} tick={{ fontSize: 11 }} />
-        <Tooltip formatter={(v: number) => `$${v.toFixed(4)}`} />
+        <Tooltip formatter={(v) => typeof v === 'number' ? `$${v.toFixed(4)}` : String(v)} />
         <Legend />
         {MODULES.map((m) => (
           <Line
