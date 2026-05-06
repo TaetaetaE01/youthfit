@@ -2,6 +2,8 @@ package com.youthfit.qna.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.metrics.application.event.LlmCallRecorded;
+import com.youthfit.metrics.domain.model.LlmModule;
 import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import tools.jackson.databind.JsonNode;
@@ -9,6 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -17,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +47,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             """;
 
     private final OpenAiQnaProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -58,6 +63,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                 "temperature", 0.2,
                 "seed", 1,
                 "stream", true,
+                "stream_options", Map.of("include_usage", true),
                 "messages", List.of(
                         Map.of("role", "system", "content", SYSTEM_PROMPT),
                         Map.of("role", "user", "content", userMessage)
@@ -116,6 +122,8 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private String readStreamResponse(InputStream inputStream, Consumer<String> chunkConsumer) throws Exception {
         StringBuilder fullAnswer = new StringBuilder();
+        int promptTokens = 0;
+        int completionTokens = 0;
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String line;
@@ -130,6 +138,15 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                 }
 
                 JsonNode node = objectMapper.readTree(data);
+
+                // usage 청크 (choices 비어있음)
+                JsonNode usage = node.get("usage");
+                if (usage != null && !usage.isNull()) {
+                    if (usage.has("prompt_tokens")) promptTokens = usage.get("prompt_tokens").asInt();
+                    if (usage.has("completion_tokens")) completionTokens = usage.get("completion_tokens").asInt();
+                    continue;
+                }
+
                 JsonNode choices = node.get("choices");
                 if (choices == null || choices.isEmpty()) {
                     continue;
@@ -144,6 +161,15 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                     chunkConsumer.accept(content);
                 }
             }
+        }
+
+        // 스트림 종료 후 메트릭 발행 (usage 누락 시 0)
+        try {
+            eventPublisher.publishEvent(new LlmCallRecorded(
+                    LlmModule.QNA, properties.getModel(), promptTokens, completionTokens, Instant.now()
+            ));
+        } catch (Exception e) {
+            log.warn("qna LLM 비용 이벤트 발행 실패 (정상 흐름 진행)", e);
         }
 
         return fullAnswer.toString();

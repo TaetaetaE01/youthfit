@@ -3,10 +3,13 @@ package com.youthfit.eligibility.infrastructure.external;
 import com.youthfit.eligibility.application.dto.command.EligibilityRuleExtractionInput;
 import com.youthfit.eligibility.application.dto.result.RawExtractedRule;
 import com.youthfit.eligibility.application.port.EligibilityRuleLlmProvider;
+import com.youthfit.metrics.application.event.LlmCallRecorded;
+import com.youthfit.metrics.domain.model.LlmModule;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -14,6 +17,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +73,7 @@ public class OpenAiEligibilityRuleClient implements EligibilityRuleLlmProvider {
             """;
 
     private final OpenAiEligibilityRuleProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -125,6 +130,18 @@ public class OpenAiEligibilityRuleClient implements EligibilityRuleLlmProvider {
             if (!choices.isArray() || choices.isEmpty()) {
                 throw new IllegalStateException("OpenAI 응답에 choices 배열이 없거나 비어있음");
             }
+
+            try {
+                JsonNode usage = root.get("usage");
+                int prompt = usage == null || !usage.has("prompt_tokens") ? 0 : usage.get("prompt_tokens").asInt();
+                int completion = usage == null || !usage.has("completion_tokens") ? 0 : usage.get("completion_tokens").asInt();
+                eventPublisher.publishEvent(new LlmCallRecorded(
+                        LlmModule.ELIGIBILITY, properties.getModel(), prompt, completion, Instant.now()
+                ));
+            } catch (Exception e) {
+                log.warn("eligibility LLM 비용 이벤트 발행 실패 (정상 흐름 진행)", e);
+            }
+
             String content = choices.get(0).path("message").path("content").asText();
             JsonNode parsed = objectMapper.readTree(content);
             JsonNode rules = parsed.path("rules");

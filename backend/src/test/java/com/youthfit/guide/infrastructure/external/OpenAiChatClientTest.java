@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import tools.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Method;
@@ -15,10 +16,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OpenAiChatClientTest {
 
     @Mock OpenAiChatProperties properties;
+    @Mock ApplicationEventPublisher eventPublisher;
 
     @Test
     void parseResponse_단일그룹_라벨없는_paired_파싱() {
-        OpenAiChatClient client = new OpenAiChatClient(properties);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher);
         String json = """
                 {
                   "oneLineSummary": "만 19~34세 청년 월세 지원",
@@ -46,7 +48,7 @@ class OpenAiChatClientTest {
 
     @Test
     void buildResponseFormat_includesAttachmentEnumAndAttachmentRef() throws Exception {
-        OpenAiChatClient client = new OpenAiChatClient(properties);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher);
         Method m = OpenAiChatClient.class.getDeclaredMethod("buildResponseFormat");
         m.setAccessible(true);
         Object format = m.invoke(client);
@@ -61,7 +63,7 @@ class OpenAiChatClientTest {
 
     @Test
     void parseResponse_라벨있는_여러그룹_paired_파싱() {
-        OpenAiChatClient client = new OpenAiChatClient(properties);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher);
         String json = """
                 {
                   "oneLineSummary": "공공분양",

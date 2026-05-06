@@ -72,6 +72,10 @@ openai:
       max-body-chars: ${OPENAI_INGESTION_PERIOD_MAX_BODY_CHARS:3000}
 
 youthfit:
+  metrics:
+    llm-cost:
+      bucket-retention-days: 90
+      usd-to-krw: 1350
   internal:
     api-key: ${INTERNAL_API_KEY:}
   cost-guard:
