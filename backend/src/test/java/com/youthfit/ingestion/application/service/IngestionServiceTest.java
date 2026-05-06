@@ -9,6 +9,8 @@ import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
 import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
+import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
 import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
@@ -52,6 +54,12 @@ class IngestionServiceTest {
 
     @Mock
     private AttachmentDownloadService attachmentDownloadService;
+
+    @Mock
+    private IngestionRunLogRepository ingestionRunLogRepository;
+
+    @Mock
+    private IngestionItemFailureRepository ingestionItemFailureRepository;
 
     @Spy
     private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();

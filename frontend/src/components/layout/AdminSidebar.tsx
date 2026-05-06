@@ -54,7 +54,7 @@ const GROUPS: MenuGroup[] = [
       { to: '/admin/email', label: '이메일 발송', icon: Mail },
       { to: '/admin/qna-cache', label: 'Q&A 캐시 로그', icon: MessageSquareText },
       { to: '/admin/llm-cost', label: 'LLM 비용', icon: DollarSign },
-      { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download, soon: true },
+      { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download },
     ],
   },
   {

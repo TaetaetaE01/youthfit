@@ -7,7 +7,12 @@ import com.youthfit.common.event.PolicyUpsertedEvent;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
+import com.youthfit.ingestion.domain.model.FailureReason;
+import com.youthfit.ingestion.domain.model.IngestionItemFailure;
+import com.youthfit.ingestion.domain.model.IngestionRunLog;
 import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
+import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
 import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
@@ -23,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -49,56 +55,80 @@ public class IngestionService {
     private final ApplicationEventPublisher eventPublisher;
     private final AttachmentDownloadService attachmentDownloadService;
     private final CostGuard costGuard;
+    private final IngestionRunLogRepository ingestionRunLogRepository;
+    private final IngestionItemFailureRepository ingestionItemFailureRepository;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
-        Category category = mapCategory(command.category());
-        SourceType sourceType = resolveSourceType(command.sourceType());
-        String rawJson = serialize(command);
-        String sourceHash = sha256(rawJson);
-        String externalId = command.externalId() != null && !command.externalId().isBlank()
-                ? command.externalId()
-                : command.sourceUrl();
-        String summary = command.summary() != null && !command.summary().isBlank()
-                ? command.summary()
-                : command.body();
+        Instant runStart = Instant.now();
+        String sourceLabel = resolveSourceLabel(command);
+        boolean failed = false;
+        boolean duplicate = false;
 
-        Sections sections = parseSections(command.body());
-        PolicyPeriod period = resolvePeriod(command);
+        try {
+            Category category = mapCategory(command.category());
+            SourceType sourceType = resolveSourceType(command.sourceType());
+            String rawJson = serialize(command);
+            String sourceHash = sha256(rawJson);
+            String externalId = command.externalId() != null && !command.externalId().isBlank()
+                    ? command.externalId()
+                    : command.sourceUrl();
+            String summary = command.summary() != null && !command.summary().isBlank()
+                    ? command.summary()
+                    : command.body();
 
-        RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
-                command.title(),
-                summary,
-                command.body(),
-                sections.supportTarget(),
-                sections.selectionCriteria(),
-                sections.supportContent(),
-                command.organization(),
-                command.contact(),
-                category,
-                command.region(),
-                period.start(),
-                period.end(),
-                command.referenceYear(),
-                command.supportCycle(),
-                command.provideType(),
-                toSet(command.lifeTags()),
-                toSet(command.themeTags()),
-                toSet(command.targetTags()),
-                mapAttachments(command.attachments()),
-                mapReferenceSites(command.referenceSites()),
-                mapApplyMethods(command.applyMethods()),
-                sourceType,
-                externalId,
-                command.sourceUrl(),
-                rawJson,
-                sourceHash
-        );
+            Sections sections = parseSections(command.body());
+            PolicyPeriod period = resolvePeriod(command);
 
-        PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
-        eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
-        triggerAttachmentDownload(ingestionResult.policyId());
+            RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
+                    command.title(),
+                    summary,
+                    command.body(),
+                    sections.supportTarget(),
+                    sections.selectionCriteria(),
+                    sections.supportContent(),
+                    command.organization(),
+                    command.contact(),
+                    category,
+                    command.region(),
+                    period.start(),
+                    period.end(),
+                    command.referenceYear(),
+                    command.supportCycle(),
+                    command.provideType(),
+                    toSet(command.lifeTags()),
+                    toSet(command.themeTags()),
+                    toSet(command.targetTags()),
+                    mapAttachments(command.attachments()),
+                    mapReferenceSites(command.referenceSites()),
+                    mapApplyMethods(command.applyMethods()),
+                    sourceType,
+                    externalId,
+                    command.sourceUrl(),
+                    rawJson,
+                    sourceHash
+            );
 
-        return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
+            PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
+            duplicate = !ingestionResult.isNew();
+            eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
+            triggerAttachmentDownload(ingestionResult.policyId());
+
+            return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
+        } catch (RuntimeException e) {
+            failed = true;
+            recordFailure(command, sourceLabel, e);
+            throw e;
+        } finally {
+            Instant runEnd = Instant.now();
+            IngestionRunLog runLog = failed
+                    ? IngestionRunLog.failure(sourceLabel, runStart, runEnd)
+                    : IngestionRunLog.success(sourceLabel, runStart, runEnd, duplicate);
+            try {
+                ingestionRunLogRepository.save(runLog);
+            } catch (Exception e) {
+                log.warn("ingestion run log 적재 실패 (정상 흐름 진행): source={}", sourceLabel, e);
+            }
+        }
     }
 
     private Category mapCategory(String category) {
@@ -205,6 +235,43 @@ public class IngestionService {
     private record Sections(String supportTarget, String selectionCriteria, String supportContent) {
         static Sections empty() {
             return new Sections(null, null, null);
+        }
+    }
+
+    private String resolveSourceLabel(IngestPolicyCommand command) {
+        if (command == null) return "unknown";
+        if (command.sourceType() != null && !command.sourceType().isBlank()) {
+            return command.sourceType();
+        }
+        return "unknown";
+    }
+
+    private void recordFailure(IngestPolicyCommand command, String sourceLabel, Throwable t) {
+        try {
+            FailureReason reason = FailureReason.classify(t);
+            String rawPayload = safeSerialize(command);
+            String message = t.getMessage() == null ? t.getClass().getSimpleName()
+                    : t.getClass().getSimpleName() + ": " + t.getMessage();
+            if (message.length() > 4000) message = message.substring(0, 4000);
+            ingestionItemFailureRepository.save(IngestionItemFailure.of(
+                    null,                       // run_log_id 는 finally 시점에 저장돼서 모름 — null
+                    sourceLabel,
+                    command == null ? null : command.externalId(),
+                    rawPayload,
+                    reason,
+                    message
+            ));
+        } catch (Exception inner) {
+            log.warn("ingestion failure 적재 실패 (정상 흐름 진행)", inner);
+        }
+    }
+
+    private String safeSerialize(IngestPolicyCommand command) {
+        if (command == null) return null;
+        try {
+            return objectMapper.writeValueAsString(command);
+        } catch (Exception e) {
+            return "{\"_serializeError\":\"" + e.getClass().getSimpleName() + "\"}";
         }
     }
 
