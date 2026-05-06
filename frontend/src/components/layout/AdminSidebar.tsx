@@ -1,13 +1,13 @@
 import { Link, NavLink } from 'react-router-dom';
 import {
+  BookOpen,
+  ChevronRight,
+  DollarSign,
+  Download,
+  ExternalLink,
   LayoutDashboard,
   Mail,
   MessageSquareText,
-  Zap,
-  Download,
-  ChevronRight,
-  ExternalLink,
-  BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -53,7 +53,7 @@ const GROUPS: MenuGroup[] = [
     items: [
       { to: '/admin/email', label: '이메일 발송', icon: Mail },
       { to: '/admin/qna-cache', label: 'Q&A 캐시 로그', icon: MessageSquareText },
-      { to: '/admin/llm-cost', label: 'LLM 비용', icon: Zap, soon: true },
+      { to: '/admin/llm-cost', label: 'LLM 비용', icon: DollarSign },
       { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download, soon: true },
     ],
   },
