@@ -2,15 +2,19 @@ package com.youthfit.rag.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.metrics.application.event.LlmCallRecorded;
+import com.youthfit.metrics.domain.model.LlmModule;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +27,7 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
     private static final String EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings";
 
     private final OpenAiEmbeddingProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
 
     @Override
@@ -54,6 +59,16 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
         if (response == null || !response.has("data")) {
             log.error("OpenAI 임베딩 API 호출 실패");
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "임베딩 생성에 실패했습니다");
+        }
+
+        try {
+            JsonNode usage = response.get("usage");
+            int prompt = usage == null || !usage.has("prompt_tokens") ? 0 : usage.get("prompt_tokens").asInt();
+            eventPublisher.publishEvent(new LlmCallRecorded(
+                    LlmModule.EMBEDDING, properties.getModel(), prompt, 0, Instant.now()
+            ));
+        } catch (Exception e) {
+            log.warn("embedding LLM 비용 이벤트 발행 실패 (정상 흐름 진행)", e);
         }
 
         List<float[]> embeddings = new ArrayList<>();
