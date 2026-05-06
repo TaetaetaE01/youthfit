@@ -15,6 +15,8 @@ import AdminEmailDetailPage from '@/pages/admin/AdminEmailDetailPage';
 import AdminQnaCachePage from '@/pages/admin/AdminQnaCachePage';
 import AdminQnaCacheDetailPage from '@/pages/admin/AdminQnaCacheDetailPage';
 import AdminLlmCostPage from '@/pages/admin/AdminLlmCostPage';
+import AdminIngestionPage from '@/pages/admin/AdminIngestionPage';
+import AdminIngestionFailureDetailPage from '@/pages/admin/AdminIngestionFailureDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +51,8 @@ export default function App() {
               <Route path="qna-cache" element={<AdminQnaCachePage />} />
               <Route path="qna-cache/:lookupId" element={<AdminQnaCacheDetailPage />} />
               <Route path="llm-cost" element={<AdminLlmCostPage />} />
+              <Route path="ingestion" element={<AdminIngestionPage />} />
+              <Route path="ingestion/failures/:id" element={<AdminIngestionFailureDetailPage />} />
             </Route>
           </Route>
         </Routes>
