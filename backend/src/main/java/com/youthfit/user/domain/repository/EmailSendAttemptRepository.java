@@ -25,7 +25,7 @@ public interface EmailSendAttemptRepository extends JpaRepository<EmailSendAttem
         WHERE a.sentAt BETWEEN :from AND :to
           AND (:#{#statuses == null || #statuses.isEmpty()} = true OR a.status IN :statuses)
           AND (:emailType IS NULL OR a.emailType = :emailType)
-          AND (:recipient IS NULL OR a.recipientEmail LIKE CONCAT('%', :recipient, '%'))
+          AND (CAST(:recipient AS string) IS NULL OR a.recipientEmail LIKE CONCAT('%', CAST(:recipient AS string), '%'))
         ORDER BY a.sentAt DESC
         """)
     Page<EmailSendAttempt> search(
