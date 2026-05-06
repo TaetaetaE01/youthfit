@@ -10,15 +10,19 @@ import com.youthfit.guide.domain.model.GuideHighlight;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
+import com.youthfit.metrics.application.event.LlmCallRecorded;
+import com.youthfit.metrics.domain.model.LlmModule;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -165,6 +169,7 @@ public class OpenAiChatClient implements GuideLlmProvider {
             """;
 
     private final OpenAiChatProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -192,6 +197,8 @@ public class OpenAiChatClient implements GuideLlmProvider {
             log.error("OpenAI Chat API 호출 실패: policyId={}", input.policyId());
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 생성에 실패했습니다");
         }
+
+        emitMetric(response);   // ← 추가
 
         String json = response.get("choices").get(0).get("message").get("content").asText();
         log.info("가이드 생성 완료: policyId={}, 응답 길이={}", input.policyId(), json.length());
@@ -222,6 +229,9 @@ public class OpenAiChatClient implements GuideLlmProvider {
             log.error("OpenAI Chat API 재시도 실패: policyId={}", input.policyId());
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 재생성 실패");
         }
+
+        emitMetric(response);   // ← 추가
+
         String json = response.get("choices").get(0).get("message").get("content").asText();
         log.info("가이드 재생성 완료: policyId={}, 응답 길이={}", input.policyId(), json.length());
         return parseResponse(json);
@@ -346,6 +356,20 @@ public class OpenAiChatClient implements GuideLlmProvider {
             sb.append("\n").append(input.referenceData().toContextText());
         }
         return sb.toString();
+    }
+
+    private void emitMetric(JsonNode response) {
+        try {
+            JsonNode usage = response == null ? null : response.get("usage");
+            int prompt = usage == null || !usage.has("prompt_tokens") ? 0 : usage.get("prompt_tokens").asInt();
+            int completion = usage == null || !usage.has("completion_tokens") ? 0 : usage.get("completion_tokens").asInt();
+            String model = properties.getModel();
+            eventPublisher.publishEvent(new LlmCallRecorded(
+                    LlmModule.GUIDE, model, prompt, completion, Instant.now()
+            ));
+        } catch (Exception e) {
+            log.warn("guide LLM 비용 이벤트 발행 실패 (정상 흐름 진행)", e);
+        }
     }
 
     private Map<String, Object> buildResponseFormat() {
