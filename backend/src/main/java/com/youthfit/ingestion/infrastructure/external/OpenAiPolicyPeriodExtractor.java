@@ -2,9 +2,12 @@ package com.youthfit.ingestion.infrastructure.external;
 
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
 import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.metrics.application.event.LlmCallRecorded;
+import com.youthfit.metrics.domain.model.LlmModule;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -13,6 +16,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.DateTimeException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +43,7 @@ public class OpenAiPolicyPeriodExtractor implements PolicyPeriodLlmProvider {
 
     private final OpenAiPolicyPeriodProperties properties;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
 
     @Override
@@ -77,6 +82,18 @@ public class OpenAiPolicyPeriodExtractor implements PolicyPeriodLlmProvider {
                 log.warn("기간 추출 응답이 비어 있습니다: title={}", title);
                 return PolicyPeriod.empty();
             }
+
+            try {
+                JsonNode usage = response.get("usage");
+                int prompt = usage == null || !usage.has("prompt_tokens") ? 0 : usage.get("prompt_tokens").asInt();
+                int completion = usage == null || !usage.has("completion_tokens") ? 0 : usage.get("completion_tokens").asInt();
+                eventPublisher.publishEvent(new LlmCallRecorded(
+                        LlmModule.INGESTION, properties.getModel(), prompt, completion, Instant.now()
+                ));
+            } catch (Exception e) {
+                log.warn("ingestion LLM 비용 이벤트 발행 실패 (정상 흐름 진행)", e);
+            }
+
             String content = response.get("choices").get(0).get("message").get("content").asText();
             return parseContent(content);
         } catch (RuntimeException e) {
