@@ -72,6 +72,11 @@ openai:
       max-body-chars: ${OPENAI_INGESTION_PERIOD_MAX_BODY_CHARS:3000}
 
 youthfit:
+  ingestion:
+    health:
+      payload-redact-days: 7
+      failure-retention-days: 30
+      stale-threshold-hours: 24
   metrics:
     llm-cost:
       bucket-retention-days: 90
