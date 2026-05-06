@@ -19,7 +19,7 @@ n8n 및 외부 수집 파이프라인의 데이터 신선도와 품질을 운영
 
 ### In
 - `IngestionRunLog` 엔티티 (수신 이벤트 단위 집계) + `IngestionItemFailure` 엔티티 (개별 실패 항목)
-- 기존 `IngestionService.ingestPolicy(...)` 흐름 끝에 적재 hook 추가
+- 기존 `IngestionService.receivePolicy(...)` 흐름에 try/catch/finally 적재 hook 추가
 - 어드민 화면:
   - 상단 알람 영역 — 24h 미수신 source 리스트 (있을 때만)
   - KPI 4개 (어제 신규 / 어제 실패 / 7일 평균 신규 / 7일 평균 실패율)
@@ -43,7 +43,7 @@ n8n 및 외부 수집 파이프라인의 데이터 신선도와 품질을 운영
 
 | # | 항목 | 결정 | 이유 |
 |---|---|---|---|
-| 1 | 적재 위치 | 기존 `IngestionService.ingestPolicy(...)` 끝에 hook 추가 | 신규 도메인 모듈 추가 부담 큼. ingestion 모듈 내부에 적재 책임 두는 것이 자연스러움 |
+| 1 | 적재 위치 | 기존 `IngestionService.receivePolicy(...)` try/catch/finally hook 추가 | 신규 도메인 모듈 추가 부담 큼. ingestion 모듈 내부에 적재 책임 두는 것이 자연스러움 |
 | 2 | 데이터 모델 분리 | `IngestionRunLog` (run 단위 집계) + `IngestionItemFailure` (실패 단건) 2 테이블 | run 통계 조회와 실패 디버깅의 액세스 패턴이 달라 분리. JSONB 컬럼은 실패 행에만 필요 |
 | 3 | `raw_payload` 저장 | DB JSONB | 디버깅 즉시성 우선. 양 부담은 7일 후 hash redact + 30일 행 삭제로 통제. S3 ref는 외부 의존 1개 더 — 디버깅 1회 ROI 낮음 |
 | 4 | `raw_payload` PII | 어드민 계정 보호 + 7일 자동 redact | 정책 외부 데이터라 PII 위험 낮음. 0은 아니므로 redact + 행 삭제 조합 |
@@ -51,7 +51,7 @@ n8n 및 외부 수집 파이프라인의 데이터 신선도와 품질을 운영
 | 6 | "마지막 수신 없음" 임계 | 24h 고정 | source별 설정은 운영 데이터 누적 후 v1. KISS |
 | 7 | 중복 판정 기준 | 기존 `IngestionService` dedup 로직 결과를 `IngestionRunLog.duplicate_count`에 카운트만 반영 | 신규 판정 로직 도입 X. 도메인 결과를 그대로 관측 |
 | 8 | 적재 트리거 | 동기 적재 (run 단위 집계는 호출당 1회, 부담 낮음) | run 통계는 ingestion 호출당 1 row. async overhead 불필요. 실패 항목은 run 내 이미 발생한 예외 처리에 묶임 |
-| 9 | run 단위 정의 | `IngestionService.ingestPolicy(...)` 1회 호출 = 1 run (정책 1건 단위) | n8n이 정책 단위로 호출. 배치 단위 집계는 n8n run id가 외부에서 전달돼야 함 — v1 검토 |
+| 9 | run 단위 정의 | `IngestionService.receivePolicy(...)` 1회 호출 = 1 run (정책 1건 단위) | n8n이 정책 단위로 호출. 배치 단위 집계는 n8n run id가 외부에서 전달돼야 함 — v1 검토 |
 | 10 | source 식별 | `source` 컬럼 (string, 예: `youth-center`, `gov24`) — n8n 호출 시 헤더 또는 payload에 포함 | ingestion API 변경 필요 (선행). plan 단계에서 현재 API 시그니처 확인 후 결정 |
 
 ## 4. 데이터 모델
@@ -131,16 +131,16 @@ public enum FailureReason {
 
 ```
 n8n → POST /api/internal/ingest/policy { source, payload }
-  └─ IngestionService.ingestPolicy(source, payload)
+  └─ IngestionService.receivePolicy(IngestPolicyCommand)
        ├─ runStart = Instant.now()
        ├─ try {
-       │    normalize → validate → dedup → save
-       │    success counts (received=1, success=1 or duplicate=1)
+       │    parse → mapCategory/Period/Sections → policyIngestionService.registerPolicy(...)
+       │    success counts (received=1, success=1 or duplicate=1) ← PolicyIngestionResult.duplicate 여부 판정
        │  }
        │  catch (validation/parsing/mapping/dedup conflict 등) {
        │    failure counts (failure=1)
        │    IngestionItemFailureRepository.save(IngestionItemFailure { source, source_item_id, raw_payload, reason, error_message })
-       │    rethrow 또는 swallow — 현행 로직 유지
+       │    rethrow 현행 동작 유지 (controller가 5xx/4xx 응답 결정)
        │  }
        └─ finally {
             runEnd = Instant.now()
@@ -148,7 +148,7 @@ n8n → POST /api/internal/ingest/policy { source, payload }
           }
 ```
 
-> ingestPolicy 메서드의 트랜잭션 경계와 예외 전파 정책은 plan 단계에서 현재 코드 검토 후 명시. 적재 자체가 사용자 핫패스에 있지 않으므로 동기 OK.
+> `receivePolicy` 의 트랜잭션 경계와 예외 전파 정책은 plan 단계에서 현재 코드 검토 후 명시. 적재 자체가 사용자 핫패스에 있지 않으므로 동기 OK. 기존 `eventPublisher.publishEvent(PolicyUpsertedEvent)` 와 `triggerAttachmentDownload` 는 그대로 유지.
 
 ### 5.3 재처리 흐름
 
@@ -326,7 +326,7 @@ HAVING MAX(received_at) < now() - interval '24 hours'
 - 프론트 페이지/컴포넌트/API 함수 (§ 6.6)
 
 ### 11.2 수정
-- `ingestion/application/service/IngestionService.ingestPolicy(...)` — try/finally + 적재 hook
+- `ingestion/application/service/IngestionService.receivePolicy(...)` — try/catch/finally + 적재 hook
 - 기존 ingestion API (필요시) — `source` 파라미터 추가/검증
 - `frontend/src/components/layout/AdminSidebar.tsx` — `/admin/ingestion` 항목 추가
 - `application.yml` — 신규 설정 키 3개
