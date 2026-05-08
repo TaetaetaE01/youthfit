@@ -10,8 +10,10 @@ describe('KpiCard', () => {
     expect(screen.getByText('어제 대비 +5')).toBeInTheDocument();
   });
 
-  it('tone=danger 시 red 색상 클래스 적용', () => {
+  it('tone=danger 시 red/rose 색상 클래스 적용', () => {
     const { container } = render(<KpiCard label="실패" value={3} tone="danger" />);
-    expect(container.querySelector('.text-red-600')).not.toBeNull();
+    expect(
+      container.querySelector('.text-rose-600, .text-red-600'),
+    ).not.toBeNull();
   });
 });

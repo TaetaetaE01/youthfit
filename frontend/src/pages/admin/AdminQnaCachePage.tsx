@@ -3,6 +3,10 @@ import { QnaCacheKpiSection } from '@/components/admin/qnaCache/QnaCacheKpiSecti
 import { QnaCacheDailyChart } from '@/components/admin/qnaCache/QnaCacheDailyChart';
 import { QnaCacheFilterBar } from '@/components/admin/qnaCache/QnaCacheFilterBar';
 import { QnaCacheLookupTable } from '@/components/admin/qnaCache/QnaCacheLookupTable';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminPager from '@/components/admin/AdminPager';
+import { AdminCardShell } from '@/components/admin/AdminPlaceholders';
+import { Skeleton } from '@/components/admin/AdminSkeleton';
 import {
   useAdminQnaCacheKpi,
   useAdminQnaCacheDailyStats,
@@ -49,7 +53,10 @@ export default function AdminQnaCachePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">Q&amp;A 캐시 로그</h1>
+      <AdminPageHeader
+        title="Q&A 캐시 로그"
+        description="semantic-cache 매칭 결과(HIT / BELOW / MISS)를 추적합니다."
+      />
 
       <QnaCacheKpiSection kpi={kpi ?? null} loading={kpiLoading} />
 
@@ -57,27 +64,42 @@ export default function AdminQnaCachePage() {
         <div className="lg:col-span-2">
           <QnaCacheDailyChart stats={stats} />
         </div>
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-medium text-slate-700">결과 비율 (14일)</h2>
+        <AdminCardShell title="결과 비율" subtitle="최근 14일">
           {sum === 0 ? (
-            <div className="text-sm text-slate-500">데이터 없음</div>
-          ) : (
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-emerald-600 font-medium">HIT</span>
-                <span>{((totals.HIT / sum) * 100).toFixed(1)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-amber-500 font-medium">BELOW</span>
-                <span>{((totals.BELOW / sum) * 100).toFixed(1)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-red-500 font-medium">MISS</span>
-                <span>{((totals.MISS / sum) * 100).toFixed(1)}%</span>
-              </div>
+            <div className="grid h-32 place-items-center text-sm text-slate-400">
+              데이터 없음
             </div>
+          ) : (
+            <ul className="space-y-2.5 text-sm">
+              {[
+                { key: 'HIT', label: 'HIT', color: 'bg-emerald-500', text: 'text-emerald-700' },
+                { key: 'BELOW', label: 'BELOW', color: 'bg-amber-500', text: 'text-amber-700' },
+                { key: 'MISS', label: 'MISS', color: 'bg-rose-500', text: 'text-rose-600' },
+              ].map((row) => {
+                const pct = (totals[row.key as keyof typeof totals] / sum) * 100;
+                return (
+                  <li key={row.key} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`inline-flex items-center gap-1.5 font-semibold ${row.text}`}>
+                        <span className={`h-2 w-2 rounded-full ${row.color}`} aria-hidden />
+                        {row.label}
+                      </span>
+                      <span className="font-semibold tabular-nums text-slate-700">
+                        {pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full ${row.color} transition-all`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
+        </AdminCardShell>
       </div>
 
       <div className="space-y-3">
@@ -97,31 +119,16 @@ export default function AdminQnaCachePage() {
           }
         />
         {isLoading ? (
-          <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
+          <Skeleton className="h-32 w-full" rounded="lg" />
         ) : (
           <>
             <QnaCacheLookupTable rows={page?.content ?? []} />
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">
-                총 {page?.totalElements ?? 0}건 / {page?.totalPages ?? 0}페이지
-              </span>
-              <div className="space-x-2">
-                <button
-                  disabled={filter.page === 0}
-                  onClick={() => setFilter((f) => ({ ...f, page: f.page - 1 }))}
-                  className="rounded border px-3 py-1 disabled:opacity-50"
-                >
-                  이전
-                </button>
-                <button
-                  disabled={filter.page + 1 >= (page?.totalPages ?? 1)}
-                  onClick={() => setFilter((f) => ({ ...f, page: f.page + 1 }))}
-                  className="rounded border px-3 py-1 disabled:opacity-50"
-                >
-                  다음
-                </button>
-              </div>
-            </div>
+            <AdminPager
+              page={filter.page}
+              totalPages={page?.totalPages ?? 0}
+              totalElements={page?.totalElements}
+              onChange={(p) => setFilter((f) => ({ ...f, page: p }))}
+            />
           </>
         )}
       </div>

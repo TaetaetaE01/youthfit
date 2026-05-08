@@ -5,7 +5,7 @@ import { LlmCostLineChart } from '../LlmCostLineChart';
 describe('LlmCostLineChart', () => {
   it('빈 시리즈는 placeholder 메시지를 표시한다', () => {
     render(<LlmCostLineChart points={[]} />);
-    expect(screen.getByText(/데이터 없음/)).toBeInTheDocument();
+    expect(screen.getByText(/데이터(가)? 없/)).toBeInTheDocument();
   });
 
   it('points 가 있으면 차트가 렌더된다', () => {
@@ -17,6 +17,6 @@ describe('LlmCostLineChart', () => {
         ]}
       />,
     );
-    expect(screen.queryByText(/데이터 없음/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/데이터(가)? 없/)).not.toBeInTheDocument();
   });
 });

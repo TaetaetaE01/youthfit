@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { BarChart3, PieChart, Table2 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 type CardShellProps = {
   title: string;
@@ -7,33 +8,53 @@ type CardShellProps = {
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  bodyClassName?: string;
+  headless?: boolean;
 };
 
-export function AdminCardShell({ title, subtitle, action, children, className }: CardShellProps) {
+export function AdminCardShell({
+  title,
+  subtitle,
+  action,
+  children,
+  className,
+  bodyClassName,
+  headless = false,
+}: CardShellProps) {
   return (
     <section
-      className={`rounded-xl border border-slate-200 bg-white shadow-card ${className ?? ''}`}
+      className={cn(
+        'rounded-xl border border-slate-200/80 bg-white shadow-card transition-shadow hover:shadow-card-hover',
+        className,
+      )}
     >
-      <header className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
-        <div>
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
-        </div>
-        {action}
-      </header>
-      <div className="p-5">{children}</div>
+      {!headless && (
+        <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold tracking-tight text-slate-900">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
+        </header>
+      )}
+      <div className={cn('p-5', bodyClassName)}>{children}</div>
     </section>
   );
 }
 
 export function ChartPlaceholder({ height = 240, label }: { height?: number; label: string }) {
-  // 막대 7개 — 간단한 시각적 자리잡기. 실제 데이터는 후속 spec.
   const bars = [40, 65, 35, 80, 55, 90, 60];
 
   return (
     <div className="relative">
       <div
-        className="flex items-end gap-3 rounded-lg bg-slate-50/60 p-4"
+        className="flex items-end gap-3 rounded-lg bg-gradient-to-b from-slate-50/80 to-slate-100/50 p-4 ring-1 ring-inset ring-slate-100"
         style={{ height }}
         aria-label={label}
       >
@@ -46,9 +67,9 @@ export function ChartPlaceholder({ height = 240, label }: { height?: number; lab
         ))}
       </div>
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white/90 px-4 py-2 text-xs text-slate-500">
-          <BarChart3 className="h-4 w-4" aria-hidden />
-          데이터 연결 대기 — 후속 spec
+        <div className="flex items-center gap-2 rounded-full border border-dashed border-slate-300 bg-white/95 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm">
+          <BarChart3 className="h-3.5 w-3.5" aria-hidden />
+          데이터 연결 대기
         </div>
       </div>
     </div>
@@ -65,23 +86,24 @@ export function DonutPlaceholder({ label }: { label: string }) {
             cy="18"
             r="15.9155"
             className="fill-none stroke-slate-100"
-            strokeWidth="3"
+            strokeWidth="3.2"
           />
           <circle
             cx="18"
             cy="18"
             r="15.9155"
-            className="fill-none stroke-slate-300"
-            strokeWidth="3"
+            className="fill-none stroke-slate-200"
+            strokeWidth="3.2"
+            strokeLinecap="round"
             strokeDasharray="0 100"
           />
         </svg>
         <div className="absolute text-center">
-          <div className="text-xl font-bold text-slate-300 tabular-nums">--%</div>
-          <div className="text-[10px] text-slate-400">대기</div>
+          <div className="text-2xl font-bold text-slate-300 tabular-nums">--%</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-400">대기</div>
         </div>
       </div>
-      <div className="flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex items-center gap-2 rounded-full border border-dashed border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
         <PieChart className="h-3.5 w-3.5" aria-hidden />
         {label}
       </div>
@@ -96,9 +118,9 @@ export function TablePlaceholder({ columns, label }: { columns: string[]; label:
     <div className="overflow-x-auto" aria-label={label}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-100 text-left text-xs text-slate-400">
+          <tr className="border-b border-slate-100 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
             {columns.map((c) => (
-              <th key={c} className="px-3 py-2 font-medium uppercase tracking-wide">
+              <th key={c} className="px-3 py-2.5">
                 {c}
               </th>
             ))}
@@ -109,7 +131,7 @@ export function TablePlaceholder({ columns, label }: { columns: string[]; label:
             <tr key={i} className="border-b border-slate-50 last:border-0">
               {columns.map((c) => (
                 <td key={c} className="px-3 py-3">
-                  <div className="h-2.5 rounded bg-slate-100" />
+                  <div className="h-2.5 rounded bg-gradient-to-r from-slate-100 via-slate-100/60 to-slate-100" />
                 </td>
               ))}
             </tr>
