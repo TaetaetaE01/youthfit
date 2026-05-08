@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "policy_source")
+@Table(name = "policy_source", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_policy_source_type_external_id",
+                          columnNames = {"source_type", "external_id"})
+})
 public class PolicySource extends BaseTimeEntity {
 
     @Id
