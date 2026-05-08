@@ -51,6 +51,9 @@ public class Policy extends BaseTimeEntity {
     @Column(length = 300)
     private String contact;
 
+    @Column(name = "normalized_title", insertable = false, updatable = false)
+    private String normalizedTitle;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Category category;

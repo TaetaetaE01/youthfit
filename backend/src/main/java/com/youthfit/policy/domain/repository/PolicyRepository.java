@@ -22,5 +22,11 @@ public interface PolicyRepository {
 
     List<Policy> findAllById(Iterable<Long> ids);
 
+    /**
+     * 정규화 제목이 일치하면서 BOKJIRO_CENTRAL 출처가 등록된 Policy 를 찾는다.
+     * 온통청년 ingestion 시점에 복지로 우선 중복 스킵 판단에 사용한다.
+     */
+    Optional<Policy> findByNormalizedTitleWithBokjiroSource(String normalizedTitle);
+
     Policy save(Policy policy);
 }
