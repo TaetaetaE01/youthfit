@@ -435,9 +435,10 @@ RecommendationScheduler (주 1회 월요일 09:00)
   → RecommendationNotificationService
     → 신규/업데이트된 OPEN 정책 조회
     → 대상 사용자 필터
-       (eligibilityRecommendationEnabled=true
+       (recommendationEnabled=true
         ∧ email 등록됨
-        ∧ 프로필 적합도 정보 보유)
+        ∧ 프로필 적합도 정보 보유
+        ∧ interestCategories/interestRegions 매칭)
     → eligibility.domain 으로 LIKELY_ELIGIBLE 정책 선별
     → 북마크·발송 이력 기반 중복 제거 (type=RECOMMENDATION)
     → 사용자별 최대 5건 선정 → EmailSender 발송

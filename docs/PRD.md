@@ -115,7 +115,7 @@ YouthFit은 공식 정책 포털(온라인청년센터, 정부24 등)을 **대�
 |------|----------|
 | 커뮤니티, 댓글, 평점 | MVP 핵심 가치(탐색·해석)와 무관한 소셜 기능 |
 | 모바일 앱 및 푸시 알림 | 웹 우선 접근, 모바일은 반응형으로 대응 |
-| 관리자 대시보드 | 운영 초기에는 DB 직접 관리로 충분 |
+| 사용자용 관리자 대시보드 | 일반 사용자 대상 관리 기능은 v0 범위 외. 단, 운영팀용 내부 어드민(이메일 로그·ingestion 헬스·LLM 비용·Q&A 캐시 모니터링)은 운영 안정성 확보를 위해 별도로 구현됨 |
 | 고급 하이브리드 검색 | 키워드 검색으로 시작하고, 사용자 피드백 후 검색 고도화 |
 | 이벤트 드리븐 아키텍처 | 트래픽 규모가 작은 MVP에서는 동기 처리로 충분 |
 | 외부 공개 API | 내부 수집 파이프라인만 우선 구현 |
@@ -669,6 +669,7 @@ Authorization: Bearer {accessToken}
 - 인증 필수
 - 마감일 알림 기본값: 활성화, 마감 7일 전. 설정 가능 옵션: 3일 전, 7일 전, 14일 전
 - 맞춤 정책 추천 기본값: 비활성화
+- 맞춤 추천 활성화 시 관심 카테고리(`interestCategories`) 또는 관심 지역(`interestRegions`) 중 1개 이상 선택 필수
 - 맞춤 추천은 프로필 적합도 정보(나이, 지역, 고용 상태)가 입력되어 있어야 발송 대상이 됨
 - CLOSED 상태의 정책에는 알림을 발송하지 않음
 - 마감일 알림 이메일 내용에 포함: 정책명, 마감일, YouthFit 상세 페이지 링크, 공식 신청 채널 링크
@@ -687,9 +688,19 @@ Content-Type: application/json
 {
   "emailEnabled": true,
   "daysBeforeDeadline": 7,
-  "eligibilityRecommendationEnabled": true
+  "recommendationEnabled": true,
+  "interestCategories": ["HOUSING", "JOBS"],
+  "interestRegions": ["SEOUL"]
 }
 ```
+
+| 필드 | 타입 | 필수 | 검증 |
+|------|------|------|------|
+| emailEnabled | Boolean | Y | @NotNull |
+| daysBeforeDeadline | Integer | Y | 3, 7, 14 중 하나 |
+| recommendationEnabled | Boolean | Y | @NotNull |
+| interestCategories | Set\<Category\> | N | recommendationEnabled=true이면 regions와 합쳐 1개 이상 |
+| interestRegions | Set\<RegionSidoCode\> | N | recommendationEnabled=true이면 categories와 합쳐 1개 이상 |
 
 **응답 (200 OK)**:
 ```json
@@ -698,7 +709,9 @@ Content-Type: application/json
   "data": {
     "emailEnabled": true,
     "daysBeforeDeadline": 7,
-    "eligibilityRecommendationEnabled": true,
+    "recommendationEnabled": true,
+    "interestCategories": ["HOUSING", "JOBS"],
+    "interestRegions": ["SEOUL"],
     "updatedAt": "2026-04-13T14:00:00"
   }
 }
@@ -854,7 +867,7 @@ Content-Type: application/json
 | 엔티티 | 소속 모듈 | 주요 필드 |
 |--------|----------|----------|
 | Bookmark | user | userId, policyId, createdAt |
-| NotificationSetting | user | userId, emailEnabled, daysBeforeDeadline, eligibilityRecommendationEnabled |
+| NotificationSetting | user | userId, emailEnabled, daysBeforeDeadline, recommendationEnabled, interestCategories, interestRegions |
 | PolicySource | policy | policyId, sourceUrl, sourceType, sourceHash |
 | PolicyDocument | rag | policyId, chunkIndex, embedding, content |
 | EligibilityRule | eligibility | policyId, field, operator, value |
@@ -965,27 +978,28 @@ Content-Type: application/json
 
 ## 13. 릴리즈 계획
 
-### Phase 1 — 기반 구축 (현재 완료)
+### Phase 1 — 기반 구축 (완료)
 - [x] 프로젝트 스켈레톤 및 패키지 구조
 - [x] common 패키지 (ApiResponse, ErrorCode, GlobalExceptionHandler)
 - [x] auth 모듈 (카카오 로그인, JWT 발급·갱신·로그아웃)
 - [x] user 모듈 (프로필 조회·수정)
 - [x] policy 모듈 (목록 조회, 상세 조회, 키워드 검색)
 
-### Phase 2 — 핵심 기능
-- [ ] user 모듈: 북마크 CRUD
-- [ ] eligibility 모듈: 규칙 기반 적합도 판정
-- [ ] ingestion 모듈: 복지로·온통청년 공공 API 수집 엔드포인트
-- [ ] policy 모듈: PolicySource 관리, 중복 제거
+### Phase 2 — 핵심 기능 (완료)
+- [x] user 모듈: 북마크 CRUD
+- [x] eligibility 모듈: 규칙 기반 적합도 판정
+- [x] ingestion 모듈: 복지로·온통청년 공공 API 수집 엔드포인트
+- [x] policy 모듈: PolicySource 관리, 중복 제거
 
-### Phase 3 — AI 기능
-- [ ] rag 모듈: 문서 청크 분할, 임베딩 생성, 벡터 조회
-- [ ] qna 모듈: RAG 기반 Q&A, SSE 스트리밍 응답
-- [ ] guide 모듈: AI 가이드 사전 생성, 캐시 관리
+### Phase 3 — AI 기능 (완료)
+- [x] rag 모듈: 문서 청크 분할, 임베딩 생성, 벡터 조회
+- [x] qna 모듈: RAG 기반 Q&A, SSE 스트리밍 응답
+- [x] guide 모듈: AI 가이드 사전 생성, 캐시 관리
 
 ### Phase 4 — 알림 및 마무리
-- [ ] user 모듈: 마감일 이메일 알림 스케줄링·발송
-- [ ] user 모듈: 적합도 기반 맞춤 정책 추천 알림 스케줄링·발송
+- [x] user 모듈: 마감일 이메일 알림 스케줄링·발송
+- [x] user 모듈: 적합도 기반 맞춤 정책 추천 알림 스케줄링·발송
+- [x] admin 모듈: 운영용 어드민 대시보드 (이메일 로그, ingestion 헬스, LLM 비용, Q&A 캐시)
 - [ ] 비기능 요구사항 점검 (성능, 보안, 모니터링)
 - [ ] 프론트엔드 통합 및 E2E 테스트
 - [ ] MVP 출시

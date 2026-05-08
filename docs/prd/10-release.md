@@ -11,20 +11,21 @@
 - [x] user 모듈 (프로필 조회·수정)
 - [x] policy 모듈 (목록 조회, 상세 조회, 키워드 검색)
 
-### Phase 2 — 핵심 기능
-- [ ] user 모듈: 북마크 CRUD → [06-bookmark.md](06-bookmark.md)
-- [ ] eligibility 모듈: 규칙 기반 적합도 판정 → [04-eligibility.md](04-eligibility.md)
-- [ ] ingestion 모듈: 복지로·온통청년 공공 API 수집 엔드포인트 → [08-ingestion.md](08-ingestion.md)
-- [ ] policy 모듈: PolicySource 관리, 중복 제거
+### Phase 2 — 핵심 기능 (완료)
+- [x] user 모듈: 북마크 CRUD → [06-bookmark.md](06-bookmark.md)
+- [x] eligibility 모듈: 규칙 기반 적합도 판정 → [04-eligibility.md](04-eligibility.md)
+- [x] ingestion 모듈: 복지로·온통청년 공공 API 수집 엔드포인트 → [08-ingestion.md](08-ingestion.md)
+- [x] policy 모듈: PolicySource 관리, 중복 제거
 
-### Phase 3 — AI 기능
-- [ ] rag 모듈: 문서 청크 분할, 임베딩 생성, 벡터 조회 → [05-qna.md](05-qna.md)
-- [ ] qna 모듈: RAG 기반 Q&A, SSE 스트리밍 응답 → [05-qna.md](05-qna.md)
-- [ ] guide 모듈: AI 가이드 사전 생성, 캐시 관리 → [05-qna.md](05-qna.md)
+### Phase 3 — AI 기능 (완료)
+- [x] rag 모듈: 문서 청크 분할, 임베딩 생성, 벡터 조회 → [05-qna.md](05-qna.md)
+- [x] qna 모듈: RAG 기반 Q&A, SSE 스트리밍 응답 → [05-qna.md](05-qna.md)
+- [x] guide 모듈: AI 가이드 사전 생성, 캐시 관리 → [05-qna.md](05-qna.md)
 
 ### Phase 4 — 알림 및 마무리
-- [ ] user 모듈: 마감일 이메일 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
-- [ ] user 모듈: 적합도 기반 맞춤 정책 추천 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
+- [x] user 모듈: 마감일 이메일 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
+- [x] user 모듈: 적합도 기반 맞춤 정책 추천 알림 스케줄링·발송 → [07-notification.md](07-notification.md)
+- [x] admin 모듈: 운영용 어드민 대시보드 (이메일 로그, ingestion 헬스, LLM 비용, Q&A 캐시 모니터링)
 - [ ] 비기능 요구사항 점검 (성능, 보안, 모니터링) → [09-common.md](09-common.md)
 - [ ] 프론트엔드 통합 및 E2E 테스트
 - [ ] MVP 출시
