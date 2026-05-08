@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @DisplayName("IngestionService")
 @ExtendWith(MockitoExtension.class)
@@ -222,6 +223,23 @@ class IngestionServiceTest {
 
             // Then: eventPublisher 외엔 LLM 의존이 주입되지 않으므로, 단순히 publish 가 한 번 일어났는지로 검증
             then(eventPublisher).should().publishEvent(any(PolicyUpsertedEvent.class));
+        }
+
+        @Test
+        @DisplayName("PolicyIngestionService 가 SKIPPED_DUPLICATE 를 반환하면 status 를 SKIPPED_DUPLICATE 로 응답하고 이벤트/첨부 다운로드를 트리거하지 않는다")
+        void respondsSkippedDuplicateWithoutSideEffects() {
+            // given
+            IngestPolicyCommand command = command("YOUTH_CENTER", "주거");
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.skippedDuplicate(42L));
+
+            // when
+            IngestPolicyResult result = ingestionService.receivePolicy(command);
+
+            // then
+            assertThat(result.status()).isEqualTo("SKIPPED_DUPLICATE");
+            then(eventPublisher).should(never()).publishEvent(any());
+            then(attachmentDownloadService).should(never()).downloadForPolicyAsync(any());
         }
 
         private IngestPolicyCommand commandWithoutPeriod(String body) {
