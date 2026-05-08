@@ -80,7 +80,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             IngestPolicyResult result = ingestionService.receivePolicy(command);
@@ -97,7 +97,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "주거");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             ingestionService.receivePolicy(command);
@@ -112,7 +112,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "알수없는카테고리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             IngestPolicyResult result = ingestionService.receivePolicy(command);
@@ -127,7 +127,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = command("UNKNOWN_TYPE", "일자리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             IngestPolicyResult result = ingestionService.receivePolicy(command);
@@ -142,7 +142,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = commandWithoutPeriod("신청기간: 2026.05.01.~2026.06.30.");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             ingestionService.receivePolicy(command);
@@ -163,7 +163,7 @@ class IngestionServiceTest {
             given(policyPeriodLlmProvider.extractPeriod(any(), any()))
                     .willReturn(PolicyPeriod.of(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)));
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             ingestionService.receivePolicy(command);
@@ -181,7 +181,7 @@ class IngestionServiceTest {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(1L, true));
+                    .willReturn(PolicyIngestionResult.registered(1L));
 
             // when
             ingestionService.receivePolicy(command);
@@ -196,7 +196,7 @@ class IngestionServiceTest {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(42L, true));
+                    .willReturn(PolicyIngestionResult.registered(42L));
 
             // When
             ingestionService.receivePolicy(command);
@@ -214,7 +214,7 @@ class IngestionServiceTest {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
             given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(new PolicyIngestionResult(42L, true));
+                    .willReturn(PolicyIngestionResult.registered(42L));
 
             // When
             assertThatCode(() -> ingestionService.receivePolicy(command))

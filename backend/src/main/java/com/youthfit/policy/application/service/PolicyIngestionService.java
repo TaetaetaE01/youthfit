@@ -57,7 +57,7 @@ public class PolicyIngestionService {
                 policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
                 policyAttachmentApplicationService.markPendingReextraction(policy.getId());
             }
-            return new PolicyIngestionResult(source.getPolicy().getId(), false);
+            return PolicyIngestionResult.updated(source.getPolicy().getId());
         }
 
         Policy policy = Policy.builder()
@@ -93,7 +93,7 @@ public class PolicyIngestionService {
                 .build();
         policySourceRepository.save(policySource);
 
-        return new PolicyIngestionResult(savedPolicy.getId(), true);
+        return PolicyIngestionResult.registered(savedPolicy.getId());
     }
 
     private List<PolicyAttachment> toAttachments(List<RegisterPolicyCommand.Attachment> attachments) {
