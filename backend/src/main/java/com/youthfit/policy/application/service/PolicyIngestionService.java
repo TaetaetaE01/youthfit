@@ -7,8 +7,10 @@ import com.youthfit.policy.domain.model.PolicyApplyMethod;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.model.PolicyReferenceSite;
 import com.youthfit.policy.domain.model.PolicySource;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
+import com.youthfit.policy.domain.service.TitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,14 @@ public class PolicyIngestionService {
     private final PolicyAttachmentApplicationService policyAttachmentApplicationService;
 
     public PolicyIngestionResult registerPolicy(RegisterPolicyCommand command) {
+        if (command.sourceType() == SourceType.YOUTH_CENTER) {
+            String normalized = TitleNormalizer.normalize(command.title());
+            Optional<Policy> bokjiroPolicy = policyRepository.findByNormalizedTitleWithBokjiroSource(normalized);
+            if (bokjiroPolicy.isPresent()) {
+                return PolicyIngestionResult.skippedDuplicate(bokjiroPolicy.get().getId());
+            }
+        }
+
         Optional<PolicySource> existingSource = policySourceRepository
                 .findBySourceTypeAndExternalId(command.sourceType(), command.externalId());
 
@@ -56,8 +66,9 @@ public class PolicyIngestionService {
                 policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
                 policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
                 policyAttachmentApplicationService.markPendingReextraction(policy.getId());
+                return PolicyIngestionResult.updated(source.getPolicy().getId());
             }
-            return PolicyIngestionResult.updated(source.getPolicy().getId());
+            return PolicyIngestionResult.skippedDuplicate(source.getPolicy().getId());
         }
 
         Policy policy = Policy.builder()
