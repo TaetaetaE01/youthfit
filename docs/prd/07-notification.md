@@ -3,7 +3,7 @@
 > **기능 ID**: F-09
 > **모듈**: `com.youthfit.user` (notification 하위 도메인)
 > **우선순위**: P2
-> **구현 상태**: 부분 구현 (백엔드 발송 인프라 완료, SES sandbox 해제 + 도메인 검증 후속)
+> **구현 상태**: 구현 완료 (백엔드 발송 인프라·스케줄러·관심 카테고리/지역 필터링 포함, SES sandbox 해제 + 도메인 검증 후속)
 > **선행 조건**: 북마크(F-08) 구현 완료, 적합도 판정(F-06) 구현 완료
 
 ---
@@ -30,6 +30,7 @@
 - 마감일 알림 기본값: 활성화, 마감 7일 전
 - 설정 가능 시점 옵션: 3일 전, 7일 전, 14일 전
 - 맞춤 정책 추천 기본값: 비활성화
+- 맞춤 추천 활성화 시 관심 카테고리(`interestCategories`) 또는 관심 지역(`interestRegions`) 중 1개 이상 선택 필수
 - 맞춤 추천은 프로필 적합도 정보(나이, 지역, 고용 상태 등)가 입력되어야 의미 있는 결과를 제공하므로 미입력 시 UI에서 안내 문구를 노출한다
 - CLOSED 상태의 정책에는 알림을 발송하지 않음
 
@@ -46,9 +47,19 @@ Content-Type: application/json
 {
   "emailEnabled": true,
   "daysBeforeDeadline": 7,
-  "eligibilityRecommendationEnabled": true
+  "recommendationEnabled": true,
+  "interestCategories": ["HOUSING", "JOBS"],
+  "interestRegions": ["SEOUL"]
 }
 ```
+
+| 필드 | 타입 | 필수 | 검증 |
+|------|------|------|------|
+| emailEnabled | Boolean | Y | @NotNull |
+| daysBeforeDeadline | Integer | Y | 3, 7, 14 중 하나 |
+| recommendationEnabled | Boolean | Y | @NotNull |
+| interestCategories | Set\<Category\> | N | recommendationEnabled=true이면 regions와 합쳐 1개 이상 |
+| interestRegions | Set\<RegionSidoCode\> | N | recommendationEnabled=true이면 categories와 합쳐 1개 이상 |
 
 **응답 (200 OK)**:
 ```json
@@ -57,7 +68,9 @@ Content-Type: application/json
   "data": {
     "emailEnabled": true,
     "daysBeforeDeadline": 7,
-    "eligibilityRecommendationEnabled": true,
+    "recommendationEnabled": true,
+    "interestCategories": ["HOUSING", "JOBS"],
+    "interestRegions": ["SEOUL"],
     "updatedAt": "2026-04-13T14:00:00"
   }
 }
@@ -86,9 +99,9 @@ Content-Type: application/json
 
 **비즈니스 규칙**:
 - 발송 주기: 주 1회 (예: 월요일 09:00), v0 기준
-- `eligibilityRecommendationEnabled = true` 이고 `email`이 등록된 사용자만 대상
+- `recommendationEnabled = true` 이고 `email`이 등록된 사용자만 대상
 - 사용자 프로필에 나이·지역·고용상태 중 하나라도 없으면 해당 사용자에게는 발송하지 않음 (데이터 부족)
-- 적합도 판정 엔진(F-06)을 이용해 신규 수집/업데이트된 OPEN 정책 중 `overallResult = LIKELY_ELIGIBLE` 인 정책을 추천 후보로 수집
+- `interestCategories` 또는 `interestRegions` 에 매칭되는 정책으로 후보군을 1차 필터링한 뒤, 적합도 판정 엔진(F-06)을 이용해 OPEN 정책 중 `overallResult = LIKELY_ELIGIBLE` 인 정책을 추천 후보로 수집
 - 북마크 이미 등록된 정책은 제외 (중복 추천 방지)
 - 동일 정책에 대해 동일 사용자에게는 중복 추천 금지 (발송 이력 관리, `type = RECOMMENDATION`)
 - 1회 발송 시 최대 5건, 추천할 정책이 없으면 발송 스킵
@@ -111,7 +124,9 @@ Content-Type: application/json
 | userId | Long | FK, UNIQUE | 사용자 FK |
 | emailEnabled | boolean | NOT NULL, default true | 마감일 알림 수신 여부 |
 | daysBeforeDeadline | int | NOT NULL, default 7 | 마감 N일 전 알림 |
-| eligibilityRecommendationEnabled | boolean | NOT NULL, default false | 맞춤 정책 추천 알림 수신 여부 |
+| recommendationEnabled | boolean | NOT NULL, default false | 맞춤 정책 추천 알림 수신 여부 |
+| interestCategories | Set\<Category\> | - | 관심 카테고리 (추천 알림용) |
+| interestRegions | Set\<RegionSidoCode\> | - | 관심 지역 시도 코드 (추천 알림용) |
 | updatedAt | LocalDateTime | NOT NULL | 수정 시각 |
 
 ### NotificationHistory
