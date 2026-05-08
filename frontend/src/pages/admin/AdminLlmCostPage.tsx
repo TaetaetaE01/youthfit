@@ -1,9 +1,13 @@
 import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { LlmCostKpiSection } from '@/components/admin/llmCost/LlmCostKpiSection';
 import { LlmCostLineChart } from '@/components/admin/llmCost/LlmCostLineChart';
 import { LlmCostStackedBar } from '@/components/admin/llmCost/LlmCostStackedBar';
 import { LlmCostModelTable } from '@/components/admin/llmCost/LlmCostModelTable';
 import { LlmCostRangeToggle } from '@/components/admin/llmCost/LlmCostRangeToggle';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import { AdminCardShell } from '@/components/admin/AdminPlaceholders';
+import { Skeleton } from '@/components/admin/AdminSkeleton';
 import { useAdminLlmCost, type Range } from '@/hooks/useAdminLlmCost';
 
 export default function AdminLlmCostPage() {
@@ -12,21 +16,29 @@ export default function AdminLlmCostPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">LLM 비용 대시보드</h1>
-        <LlmCostRangeToggle value={range} onChange={setRange} />
-      </header>
+      <AdminPageHeader
+        title="LLM 비용 대시보드"
+        description="모듈·모델별 호출 수와 비용을 일자 기준으로 집계합니다."
+        actions={<LlmCostRangeToggle value={range} onChange={setRange} />}
+      />
 
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          데이터를 불러오지 못했습니다: {error.message}
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <div>
+            <div className="font-semibold">데이터를 불러오지 못했습니다</div>
+            <div className="mt-0.5 text-xs text-rose-600/80">{error.message}</div>
+          </div>
         </div>
       )}
 
       {loading && (
         <div className="space-y-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-100" />
+            <Skeleton key={i} className="h-24 w-full" rounded="lg" />
           ))}
         </div>
       )}
@@ -35,20 +47,17 @@ export default function AdminLlmCostPage() {
         <>
           <LlmCostKpiSection kpi={kpi} />
 
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-slate-700">시간별 비용 추이</h2>
+          <AdminCardShell title="시간별 비용 추이" subtitle="기간 내 합계">
             <LlmCostLineChart points={series?.points ?? []} />
-          </section>
+          </AdminCardShell>
 
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-slate-700">일자별 모듈 분포</h2>
+          <AdminCardShell title="일자별 모듈 분포" subtitle="모듈별 누적 비용">
             <LlmCostStackedBar rows={byModule} />
-          </section>
+          </AdminCardShell>
 
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-slate-700">모델별 합계</h2>
+          <AdminCardShell title="모델별 합계" subtitle="호출 수 / 토큰 / 비용">
             <LlmCostModelTable rows={byModel} />
-          </section>
+          </AdminCardShell>
         </>
       )}
     </div>

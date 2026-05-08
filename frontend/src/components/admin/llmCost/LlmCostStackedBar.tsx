@@ -29,19 +29,15 @@ export function LlmCostStackedBar({ rows }: Props) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, costs]) => ({ date, ...costs }));
 
-  if (data.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded border border-slate-200 bg-slate-50 text-sm text-slate-500">
-        데이터 없음
-      </div>
-    );
-  }
-
   return (
     <StackedBarChart
       data={data}
       xKey="date"
       series={MODULES.map((m) => ({ key: m, name: m, color: COLORS[m] }))}
+      valueFormatter={(v) =>
+        typeof v === 'number' ? `$${v.toFixed(4)}` : String(v ?? '-')
+      }
+      emptyMessage="아직 모듈별 비용 데이터가 없습니다"
     />
   );
 }

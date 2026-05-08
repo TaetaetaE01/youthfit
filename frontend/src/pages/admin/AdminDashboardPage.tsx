@@ -1,5 +1,6 @@
 import { Mail, MessageSquareText, Zap, Download } from 'lucide-react';
 import AdminKpiCard from '@/components/admin/AdminKpiCard';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import {
   AdminCardShell,
   ChartPlaceholder,
@@ -11,28 +12,36 @@ import { useAdminPing } from '@/hooks/queries/useAdminPing';
 export default function AdminDashboardPage() {
   const ping = useAdminPing();
 
+  const status = (
+    <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm md:inline-flex">
+      <span
+        className={[
+          'h-1.5 w-1.5 rounded-full',
+          ping.isError
+            ? 'bg-error-500'
+            : ping.isLoading
+              ? 'bg-amber-500 animate-pulse'
+              : 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]',
+        ].join(' ')}
+        aria-hidden
+      />
+      {ping.isLoading && <span>API 확인 중…</span>}
+      {ping.isError && <span className="text-error-500">API 연결 실패</span>}
+      {ping.data && (
+        <span>
+          API <strong className="text-slate-900">{ping.data.message}</strong>
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">관리자 대시보드</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            운영 추적 영역. 항목별 상세는 후속 출시 예정입니다.
-          </p>
-        </div>
-        <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-card md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-success-500" />
-          {ping.isLoading && '어드민 API 확인 중…'}
-          {ping.isError && (
-            <span className="text-error-500">API 연결 실패</span>
-          )}
-          {ping.data && (
-            <span>
-              API <strong className="text-slate-900">{ping.data.message}</strong>
-            </span>
-          )}
-        </div>
-      </div>
+      <AdminPageHeader
+        title="관리자 대시보드"
+        description="운영 추적 영역. 항목별 상세는 후속 출시 예정입니다."
+        status={status}
+      />
 
       {/* KPI 4개 — 후속 spec과 1:1 매칭 */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -73,10 +82,16 @@ export default function AdminDashboardPage() {
           title="발송 / 캐시 추이"
           subtitle="일자별 합계 — 데이터 연결 후 표시"
           action={
-            <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs text-slate-500">
-              <span className="rounded px-2 py-1 font-medium text-slate-700">7D</span>
-              <span className="rounded px-2 py-1">30D</span>
-              <span className="rounded px-2 py-1">90D</span>
+            <div className="flex gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+              <span className="rounded-md bg-white px-2.5 py-1 font-semibold text-slate-700 shadow-sm">
+                7D
+              </span>
+              <span className="rounded-md px-2.5 py-1 text-slate-500 hover:text-slate-700">
+                30D
+              </span>
+              <span className="rounded-md px-2.5 py-1 text-slate-500 hover:text-slate-700">
+                90D
+              </span>
             </div>
           }
         >

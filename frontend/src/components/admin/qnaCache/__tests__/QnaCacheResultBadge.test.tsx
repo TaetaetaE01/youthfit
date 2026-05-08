@@ -16,6 +16,6 @@ describe('QnaCacheResultBadge', () => {
   it('MISS는 빨강 뱃지', () => {
     const { container } = render(<QnaCacheResultBadge result="MISS" />);
     expect(screen.getByText('MISS')).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass(/red|danger|error/);
+    expect(container.firstChild).toHaveClass(/red|rose|danger|error/);
   });
 });
