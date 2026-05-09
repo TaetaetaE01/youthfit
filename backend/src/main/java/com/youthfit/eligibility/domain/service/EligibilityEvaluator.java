@@ -10,6 +10,10 @@ import java.util.Set;
 public class EligibilityEvaluator {
 
     public CriterionEvaluation evaluateRule(EligibilityRule rule, EligibilityProfile profile) {
+        if (rule.getOperator() == RuleOperator.ANY) {
+            Object userValue = extractFieldValue(profile, rule.getField());
+            return CriterionEvaluation.eligible(rule, userValue);
+        }
         Object userValue = extractFieldValue(profile, rule.getField());
         if (userValue == null) {
             return CriterionEvaluation.uncertain(rule);
@@ -60,6 +64,7 @@ public class EligibilityEvaluator {
                 long val = toNumber(userValue);
                 yield val >= Long.parseLong(bounds[0].trim()) && val <= Long.parseLong(bounds[1].trim());
             }
+            case ANY -> true;
         };
     }
 

@@ -7,12 +7,15 @@ import com.youthfit.eligibility.domain.model.RuleOperator;
 import com.youthfit.eligibility.domain.model.UncertainReason;
 import com.youthfit.user.domain.model.EligibilityProfile;
 import com.youthfit.user.domain.model.EmploymentKind;
+import com.youthfit.user.domain.model.MaritalStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("EligibilityEvaluator")
 class EligibilityEvaluatorTest {
@@ -326,5 +329,43 @@ class EligibilityEvaluatorTest {
                 .build();
         ReflectionTestUtils.setField(rule, "id", 1L);
         return rule;
+    }
+
+    @Test
+    void evaluateRule_returns_eligible_when_operator_is_ANY_with_null_user_value() {
+        EligibilityRule rule = EligibilityRule.builder()
+                .policyId(1L)
+                .field("age")
+                .operator(RuleOperator.ANY)
+                .value("ALL")
+                .label("연령")
+                .confidence(RuleConfidence.HIGH)
+                .extractionVersion("code-v1")
+                .build();
+        EligibilityProfile profile = mock(EligibilityProfile.class);
+        when(profile.getAge()).thenReturn(null);
+
+        CriterionEvaluation evaluation = evaluator.evaluateRule(rule, profile);
+
+        assertThat(evaluation.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
+    }
+
+    @Test
+    void evaluateRule_returns_eligible_when_operator_is_ANY_with_user_value() {
+        EligibilityRule rule = EligibilityRule.builder()
+                .policyId(1L)
+                .field("maritalStatus")
+                .operator(RuleOperator.ANY)
+                .value("ALL")
+                .label("결혼상태")
+                .confidence(RuleConfidence.HIGH)
+                .extractionVersion("code-v1")
+                .build();
+        EligibilityProfile profile = mock(EligibilityProfile.class);
+        when(profile.getMaritalStatus()).thenReturn(MaritalStatus.SINGLE);
+
+        CriterionEvaluation evaluation = evaluator.evaluateRule(rule, profile);
+
+        assertThat(evaluation.result()).isEqualTo(EligibilityResult.LIKELY_ELIGIBLE);
     }
 }

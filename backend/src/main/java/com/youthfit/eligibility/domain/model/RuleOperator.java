@@ -6,5 +6,6 @@ public enum RuleOperator {
     LTE,
     IN,
     BETWEEN,
-    NOT_EQ
+    NOT_EQ,
+    ANY
 }
