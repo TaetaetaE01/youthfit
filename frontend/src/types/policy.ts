@@ -61,6 +61,18 @@ export interface PolicyDetail extends Policy {
   referenceYear: number | null;
   supportCycle: string | null;
   provideType: string | null;
+  // ── 신규 정책 상세 11개 ──
+  screeningMethod: string | null;
+  submissionDocuments: string | null;
+  additionalQualification: string | null;
+  participationRestriction: string | null;
+  additionalNotes: string | null;
+  businessPeriodStart: string | null;
+  businessPeriodEnd: string | null;
+  businessPeriodNote: string | null;
+  supportScale: number | null;
+  firstComeFirstServed: boolean;
+  applyUrl: string | null;
   lifeTags: string[];
   themeTags: string[];
   targetTags: string[];
