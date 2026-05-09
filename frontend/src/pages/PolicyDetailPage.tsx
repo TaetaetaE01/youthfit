@@ -517,7 +517,7 @@ export default function PolicyDetailPage() {
           {policy.additionalQualification && policy.additionalQualification !== '해당사항 없음' && (
             <section className="mb-6 rounded-lg border border-gray-200 p-4">
               <h3 className="mb-2 font-semibold">추가 자격조건</h3>
-              <p className="whitespace-pre-line text-sm text-gray-700">{policy.additionalQualification}</p>
+              <FormattedPolicyText text={policy.additionalQualification} />
             </section>
           )}
 
@@ -525,7 +525,7 @@ export default function PolicyDetailPage() {
           {policy.participationRestriction && (
             <section className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
               <h3 className="mb-2 font-semibold text-amber-900">⚠ 참여 제한 대상</h3>
-              <p className="whitespace-pre-line text-sm text-amber-900">{policy.participationRestriction}</p>
+              <FormattedPolicyText text={policy.participationRestriction} className="text-amber-900" />
             </section>
           )}
 
@@ -543,7 +543,7 @@ export default function PolicyDetailPage() {
           {policy.screeningMethod && (
             <section className="mb-6 rounded-lg border border-gray-200 p-4">
               <h3 className="mb-2 font-semibold">심사방법</h3>
-              <p className="whitespace-pre-line text-sm text-gray-700">{policy.screeningMethod}</p>
+              <FormattedPolicyText text={policy.screeningMethod} />
             </section>
           )}
 
@@ -561,7 +561,7 @@ export default function PolicyDetailPage() {
           {policy.submissionDocuments && (
             <section className="mb-6 rounded-lg border border-gray-200 p-4">
               <h3 className="mb-2 font-semibold">제출서류</h3>
-              <p className="whitespace-pre-line text-sm text-gray-700">{policy.submissionDocuments}</p>
+              <FormattedPolicyText text={policy.submissionDocuments} />
             </section>
           )}
 
@@ -569,7 +569,7 @@ export default function PolicyDetailPage() {
           {policy.additionalNotes && (
             <section className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
               <h3 className="mb-2 text-sm font-semibold text-gray-600">기타사항</h3>
-              <p className="whitespace-pre-line text-sm italic text-gray-600">{policy.additionalNotes}</p>
+              <FormattedPolicyText text={policy.additionalNotes} className="italic text-gray-600" />
             </section>
           )}
 
