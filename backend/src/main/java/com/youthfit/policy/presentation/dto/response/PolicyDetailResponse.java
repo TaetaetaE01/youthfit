@@ -23,6 +23,7 @@ public record PolicyDetailResponse(
         String contact,
         Category category,
         String regionCode,
+        List<SubRegion> subRegions,
         LocalDate applyStart,
         LocalDate applyEnd,
         Integer referenceYear,
@@ -73,6 +74,12 @@ public record PolicyDetailResponse(
         }
     }
 
+    public record SubRegion(String code, String sidoCode, String sidoName, String name) {
+        static SubRegion from(PolicyDetailResult.SubRegion s) {
+            return new SubRegion(s.code(), s.sidoCode(), s.sidoName(), s.name());
+        }
+    }
+
     public static PolicyDetailResponse from(PolicyDetailResult result) {
         return new PolicyDetailResponse(
                 result.id(),
@@ -86,6 +93,7 @@ public record PolicyDetailResponse(
                 result.contact(),
                 result.category(),
                 result.regionCode(),
+                result.subRegions().stream().map(SubRegion::from).toList(),
                 result.applyStart(),
                 result.applyEnd(),
                 result.referenceYear(),

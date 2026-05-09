@@ -50,7 +50,7 @@ class PolicyControllerTest {
     void findPolicies_returns200WithPage() throws Exception {
         // given
         PolicySummaryResult summary = new PolicySummaryResult(
-                1L, "청년 취업 지원", "요약", Category.JOBS, "11",
+                1L, "청년 취업 지원", "요약", Category.JOBS, "11", java.util.List.of(),
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
                 2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시", null, null);
         PolicyPageResult pageResult = new PolicyPageResult(
@@ -113,7 +113,7 @@ class PolicyControllerTest {
         LocalDateTime now = LocalDateTime.of(2026, 4, 15, 10, 0);
         PolicyDetailResult detail = new PolicyDetailResult(
                 1L, "청년 취업 지원", "요약", null, null, null, null, null, null,
-                Category.JOBS, "11",
+                Category.JOBS, "11", java.util.List.of(),
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
                 null, null, null,
                 // TODO Task 3: 신규 11개 필드 임시 null
@@ -143,7 +143,7 @@ class PolicyControllerTest {
     void searchPolicies_keywordOnly_passesNullStatus() throws Exception {
         // given
         PolicySummaryResult summary = new PolicySummaryResult(
-                1L, "청년 취업 지원", "요약", Category.JOBS, "11",
+                1L, "청년 취업 지원", "요약", Category.JOBS, "11", java.util.List.of(),
                 null, null, 2026, PolicyStatus.OPEN, DetailLevel.LITE, "서울시", null, null);
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);

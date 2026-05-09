@@ -37,7 +37,7 @@ import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBo
 import { useUnsubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 import { QnaChatSection } from '@/components/qna/QnaChatSection';
 import { getRegionName } from '@/types/policy';
-import type { PolicyDetail, EligibilityResponse } from '@/types/policy';
+import type { PolicyDetail, EligibilityResponse, PolicySubRegion } from '@/types/policy';
 import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
 
 // ---------------------------------------------------------------------------
@@ -119,6 +119,42 @@ function PolicyHeader({
         )}
       </div>
     </header>
+  );
+}
+
+function SubRegionSection({ subRegions }: { subRegions: PolicySubRegion[] }) {
+  if (!subRegions || subRegions.length === 0) return null;
+
+  const groups = subRegions.reduce<Record<string, PolicySubRegion[]>>((acc, sr) => {
+    const key = sr.sidoName ?? '기타';
+    (acc[key] ||= []).push(sr);
+    return acc;
+  }, {});
+
+  return (
+    <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-neutral-900">
+        <MapPin className="h-4 w-4 text-brand-800" />
+        세부 지역
+      </h2>
+      <div className="space-y-3">
+        {Object.entries(groups).map(([sidoName, items]) => (
+          <div key={sidoName}>
+            <div className="mb-1.5 text-xs font-medium text-neutral-500">{sidoName}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {items.map((s) => (
+                <span
+                  key={s.code}
+                  className="rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs text-neutral-700"
+                >
+                  {s.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -440,6 +476,10 @@ export default function PolicyDetailPage() {
             isBookmarked={bookmarked}
             onBookmarkToggle={handleBookmarkToggle}
           />
+
+          {policy.subRegions && policy.subRegions.length >= 2 && (
+            <SubRegionSection subRegions={policy.subRegions} />
+          )}
 
           {/* AI 한 줄 요약 — 가이드 있을 때만 */}
           {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}

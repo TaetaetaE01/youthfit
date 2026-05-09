@@ -3,6 +3,7 @@ package com.youthfit.policy.application.dto.result;
 import com.youthfit.policy.domain.model.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record PolicySummaryResult(
         Long id,
@@ -10,6 +11,7 @@ public record PolicySummaryResult(
         String summary,
         Category category,
         String regionCode,
+        List<String> subRegions,
         LocalDate applyStart,
         LocalDate applyEnd,
         Integer referenceYear,
@@ -19,7 +21,7 @@ public record PolicySummaryResult(
         SourceType sourceType,
         String sourceLabel
 ) {
-    public static PolicySummaryResult from(Policy policy, PolicySource source) {
+    public static PolicySummaryResult from(Policy policy, PolicySource source, List<String> subRegions) {
         SourceType sourceType = source != null ? source.getSourceType() : null;
         String sourceLabel = sourceType != null ? sourceType.getLabel() : null;
         return new PolicySummaryResult(
@@ -28,6 +30,7 @@ public record PolicySummaryResult(
                 policy.getSummary(),
                 policy.getCategory(),
                 policy.getRegionCode(),
+                subRegions == null ? List.of() : subRegions,
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
                 policy.getReferenceYear(),

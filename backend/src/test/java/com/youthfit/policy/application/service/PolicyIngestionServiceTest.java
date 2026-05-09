@@ -138,7 +138,7 @@ class PolicyIngestionServiceTest {
     private RegisterPolicyCommand command(SourceType sourceType, String externalId, String title) {
         return new RegisterPolicyCommand(
                 title, "summary", "[개요]\nbody", null, null, null,
-                "org", "contact", Category.WELFARE, "전국",
+                "org", "contact", Category.WELFARE, "전국", List.of(),
                 null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, false, null,
@@ -195,7 +195,7 @@ class PolicyIngestionServiceTest {
                 "샘플", "요약", "본문",
                 "대상", "기준", "내용",
                 "기관", "연락처",
-                Category.JOBS, "서울특별시",
+                Category.JOBS, "서울특별시", List.of(),
                 null, null, 2026, "연 1회", "보조금",
                 "심사방법", "주민등록등본", "추가 자격", "기존 수혜자 제외", "기타",
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "특정기간",

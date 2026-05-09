@@ -5,10 +5,12 @@ import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.dto.result.PolicySummaryResult;
+import com.youthfit.policy.application.port.RegionCodeRegistry;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionCode;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class PolicyQueryService {
 
     private final PolicyRepository policyRepository;
     private final PolicySourceRepository policySourceRepository;
+    private final RegionCodeRegistry regionCodeRegistry;
 
     public PolicyPageResult findPoliciesByFilters(String regionCode, Category category,
                                                   PolicyStatus status,
@@ -37,11 +40,19 @@ public class PolicyQueryService {
         return toPageResult(policyPage);
     }
 
+    private static final int NATIONWIDE_CODE_THRESHOLD = 100;
+
     public PolicyDetailResult findPolicyById(Long policyId) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "정책을 찾을 수 없습니다: " + policyId));
         PolicySource source = policySourceRepository.findFirstByPolicyId(policyId).orElse(null);
-        return PolicyDetailResult.from(policy, source);
+        List<PolicyDetailResult.SubRegion> subRegions = isNationwide(policy)
+                ? List.of()
+                : regionCodeRegistry.findAll(policy.getRegionCodeList())
+                        .stream()
+                        .map(PolicyDetailResult.SubRegion::from)
+                        .toList();
+        return PolicyDetailResult.from(policy, source, subRegions);
     }
 
     public PolicyPageResult searchPoliciesByKeyword(String keyword, PolicyStatus status, int page, int size) {
@@ -55,7 +66,7 @@ public class PolicyQueryService {
         Map<Long, PolicySource> sourceMap = policySourceRepository.findFirstByPolicyIds(ids);
         return new PolicyPageResult(
                 policyPage.getContent().stream()
-                        .map(p -> PolicySummaryResult.from(p, sourceMap.get(p.getId())))
+                        .map(p -> PolicySummaryResult.from(p, sourceMap.get(p.getId()), summarizeSubRegions(p)))
                         .toList(),
                 policyPage.getTotalElements(),
                 policyPage.getNumber(),
@@ -63,5 +74,19 @@ public class PolicyQueryService {
                 policyPage.getTotalPages(),
                 policyPage.hasNext()
         );
+    }
+
+    private List<String> summarizeSubRegions(Policy policy) {
+        if (isNationwide(policy)) return List.of();
+        return regionCodeRegistry.findAll(policy.getRegionCodeList())
+                .stream()
+                .map(RegionCode::name)
+                .distinct()
+                .toList();
+    }
+
+    private boolean isNationwide(Policy policy) {
+        if ("전국".equals(policy.getRegionCode())) return true;
+        return policy.getRegionCodeList().size() >= NATIONWIDE_CODE_THRESHOLD;
     }
 }
