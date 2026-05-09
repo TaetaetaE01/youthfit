@@ -252,7 +252,7 @@ class PolicyTest {
                 "변경된 제목", "변경된 요약", "변경된 본문",
                 null, null, null,
                 null, null,
-                Category.HOUSING, "전국",
+                Category.HOUSING, "전국", java.util.List.of(),
                 null, null, null, null, null,
                 "심사", "서류", "추가자격", "제한", "기타",
                 LocalDate.of(2027, 1, 1), LocalDate.of(2027, 12, 31), "특정기간",

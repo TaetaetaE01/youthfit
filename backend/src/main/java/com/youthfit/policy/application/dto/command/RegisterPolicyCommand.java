@@ -18,6 +18,7 @@ public record RegisterPolicyCommand(
         String contact,
         Category category,
         String regionCode,
+        List<String> regionCodes,
         LocalDate applyStart,
         LocalDate applyEnd,
         Integer referenceYear,

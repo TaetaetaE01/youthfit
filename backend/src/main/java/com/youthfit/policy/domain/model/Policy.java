@@ -13,6 +13,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -60,6 +61,9 @@ public class Policy extends BaseTimeEntity {
 
     @Column(name = "region_code", length = 20)
     private String regionCode;
+
+    @Column(name = "region_codes", columnDefinition = "TEXT")
+    private String regionCodes;
 
     @Column(name = "apply_start")
     private LocalDate applyStart;
@@ -147,7 +151,7 @@ public class Policy extends BaseTimeEntity {
     private Policy(String title, String summary, String body,
                    String supportTarget, String selectionCriteria, String supportContent,
                    String organization, String contact,
-                   Category category, String regionCode,
+                   Category category, String regionCode, List<String> regionCodes,
                    LocalDate applyStart, LocalDate applyEnd,
                    Integer referenceYear, String supportCycle, String provideType,
                    String screeningMethod, String submissionDocuments,
@@ -166,6 +170,7 @@ public class Policy extends BaseTimeEntity {
         this.contact = contact;
         this.category = category;
         this.regionCode = regionCode;
+        this.regionCodes = joinRegionCodes(regionCodes);
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
         this.referenceYear = referenceYear;
@@ -184,6 +189,24 @@ public class Policy extends BaseTimeEntity {
         this.applyUrl = applyUrl;
         this.status = PolicyStatus.UPCOMING;
         this.detailLevel = DetailLevel.LITE;
+    }
+
+    public List<String> getRegionCodeList() {
+        if (this.regionCodes == null || this.regionCodes.isBlank()) return List.of();
+        return Arrays.stream(this.regionCodes.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    private static String joinRegionCodes(List<String> codes) {
+        if (codes == null || codes.isEmpty()) return null;
+        return codes.stream()
+                .filter(c -> c != null && !c.isBlank())
+                .map(String::trim)
+                .distinct()
+                .reduce((a, b) -> a + "," + b)
+                .orElse(null);
     }
 
     // ── 비즈니스 메서드 ──
@@ -220,7 +243,7 @@ public class Policy extends BaseTimeEntity {
     public void updateInfo(String title, String summary, String body,
                            String supportTarget, String selectionCriteria, String supportContent,
                            String organization, String contact,
-                           Category category, String regionCode,
+                           Category category, String regionCode, List<String> regionCodes,
                            LocalDate applyStart, LocalDate applyEnd,
                            Integer referenceYear, String supportCycle, String provideType,
                            String screeningMethod, String submissionDocuments,
@@ -239,6 +262,7 @@ public class Policy extends BaseTimeEntity {
         this.contact = contact;
         this.category = category;
         this.regionCode = regionCode;
+        this.regionCodes = joinRegionCodes(regionCodes);
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
         this.referenceYear = referenceYear;

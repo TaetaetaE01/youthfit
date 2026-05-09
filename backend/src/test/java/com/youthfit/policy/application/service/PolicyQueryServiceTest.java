@@ -4,6 +4,7 @@ import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
+import com.youthfit.policy.application.port.RegionCodeRegistry;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicySource;
@@ -46,6 +47,9 @@ class PolicyQueryServiceTest {
 
     @Mock
     private PolicySourceRepository policySourceRepository;
+
+    @Mock
+    private RegionCodeRegistry regionCodeRegistry;
 
     @Nested
     @DisplayName("findPolicyById")

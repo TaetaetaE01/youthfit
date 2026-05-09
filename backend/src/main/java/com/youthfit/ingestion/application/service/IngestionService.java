@@ -83,6 +83,9 @@ public class IngestionService {
             Sections sections = parseSections(command.body());
             PolicyPeriod period = resolvePeriod(command);
 
+            List<String> regionCodes = command.rawCodes() == null
+                    ? null
+                    : command.rawCodes().zipCodes();
             RegisterPolicyCommand registerCommand = new RegisterPolicyCommand(
                     command.title(),
                     summary,
@@ -94,6 +97,7 @@ public class IngestionService {
                     command.contact(),
                     category,
                     command.region(),
+                    regionCodes,
                     period.start(),
                     period.end(),
                     command.referenceYear(),

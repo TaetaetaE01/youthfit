@@ -19,6 +19,7 @@ public record PolicyDetailResult(
         String contact,
         Category category,
         String regionCode,
+        List<SubRegion> subRegions,
         LocalDate applyStart,
         LocalDate applyEnd,
         Integer referenceYear,
@@ -73,7 +74,13 @@ public record PolicyDetailResult(
         }
     }
 
-    public static PolicyDetailResult from(Policy policy, PolicySource source) {
+    public record SubRegion(String code, String sidoCode, String sidoName, String name) {
+        public static SubRegion from(RegionCode rc) {
+            return new SubRegion(rc.code(), rc.sidoCode(), rc.sidoName(), rc.name());
+        }
+    }
+
+    public static PolicyDetailResult from(Policy policy, PolicySource source, List<SubRegion> subRegions) {
         SourceType sourceType = source != null ? source.getSourceType() : null;
         String sourceLabel = sourceType != null ? sourceType.getLabel() : null;
         String sourceUrl = source != null ? source.getSourceUrl() : null;
@@ -89,6 +96,7 @@ public record PolicyDetailResult(
                 policy.getContact(),
                 policy.getCategory(),
                 policy.getRegionCode(),
+                subRegions == null ? List.of() : subRegions,
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
                 policy.getReferenceYear(),

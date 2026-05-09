@@ -55,6 +55,7 @@ public class PolicyIngestionService {
                         command.contact(),
                         command.category(),
                         command.regionCode(),
+                        command.regionCodes(),
                         command.applyStart(),
                         command.applyEnd(),
                         command.referenceYear(),
@@ -93,6 +94,7 @@ public class PolicyIngestionService {
                 .contact(command.contact())
                 .category(command.category())
                 .regionCode(command.regionCode())
+                .regionCodes(command.regionCodes())
                 .applyStart(command.applyStart())
                 .applyEnd(command.applyEnd())
                 .referenceYear(command.referenceYear())

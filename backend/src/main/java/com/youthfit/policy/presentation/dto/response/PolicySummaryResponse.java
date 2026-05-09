@@ -7,6 +7,7 @@ import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.SourceType;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record PolicySummaryResponse(
         Long id,
@@ -14,6 +15,7 @@ public record PolicySummaryResponse(
         String summary,
         Category category,
         String regionCode,
+        List<String> subRegions,
         LocalDate applyStart,
         LocalDate applyEnd,
         Integer referenceYear,
@@ -30,6 +32,7 @@ public record PolicySummaryResponse(
                 result.summary(),
                 result.category(),
                 result.regionCode(),
+                result.subRegions(),
                 result.applyStart(),
                 result.applyEnd(),
                 result.referenceYear(),
