@@ -19,12 +19,20 @@ export type EligibilityResult = 'LIKELY_ELIGIBLE' | 'UNCERTAIN' | 'LIKELY_INELIG
 
 /* ── Policy ── */
 
+export interface PolicySubRegion {
+  code: string;
+  sidoCode: string;
+  sidoName: string;
+  name: string;
+}
+
 export interface Policy {
   id: number;
   title: string;
   summary: string;
   category: PolicyCategory;
   regionCode: string;
+  subRegions: string[];
   applyStart: string | null;
   applyEnd: string | null;
   referenceYear: number | null;
@@ -52,7 +60,8 @@ export interface PolicyApplyMethod {
   description: string | null;
 }
 
-export interface PolicyDetail extends Policy {
+export interface PolicyDetail extends Omit<Policy, 'subRegions'> {
+  subRegions: PolicySubRegion[];
   body: string | null;
   supportTarget: string | null;
   selectionCriteria: string | null;

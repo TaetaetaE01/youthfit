@@ -34,6 +34,12 @@ function StatusBadge({ status }: { status: PolicyStatus }) {
   );
 }
 
+function formatSubRegions(subRegions: string[]): string {
+  const head = subRegions.slice(0, 3).join('·');
+  const rest = subRegions.length - 3;
+  return rest > 0 ? `${head} 외 ${rest}곳` : head;
+}
+
 export { CategoryBadge, StatusBadge };
 
 export default function PolicyCard({ policy, isBookmarked = false, onBookmarkToggle, dDay }: PolicyCardProps) {
@@ -94,6 +100,9 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
         <span className="flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5" />
           {getRegionName(policy.regionCode)}
+          {policy.subRegions && policy.subRegions.length >= 2 && (
+            <span className="text-gray-300">· {formatSubRegions(policy.subRegions)}</span>
+          )}
         </span>
         <span className="text-gray-200">|</span>
         <span className="flex items-center gap-1">
