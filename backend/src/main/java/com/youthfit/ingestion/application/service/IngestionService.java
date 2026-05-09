@@ -16,6 +16,7 @@ import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
 import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
+import com.youthfit.policy.application.dto.result.PolicyIngestionResult.Outcome;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.SourceType;
@@ -109,7 +110,12 @@ public class IngestionService {
             );
 
             PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
-            duplicate = !ingestionResult.isNew();
+            duplicate = ingestionResult.outcome() != Outcome.REGISTERED;
+
+            if (ingestionResult.outcome() == Outcome.SKIPPED_DUPLICATE) {
+                return new IngestPolicyResult(UUID.randomUUID(), "SKIPPED_DUPLICATE");
+            }
+
             eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
             triggerAttachmentDownload(ingestionResult.policyId());
 

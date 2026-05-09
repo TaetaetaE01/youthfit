@@ -2,7 +2,7 @@
 
 > **모듈**: `com.youthfit.ingestion`
 > **우선순위**: P1
-> **구현 상태**: 백엔드 수신 API 확장 완료 / 복지로 중앙부처 n8n 워크플로우 완료 / 온통청년 지자체 n8n 워크플로우 대기 (API 키 발급 중)
+> **구현 상태**: 백엔드 수신 API 확장 완료 / 복지로 중앙부처 n8n 워크플로우 완료 / 온통청년 지자체 n8n 워크플로우 완료 (서울 스코프, 풀 페이징)
 
 ---
 
@@ -77,7 +77,7 @@ GET https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelf
 | 생활지원 | WELFARE |
 | (그 외 매칭 없음) | WELFARE (기본값) |
 
-### v0-B — 온통청년 API (스펙 정의, 구현 대기)
+### v0-B — 온통청년 API (구현 완료)
 
 | 항목 | 내용 |
 |------|------|
@@ -87,9 +87,10 @@ GET https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelf
 | **data.go.kr 서비스 ID** | 15128179 (청년정책 통합검색 API) |
 | **응답 포맷** | JSON |
 | **커버리지** | 지자체(시·도·구) 청년 정책 보충 (복지로 중앙부처와 상호보완) |
+| **호출 전략** | 전체 페이징 (zipCd 필터 없음) + 응답측 서울 필터 |
 | **스코프 (v0)** | 서울특별시(11000) + 서울 25개 자치구(11110~11740) |
 
-#### 엔드포인트 (예정)
+#### 엔드포인트
 
 ```
 GET https://www.youthcenter.go.kr/go/ythip/getPlcy
@@ -97,43 +98,28 @@ GET https://www.youthcenter.go.kr/go/ythip/getPlcy
   &rtnType=json
   &pageNum={페이지}
   &pageSize=100
-  &zipCd={행정표준코드, 11110~11740 중 하나}
-  &lclsfNm=청년
 ```
 
-> **주의**: 실제 엔드포인트·파라미터명은 공공데이터포털 인증키 발급 후 응답 샘플로 검증 필요.
+#### 응답 → DB 매핑 (실응답 기반 검증)
 
-#### 수집 예정 데이터
-
-| 필드 | 매핑 대상 | 비고 |
-|------|----------|------|
-| `plcyNo` | `rawData.externalId` | 온통청년 정책번호 |
-| `plcyNm` | `rawData.title` | |
-| `plcyExplnCn` | `rawData.summary` | |
-| `plcySprtCn` + 관련 텍스트 | `rawData.body` | |
-| `sprvsnInstCdNm` | `rawData.organization` | 소관 기관명 |
-| `sprtTrgtMinAge` / `sprtTrgtMaxAge` | `rawData.body` 내 포함 | 구조화 연령 필드 (추후 활용) |
-| `aplyYmdBgn` / `aplyYmdEnd` | `rawData.applyStart/End` | |
-| `zipCd` | `rawData.region` | "서울특별시 종로구" 등 한글 매핑 |
-| `plcyKywdNm` | `rawData.themeTags` | 쉼표/공백 구분 |
-
-#### 서울 자치구 코드 (행정표준)
-
-| 코드 | 지역 | 코드 | 지역 |
-|------|------|------|------|
-| 11000 | 서울특별시 | 11410 | 서대문구 |
-| 11110 | 종로구 | 11440 | 마포구 |
-| 11140 | 중구 | 11470 | 양천구 |
-| 11170 | 용산구 | 11500 | 강서구 |
-| 11200 | 성동구 | 11530 | 구로구 |
-| 11215 | 광진구 | 11545 | 금천구 |
-| 11230 | 동대문구 | 11560 | 영등포구 |
-| 11260 | 중랑구 | 11590 | 동작구 |
-| 11290 | 성북구 | 11620 | 관악구 |
-| 11305 | 강북구 | 11650 | 서초구 |
-| 11320 | 도봉구 | 11680 | 강남구 |
-| 11350 | 노원구 | 11710 | 송파구 |
-| 11380 | 은평구 | 11740 | 강동구 |
+| 응답 필드 | 매핑 대상 | 비고 |
+|-----------|-----------|------|
+| `plcyNo` | `policy_source.external_id` | UNIQUE 키 |
+| `plcyNm` | `policy.title` | 인코딩 정제 (᭼→·) |
+| `plcyExplnCn` | `policy.summary` | 빈 값이면 title 폴백 |
+| `lclsfNm` | `policy.category` | `･` 구분 다중값 → 첫 매치, 5종 분류 |
+| `mclsfNm` + `plcyKywdNm` | `policy.theme_tags` | 표준 17·17종 |
+| `aplyYmd` ("YYYYMMDD ~ YYYYMMDD") | `policy.apply_start` / `apply_end` | 빈 값/수시 → null |
+| `zipCd` (콤마 구분 다중값) | `policy.region_code` | 서울 자치구 25개 모두 → "서울특별시", 단일 → "서울특별시 ○○구" |
+| `sprvsnInstCdNm` + `operInstCdNm` | `policy.organization` | 200자 컷 |
+| `sprvsnInstPicNm` | `policy.contact` | "담당: {이름}" |
+| `aplyUrlAddr`, `refUrlAddr1/2` | `policy.reference_sites` | jsonb |
+| `plcyAplyMthdCn` | `policy.apply_methods` | 단일 entry |
+| `frstRegDt` 연도 | `policy.reference_year` | |
+| `mrgSttsCd`, `jobCd`, `schoolCd`, `plcyMajorCd`, `sbizCd`, `plcyPvsnMthdCd`, `bizPrdSeCd` | `policy.body` 본문 풀이 | data.go.kr 공식 코드 사전(`docs/prd/reference/youth-center-codes.xlsx`)으로 한글 풀이 |
+| `sprtTrgtMinAge/MaxAge`, `earnMin/MaxAmt`, `sbmsnDcmntCn`, `etcMttrCn` | `policy.body` 본문 섹션 | [지원대상]/[제출서류]/[기타] |
+| — | `policy.life_tags` | `["청년"]` 고정 |
+| — | `attachments` | 항상 빈 배열 (응답에 첨부 필드 없음) |
 
 ### 미래 확장
 
@@ -157,7 +143,7 @@ GET https://www.youthcenter.go.kr/go/ythip/getPlcy
 - 백엔드 `IngestionService.receivePolicy`에서 처리한다.
 - 신규 정책 등록 직전 `YOUTH_CENTER` 타입인 경우에 한해, 정규화된 제목이 `BOKJIRO_CENTRAL` 소스의 어떤 정책과도 일치하지 않는지 검증한다.
 - 일치 시 `status = "SKIPPED_DUPLICATE"`로 응답(HTTP 202)하며 저장하지 않는다.
-- 순서에 관계없이 결과가 같도록 `YOUTH_CENTER`가 먼저 들어온 뒤 `BOKJIRO_CENTRAL`이 들어오는 경우에는 `BOKJIRO_CENTRAL`이 별개 정책으로 등록된 후, 다음 주기 스케줄에서 `YOUTH_CENTER` 중복건은 자연 스킵된다.
+- 정상 스케줄에서는 BOKJIRO 03:00 → YOUTH_CENTER 04:00 순으로 BOKJIRO 가 항상 먼저 들어오므로 자연스럽게 우선권이 부여된다. 엣지 케이스(YOUTH_CENTER 가 먼저 들어가있는데 며칠 뒤 동일 제목의 BOKJIRO 가 신규 등록)에서는 별개 정책 2건이 일시적으로 공존할 수 있으며, v0 에서는 미처리한다(빈도 매우 낮음, 어드민 수동 머지 또는 v1 보강).
 
 ### 원천 보존
 
@@ -265,31 +251,32 @@ Content-Type: application/json
 - `BACKEND_URL`: 백엔드 URL (기본 `http://backend:8080`)
 - `INTERNAL_API_KEY`: 내부 인증키
 
-#### 온통청년 수집 (`n8n/workflows/youth-center-seoul.json` — 대기)
+#### 온통청년 수집 (`n8n/workflows/youth-center-seoul.json` — 구현 완료)
+
+흐름:
 
 ```
-[Schedule Trigger]          매일 새벽 04:00 (복지로 이후)
+[Schedule Trigger / Webhook]   매일 04:00 또는 수동
        ↓
-[Code Node]                 서울+자치구 코드 목록 생성 (11000, 11110..11740)
+[페이지 초기화]                pageNum=1
        ↓
-[SplitInBatches]            자치구별 순차 처리
+[getPlcy 호출]                 zipCd 필터 없음, pageSize=100
        ↓
-[HTTP Request]              /go/ythip/getPlcy 호출 (zipCd별)
+[JSON 파싱 + 서울 필터]        zipCd 에 서울 26개 코드 중 하나라도 포함되는 정책만 통과
        ↓
-[Code Node]                 JSON 파싱 → plcyNo 추출
+[SplitInBatches batchSize=1]
        ↓
-[SplitInBatches]            정책별 순차 처리
+[1초 대기]                     백엔드 보호
        ↓
-[Wait 1s]                   Rate limit
+[변환 Code 노드]               코드 사전 풀이 + 본문 섹션 결합
        ↓
-[Code Node]                 IngestPolicyRequest JSON 구성 (sourceType=YOUTH_CENTER)
+[POST /api/internal/ingestion/policies]
        ↓
-[HTTP Request]              POST /api/internal/ingestion/policies
-                            (중복 감지 시 백엔드가 SKIPPED_DUPLICATE 응답)
+[페이지 루프]                  pageNum < lastPage 면 다음 페이지
 ```
 
-**환경변수 (예정)**:
-- `YOUTH_CENTER_API_KEY`: data.go.kr 인증키 (발급 대기 중)
+**환경변수**:
+- `YOUTH_CENTER_API_KEY`: data.go.kr 인증키
 
 **비즈니스 규칙 (공통)**:
 - 수집 간격 분리: 복지로 03:00 / 온통청년 04:00
@@ -319,5 +306,5 @@ Content-Type: application/json
 ## 확장 방향
 
 - v0-A: 복지로 중앙부처 API (완료)
-- v0-B: 온통청년 지자체 API — 서울 스코프 (대기)
+- v0-B: 온통청년 지자체 API — 서울 스코프 (완료)
 - v1: 온통청년 전국 확대, 부처별 전문 API(청년내일채움공제 등), 첨부파일 다운로드·본문 추출, 비동기 이벤트 기반 파이프라인 분리

@@ -49,6 +49,11 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     }
 
     @Override
+    public Optional<Policy> findByNormalizedTitleWithBokjiroSource(String normalizedTitle) {
+        return jpaRepository.findByNormalizedTitleWithBokjiroSource(normalizedTitle);
+    }
+
+    @Override
     public Policy save(Policy policy) {
         return jpaRepository.save(policy);
     }
