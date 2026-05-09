@@ -15,7 +15,7 @@ import java.util.List;
 @Transactional
 public class CodeBasedRuleExtractionService {
 
-    private final CodeBasedRuleExtractor extractor;
+    private final CodeBasedRuleExtractor extractor = new CodeBasedRuleExtractor();
     private final EligibilityRuleRepository ruleRepository;
 
     public void extractAndPersist(Long policyId, CodeBasedExtractionInput input) {
