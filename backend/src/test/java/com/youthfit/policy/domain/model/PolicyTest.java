@@ -204,6 +204,74 @@ class PolicyTest {
         }
     }
 
+    @Test
+    void builder_assigns_youth_center_detail_fields() {
+        Policy policy = Policy.builder()
+                .title("샘플")
+                .summary("요약")
+                .body("본문")
+                .category(Category.JOBS)
+                .regionCode("서울특별시")
+                .screeningMethod("1단계 서류심사")
+                .submissionDocuments("주민등록등본")
+                .additionalQualification("연 30,000,000원 이하")
+                .participationRestriction("기존 수혜자 제외")
+                .additionalNotes("우대사항: 장애인")
+                .businessPeriodStart(LocalDate.of(2026, 1, 1))
+                .businessPeriodEnd(LocalDate.of(2026, 12, 31))
+                .businessPeriodNote("상시")
+                .supportScale(25)
+                .firstComeFirstServed(true)
+                .applyUrl("https://example.kr/apply")
+                .build();
+
+        assertThat(policy.getScreeningMethod()).isEqualTo("1단계 서류심사");
+        assertThat(policy.getSubmissionDocuments()).isEqualTo("주민등록등본");
+        assertThat(policy.getAdditionalQualification()).isEqualTo("연 30,000,000원 이하");
+        assertThat(policy.getParticipationRestriction()).isEqualTo("기존 수혜자 제외");
+        assertThat(policy.getAdditionalNotes()).isEqualTo("우대사항: 장애인");
+        assertThat(policy.getBusinessPeriodStart()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(policy.getBusinessPeriodEnd()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(policy.getBusinessPeriodNote()).isEqualTo("상시");
+        assertThat(policy.getSupportScale()).isEqualTo(25);
+        assertThat(policy.isFirstComeFirstServed()).isTrue();
+        assertThat(policy.getApplyUrl()).isEqualTo("https://example.kr/apply");
+    }
+
+    @Test
+    void updateInfo_replaces_youth_center_detail_fields() {
+        Policy policy = Policy.builder()
+                .title("샘플")
+                .summary("요약")
+                .body("본문")
+                .category(Category.JOBS)
+                .regionCode("서울특별시")
+                .build();
+
+        policy.updateInfo(
+                "변경된 제목", "변경된 요약", "변경된 본문",
+                null, null, null,
+                null, null,
+                Category.HOUSING, "전국",
+                null, null, null, null, null,
+                "심사", "서류", "추가자격", "제한", "기타",
+                LocalDate.of(2027, 1, 1), LocalDate.of(2027, 12, 31), "특정기간",
+                10, true, "https://new.kr"
+        );
+
+        assertThat(policy.getScreeningMethod()).isEqualTo("심사");
+        assertThat(policy.getSubmissionDocuments()).isEqualTo("서류");
+        assertThat(policy.getAdditionalQualification()).isEqualTo("추가자격");
+        assertThat(policy.getParticipationRestriction()).isEqualTo("제한");
+        assertThat(policy.getAdditionalNotes()).isEqualTo("기타");
+        assertThat(policy.getBusinessPeriodStart()).isEqualTo(LocalDate.of(2027, 1, 1));
+        assertThat(policy.getBusinessPeriodEnd()).isEqualTo(LocalDate.of(2027, 12, 31));
+        assertThat(policy.getBusinessPeriodNote()).isEqualTo("특정기간");
+        assertThat(policy.getSupportScale()).isEqualTo(10);
+        assertThat(policy.isFirstComeFirstServed()).isTrue();
+        assertThat(policy.getApplyUrl()).isEqualTo("https://new.kr");
+    }
+
     // ── 헬퍼 메서드 ──
 
     private Policy createUpcomingPolicy() {
