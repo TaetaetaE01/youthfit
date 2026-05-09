@@ -242,6 +242,48 @@ class IngestionServiceTest {
             then(attachmentDownloadService).should(never()).downloadForPolicyAsync(any());
         }
 
+        @Test
+        @DisplayName("youth center 상세 필드가 RegisterPolicyCommand 에 그대로 전달된다")
+        void receivePolicy_propagates_youth_center_detail_fields_to_register_command() {
+            IngestPolicyCommand command = sampleCommandWithDetailFields();
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.registered(99L));
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+
+            ingestionService.receivePolicy(command);
+
+            ArgumentCaptor<RegisterPolicyCommand> captor = ArgumentCaptor.forClass(RegisterPolicyCommand.class);
+            then(policyIngestionService).should().registerPolicy(captor.capture());
+            RegisterPolicyCommand reg = captor.getValue();
+            assertThat(reg.screeningMethod()).isEqualTo("심사방법");
+            assertThat(reg.submissionDocuments()).isEqualTo("주민등록등본");
+            assertThat(reg.additionalQualification()).isEqualTo("추가 자격");
+            assertThat(reg.participationRestriction()).isEqualTo("기존 수혜자 제외");
+            assertThat(reg.additionalNotes()).isEqualTo("기타");
+            assertThat(reg.businessPeriodStart()).isEqualTo(LocalDate.of(2026, 1, 1));
+            assertThat(reg.businessPeriodEnd()).isEqualTo(LocalDate.of(2026, 12, 31));
+            assertThat(reg.businessPeriodNote()).isEqualTo("특정기간");
+            assertThat(reg.supportScale()).isEqualTo(25);
+            assertThat(reg.firstComeFirstServed()).isTrue();
+            assertThat(reg.applyUrl()).isEqualTo("https://apply.kr");
+        }
+
+        private IngestPolicyCommand sampleCommandWithDetailFields() {
+            return new IngestPolicyCommand(
+                    "https://src.kr", "YOUTH_CENTER", LocalDateTime.now(),
+                    "EXT-1", "제목", "요약", "[지원대상]\n내용", "복지", "서울특별시",
+                    null, null, 2026, null, "보조금",
+                    "기관", "연락처",
+                    List.of(), List.of(), List.of(),
+                    List.of(), List.of(), List.of(),
+                    "심사방법", "주민등록등본", "추가 자격", "기존 수혜자 제외", "기타",
+                    LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "특정기간",
+                    25, true, "https://apply.kr",
+                    null
+            );
+        }
+
         private IngestPolicyCommand commandWithoutPeriod(String body) {
             return new IngestPolicyCommand(
                     "https://example.com/policy/2",
@@ -265,7 +307,10 @@ class IngestionServiceTest {
                     List.of(),
                     List.of(),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null
             );
         }
 
@@ -292,7 +337,10 @@ class IngestionServiceTest {
                     List.of("저소득"),
                     List.of(),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null
             );
         }
     }

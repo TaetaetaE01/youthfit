@@ -43,7 +43,33 @@ public record IngestPolicyRequest(
                         .toList(),
                 rawData.applyMethods() == null ? List.of() : rawData.applyMethods().stream()
                         .map(m -> new IngestPolicyCommand.ApplyMethod(m.stageName(), m.description()))
-                        .toList()
+                        .toList(),
+                rawData.screeningMethod(),
+                rawData.submissionDocuments(),
+                rawData.additionalQualification(),
+                rawData.participationRestriction(),
+                rawData.additionalNotes(),
+                rawData.businessPeriodStart(),
+                rawData.businessPeriodEnd(),
+                rawData.businessPeriodNote(),
+                rawData.supportScale(),
+                rawData.firstComeFirstServed(),
+                rawData.applyUrl(),
+                rawData.rawCodes() == null ? null : new IngestPolicyCommand.RawCodes(
+                        rawData.rawCodes().ageMin(),
+                        rawData.rawCodes().ageMax(),
+                        rawData.rawCodes().ageLimitYn(),
+                        rawData.rawCodes().maritalStatusCd(),
+                        rawData.rawCodes().earnConditionCd(),
+                        rawData.rawCodes().earnMin(),
+                        rawData.rawCodes().earnMax(),
+                        rawData.rawCodes().earnEtcCn(),
+                        rawData.rawCodes().employmentKindCd(),
+                        rawData.rawCodes().educationCd(),
+                        rawData.rawCodes().majorFieldCd(),
+                        rawData.rawCodes().specializationCd(),
+                        rawData.rawCodes().zipCodes() == null ? List.of() : rawData.rawCodes().zipCodes()
+                )
         );
     }
 
@@ -72,7 +98,19 @@ public record IngestPolicyRequest(
             List<String> targetTags,
             List<@Valid Attachment> attachments,
             List<@Valid ReferenceSite> referenceSites,
-            List<@Valid ApplyMethod> applyMethods
+            List<@Valid ApplyMethod> applyMethods,
+            String screeningMethod,
+            String submissionDocuments,
+            String additionalQualification,
+            String participationRestriction,
+            String additionalNotes,
+            LocalDate businessPeriodStart,
+            LocalDate businessPeriodEnd,
+            String businessPeriodNote,
+            Integer supportScale,
+            Boolean firstComeFirstServed,
+            String applyUrl,
+            @Valid RawCodes rawCodes
     ) {}
 
     public record Attachment(
@@ -89,5 +127,21 @@ public record IngestPolicyRequest(
     public record ApplyMethod(
             @NotBlank String stageName,
             String description
+    ) {}
+
+    public record RawCodes(
+            Integer ageMin,
+            Integer ageMax,
+            String ageLimitYn,
+            String maritalStatusCd,
+            String earnConditionCd,
+            Integer earnMin,
+            Integer earnMax,
+            String earnEtcCn,
+            String employmentKindCd,
+            String educationCd,
+            String majorFieldCd,
+            String specializationCd,
+            List<String> zipCodes
     ) {}
 }

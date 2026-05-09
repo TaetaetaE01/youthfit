@@ -57,7 +57,10 @@ class IngestionServiceHealthHookTest {
                 LocalDate.now(), LocalDate.now().plusDays(30),
                 2026, "ANNUAL", "CASH", "테스트기관", "02-0000-0000",
                 List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of()
+                List.of(), List.of(), List.of(),
+                null, null, null, null, null,
+                null, null, null, null, null, null,
+                null
         );
     }
 
@@ -96,7 +99,10 @@ class IngestionServiceHealthHookTest {
                 null, "x", null,
                 null, "전국", null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null
+                null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, null, null,
+                null
         );
 
         assertThatThrownBy(() -> service.receivePolicy(bad))
