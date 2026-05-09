@@ -96,6 +96,9 @@ public class IngestionService {
                     command.referenceYear(),
                     command.supportCycle(),
                     command.provideType(),
+                    // TODO Task 5: 아래 11개 필드는 IngestPolicyCommand 확장 후 실제 값으로 교체
+                    null, null, null, null, null,
+                    null, null, null, null, false, null,
                     toSet(command.lifeTags()),
                     toSet(command.themeTags()),
                     toSet(command.targetTags()),

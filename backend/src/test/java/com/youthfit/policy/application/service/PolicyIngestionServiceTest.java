@@ -12,10 +12,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -138,6 +140,8 @@ class PolicyIngestionServiceTest {
                 title, "summary", "[개요]\nbody", null, null, null,
                 "org", "contact", Category.WELFARE, "전국",
                 null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, false, null,
                 Set.of(), Set.of(), Set.of(),
                 List.of(), List.of(), List.of(),
                 sourceType, externalId, "https://example.com",
@@ -157,5 +161,49 @@ class PolicyIngestionServiceTest {
         given(s.getPolicy()).willReturn(policy);
         given(s.hasChanged(any())).willReturn(true); // default — overridden in test
         return s;
+    }
+
+    @Test
+    void registerPolicy_propagates_youth_center_detail_fields_to_new_policy() {
+        given(policyRepository.findByNormalizedTitleWithBokjiroSource(any()))
+                .willReturn(Optional.empty());
+        given(policySourceRepository.findBySourceTypeAndExternalId(any(), any()))
+                .willReturn(Optional.empty());
+        given(policyRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        RegisterPolicyCommand command = sampleRegisterCommandWithDetailFields();
+        policyIngestionService.registerPolicy(command);
+
+        ArgumentCaptor<Policy> policyCaptor = ArgumentCaptor.forClass(Policy.class);
+        verify(policyRepository).save(policyCaptor.capture());
+        Policy saved = policyCaptor.getValue();
+        assertThat(saved.getScreeningMethod()).isEqualTo("심사방법");
+        assertThat(saved.getSubmissionDocuments()).isEqualTo("주민등록등본");
+        assertThat(saved.getAdditionalQualification()).isEqualTo("추가 자격");
+        assertThat(saved.getParticipationRestriction()).isEqualTo("기존 수혜자 제외");
+        assertThat(saved.getAdditionalNotes()).isEqualTo("기타");
+        assertThat(saved.getBusinessPeriodStart()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(saved.getBusinessPeriodEnd()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(saved.getBusinessPeriodNote()).isEqualTo("특정기간");
+        assertThat(saved.getSupportScale()).isEqualTo(25);
+        assertThat(saved.isFirstComeFirstServed()).isTrue();
+        assertThat(saved.getApplyUrl()).isEqualTo("https://apply.kr");
+    }
+
+    private RegisterPolicyCommand sampleRegisterCommandWithDetailFields() {
+        return new RegisterPolicyCommand(
+                "샘플", "요약", "본문",
+                "대상", "기준", "내용",
+                "기관", "연락처",
+                Category.JOBS, "서울특별시",
+                null, null, 2026, "연 1회", "보조금",
+                "심사방법", "주민등록등본", "추가 자격", "기존 수혜자 제외", "기타",
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "특정기간",
+                25, true, "https://apply.kr",
+                Set.of(), Set.of(), Set.of(),
+                List.of(), List.of(), List.of(),
+                SourceType.YOUTH_CENTER, "EXT-001", "https://src.kr",
+                "{}", "abc123"
+        );
     }
 }

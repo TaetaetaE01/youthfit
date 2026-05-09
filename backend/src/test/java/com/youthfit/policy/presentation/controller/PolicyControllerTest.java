@@ -116,6 +116,9 @@ class PolicyControllerTest {
                 Category.JOBS, "11",
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
                 null, null, null,
+                // TODO Task 3: 신규 11개 필드 임시 null
+                null, null, null, null, null,
+                null, null, null, null, false, null,
                 PolicyStatus.OPEN, DetailLevel.LITE,
                 java.util.Set.of(), java.util.Set.of(), java.util.Set.of(),
                 java.util.List.of(),

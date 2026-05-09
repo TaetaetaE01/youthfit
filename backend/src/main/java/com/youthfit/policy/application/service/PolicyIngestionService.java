@@ -59,7 +59,18 @@ public class PolicyIngestionService {
                         command.applyEnd(),
                         command.referenceYear(),
                         command.supportCycle(),
-                        command.provideType()
+                        command.provideType(),
+                        command.screeningMethod(),
+                        command.submissionDocuments(),
+                        command.additionalQualification(),
+                        command.participationRestriction(),
+                        command.additionalNotes(),
+                        command.businessPeriodStart(),
+                        command.businessPeriodEnd(),
+                        command.businessPeriodNote(),
+                        command.supportScale(),
+                        command.firstComeFirstServed(),
+                        command.applyUrl()
                 );
                 policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
                 policy.replaceAttachments(toAttachments(command.attachments()));
@@ -87,6 +98,17 @@ public class PolicyIngestionService {
                 .referenceYear(command.referenceYear())
                 .supportCycle(command.supportCycle())
                 .provideType(command.provideType())
+                .screeningMethod(command.screeningMethod())
+                .submissionDocuments(command.submissionDocuments())
+                .additionalQualification(command.additionalQualification())
+                .participationRestriction(command.participationRestriction())
+                .additionalNotes(command.additionalNotes())
+                .businessPeriodStart(command.businessPeriodStart())
+                .businessPeriodEnd(command.businessPeriodEnd())
+                .businessPeriodNote(command.businessPeriodNote())
+                .supportScale(command.supportScale())
+                .firstComeFirstServed(command.firstComeFirstServed())
+                .applyUrl(command.applyUrl())
                 .build();
         policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
         policy.replaceAttachments(toAttachments(command.attachments()));
