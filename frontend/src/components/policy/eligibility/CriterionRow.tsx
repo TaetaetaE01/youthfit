@@ -28,7 +28,14 @@ export default function CriterionRow({ item }: Props) {
       {/* Requirement vs userValue grid */}
       <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
         <dt className="text-neutral-500">정책 요구</dt>
-        <dd className="text-neutral-900">{item.requirement.displayText}</dd>
+        <dd className="flex items-center gap-1.5 text-neutral-900">
+          {item.requirement.displayText}
+          {item.requirement.operator === 'ANY' && (
+            <span className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+              조건 없음 (통과)
+            </span>
+          )}
+        </dd>
         <dt className="text-neutral-500">내 정보</dt>
         <dd
           className={cn(
