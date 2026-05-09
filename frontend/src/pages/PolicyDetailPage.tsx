@@ -470,6 +470,39 @@ export default function PolicyDetailPage() {
             contact={policy.contact}
           />
 
+          {/* 공식 신청 페이지 CTA */}
+          {policy.applyUrl && (
+            <div className="mb-6">
+              <a
+                href={policy.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-6 py-3 text-white font-semibold hover:bg-blue-600 transition-colors"
+              >
+                공식 신청 페이지로 이동
+                <span aria-hidden>→</span>
+              </a>
+            </div>
+          )}
+
+          {/* 사업기간 / 지원규모 chip */}
+          {(policy.businessPeriodStart || policy.businessPeriodNote || policy.supportScale != null) && (
+            <div className="mb-6 flex flex-wrap gap-2 text-sm text-gray-700">
+              {policy.businessPeriodStart && policy.businessPeriodEnd && (
+                <span className="rounded-full bg-gray-100 px-3 py-1">
+                  사업기간: {policy.businessPeriodStart} ~ {policy.businessPeriodEnd}
+                  {policy.businessPeriodNote && ` (${policy.businessPeriodNote})`}
+                </span>
+              )}
+              {policy.supportScale != null && (
+                <span className="rounded-full bg-gray-100 px-3 py-1">
+                  지원규모: {policy.supportScale.toLocaleString()}명
+                  {policy.firstComeFirstServed && ' · 선착순'}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Paired: 지원대상 */}
           <PairedSection
             id="paired-supportTarget"
@@ -479,6 +512,22 @@ export default function PolicyDetailPage() {
             originalContent={policy.supportTarget}
             originalRenderer={(c) => <FormattedPolicyText text={c} />}
           />
+
+          {/* 추가 자격조건 — 지원대상 카드 다음 */}
+          {policy.additionalQualification && policy.additionalQualification !== '해당사항 없음' && (
+            <section className="mb-6 rounded-lg border border-gray-200 p-4">
+              <h3 className="mb-2 font-semibold">추가 자격조건</h3>
+              <p className="whitespace-pre-line text-sm text-gray-700">{policy.additionalQualification}</p>
+            </section>
+          )}
+
+          {/* 참여 제한 대상 — 경고 톤 */}
+          {policy.participationRestriction && (
+            <section className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <h3 className="mb-2 font-semibold text-amber-900">⚠ 참여 제한 대상</h3>
+              <p className="whitespace-pre-line text-sm text-amber-900">{policy.participationRestriction}</p>
+            </section>
+          )}
 
           {/* Paired: 선정기준 */}
           <PairedSection
@@ -490,6 +539,14 @@ export default function PolicyDetailPage() {
             originalRenderer={(c) => <FormattedPolicyText text={c} />}
           />
 
+          {/* 심사방법 — 선정기준 다음 */}
+          {policy.screeningMethod && (
+            <section className="mb-6 rounded-lg border border-gray-200 p-4">
+              <h3 className="mb-2 font-semibold">심사방법</h3>
+              <p className="whitespace-pre-line text-sm text-gray-700">{policy.screeningMethod}</p>
+            </section>
+          )}
+
           {/* Paired: 지원내용 */}
           <PairedSection
             id="paired-supportContent"
@@ -499,6 +556,22 @@ export default function PolicyDetailPage() {
             originalContent={policy.supportContent}
             originalRenderer={(c) => <FormattedPolicyText text={c} />}
           />
+
+          {/* 제출서류 — 지원내용 다음 */}
+          {policy.submissionDocuments && (
+            <section className="mb-6 rounded-lg border border-gray-200 p-4">
+              <h3 className="mb-2 font-semibold">제출서류</h3>
+              <p className="whitespace-pre-line text-sm text-gray-700">{policy.submissionDocuments}</p>
+            </section>
+          )}
+
+          {/* 기타사항 — 보조 톤 */}
+          {policy.additionalNotes && (
+            <section className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-gray-600">기타사항</h3>
+              <p className="whitespace-pre-line text-sm italic text-gray-600">{policy.additionalNotes}</p>
+            </section>
+          )}
 
           {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
           {guide && (

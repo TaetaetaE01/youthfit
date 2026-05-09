@@ -107,6 +107,39 @@ public class Policy extends BaseTimeEntity {
     @Column(name = "tag", length = 100)
     private Set<String> targetTags = new HashSet<>();
 
+    @Column(name = "screening_method", columnDefinition = "TEXT")
+    private String screeningMethod;
+
+    @Column(name = "submission_documents", columnDefinition = "TEXT")
+    private String submissionDocuments;
+
+    @Column(name = "additional_qualification", columnDefinition = "TEXT")
+    private String additionalQualification;
+
+    @Column(name = "participation_restriction", columnDefinition = "TEXT")
+    private String participationRestriction;
+
+    @Column(name = "additional_notes", columnDefinition = "TEXT")
+    private String additionalNotes;
+
+    @Column(name = "business_period_start")
+    private LocalDate businessPeriodStart;
+
+    @Column(name = "business_period_end")
+    private LocalDate businessPeriodEnd;
+
+    @Column(name = "business_period_note", columnDefinition = "TEXT")
+    private String businessPeriodNote;
+
+    @Column(name = "support_scale")
+    private Integer supportScale;
+
+    @Column(name = "first_come_first_served", nullable = false)
+    private boolean firstComeFirstServed;
+
+    @Column(name = "apply_url", length = 500)
+    private String applyUrl;
+
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PolicyAttachment> attachments = new ArrayList<>();
 
@@ -116,7 +149,13 @@ public class Policy extends BaseTimeEntity {
                    String organization, String contact,
                    Category category, String regionCode,
                    LocalDate applyStart, LocalDate applyEnd,
-                   Integer referenceYear, String supportCycle, String provideType) {
+                   Integer referenceYear, String supportCycle, String provideType,
+                   String screeningMethod, String submissionDocuments,
+                   String additionalQualification, String participationRestriction,
+                   String additionalNotes,
+                   LocalDate businessPeriodStart, LocalDate businessPeriodEnd,
+                   String businessPeriodNote,
+                   Integer supportScale, boolean firstComeFirstServed, String applyUrl) {
         this.title = title;
         this.summary = summary;
         this.body = body;
@@ -132,6 +171,17 @@ public class Policy extends BaseTimeEntity {
         this.referenceYear = referenceYear;
         this.supportCycle = supportCycle;
         this.provideType = provideType;
+        this.screeningMethod = screeningMethod;
+        this.submissionDocuments = submissionDocuments;
+        this.additionalQualification = additionalQualification;
+        this.participationRestriction = participationRestriction;
+        this.additionalNotes = additionalNotes;
+        this.businessPeriodStart = businessPeriodStart;
+        this.businessPeriodEnd = businessPeriodEnd;
+        this.businessPeriodNote = businessPeriodNote;
+        this.supportScale = supportScale;
+        this.firstComeFirstServed = firstComeFirstServed;
+        this.applyUrl = applyUrl;
         this.status = PolicyStatus.UPCOMING;
         this.detailLevel = DetailLevel.LITE;
     }
@@ -172,7 +222,13 @@ public class Policy extends BaseTimeEntity {
                            String organization, String contact,
                            Category category, String regionCode,
                            LocalDate applyStart, LocalDate applyEnd,
-                           Integer referenceYear, String supportCycle, String provideType) {
+                           Integer referenceYear, String supportCycle, String provideType,
+                           String screeningMethod, String submissionDocuments,
+                           String additionalQualification, String participationRestriction,
+                           String additionalNotes,
+                           LocalDate businessPeriodStart, LocalDate businessPeriodEnd,
+                           String businessPeriodNote,
+                           Integer supportScale, boolean firstComeFirstServed, String applyUrl) {
         this.title = title;
         this.summary = summary;
         this.body = body;
@@ -188,6 +244,17 @@ public class Policy extends BaseTimeEntity {
         this.referenceYear = referenceYear;
         this.supportCycle = supportCycle;
         this.provideType = provideType;
+        this.screeningMethod = screeningMethod;
+        this.submissionDocuments = submissionDocuments;
+        this.additionalQualification = additionalQualification;
+        this.participationRestriction = participationRestriction;
+        this.additionalNotes = additionalNotes;
+        this.businessPeriodStart = businessPeriodStart;
+        this.businessPeriodEnd = businessPeriodEnd;
+        this.businessPeriodNote = businessPeriodNote;
+        this.supportScale = supportScale;
+        this.firstComeFirstServed = firstComeFirstServed;
+        this.applyUrl = applyUrl;
     }
 
     public void replaceReferenceSites(List<PolicyReferenceSite> sites) {

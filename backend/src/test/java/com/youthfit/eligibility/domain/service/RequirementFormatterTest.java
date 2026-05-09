@@ -135,4 +135,26 @@ class RequirementFormatterTest {
             assertThat(view.displayText()).isEqualTo("2,000만원 이상 5,000만원 이하");
         }
     }
+
+    @Nested
+    @DisplayName("ANY 연산자")
+    class Any {
+
+        @Test
+        @DisplayName("ANY 연산자는 value 무관하게 displayText가 \"제한 없음\"이어야 한다")
+        void anyOperator_returns_제한없음() {
+            RequirementView view = formatter.format("age", RuleOperator.ANY, "ALL");
+
+            assertThat(view.operator()).isEqualTo("ANY");
+            assertThat(view.displayText()).isEqualTo("제한 없음");
+        }
+
+        @Test
+        @DisplayName("ANY 연산자는 field나 value가 달라도 항상 \"제한 없음\"을 반환한다")
+        void anyOperator_ignores_field_and_value() {
+            RequirementView view = formatter.format("maritalStatus", RuleOperator.ANY, "WHATEVER");
+
+            assertThat(view.displayText()).isEqualTo("제한 없음");
+        }
+    }
 }

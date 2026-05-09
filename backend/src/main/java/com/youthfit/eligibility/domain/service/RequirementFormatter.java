@@ -26,6 +26,7 @@ public class RequirementFormatter {
             case LTE     -> formatScalar(field, value) + " 이하";
             case BETWEEN -> formatRange(field, value);
             case IN      -> formatList(field, value);
+            case ANY     -> "제한 없음";
         };
         return new RequirementView(operator.name(), displayText);
     }

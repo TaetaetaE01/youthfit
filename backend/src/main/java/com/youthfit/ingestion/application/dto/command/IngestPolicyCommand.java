@@ -26,9 +26,39 @@ public record IngestPolicyCommand(
         List<String> targetTags,
         List<Attachment> attachments,
         List<ReferenceSite> referenceSites,
-        List<ApplyMethod> applyMethods
+        List<ApplyMethod> applyMethods,
+        // ── 신규 텍스트/구조화 11개 ──
+        String screeningMethod,
+        String submissionDocuments,
+        String additionalQualification,
+        String participationRestriction,
+        String additionalNotes,
+        LocalDate businessPeriodStart,
+        LocalDate businessPeriodEnd,
+        String businessPeriodNote,
+        Integer supportScale,
+        Boolean firstComeFirstServed,
+        String applyUrl,
+        // ── 신규 rawCodes ──
+        RawCodes rawCodes
 ) {
     public record Attachment(String name, String url, String mediaType) {}
     public record ReferenceSite(String name, String url) {}
     public record ApplyMethod(String stageName, String description) {}
+
+    public record RawCodes(
+            Integer ageMin,
+            Integer ageMax,
+            String ageLimitYn,
+            String maritalStatusCd,
+            String earnConditionCd,
+            Integer earnMin,
+            Integer earnMax,
+            String earnEtcCn,
+            String employmentKindCd,
+            String educationCd,
+            String majorFieldCd,
+            String specializationCd,
+            List<String> zipCodes
+    ) {}
 }

@@ -5,6 +5,8 @@ import tools.jackson.databind.json.JsonMapper;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.common.event.PolicyUpsertedEvent;
+import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput;
+import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
@@ -33,9 +35,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("IngestionService")
 @ExtendWith(MockitoExtension.class)
@@ -61,6 +65,9 @@ class IngestionServiceTest {
 
     @Mock
     private IngestionItemFailureRepository ingestionItemFailureRepository;
+
+    @Mock
+    private CodeBasedRuleExtractionService codeBasedRuleExtractionService;
 
     @Spy
     private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();
@@ -242,6 +249,141 @@ class IngestionServiceTest {
             then(attachmentDownloadService).should(never()).downloadForPolicyAsync(any());
         }
 
+        @Test
+        @DisplayName("youth center 상세 필드가 RegisterPolicyCommand 에 그대로 전달된다")
+        void receivePolicy_propagates_youth_center_detail_fields_to_register_command() {
+            IngestPolicyCommand command = sampleCommandWithDetailFields();
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.registered(99L));
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+
+            ingestionService.receivePolicy(command);
+
+            ArgumentCaptor<RegisterPolicyCommand> captor = ArgumentCaptor.forClass(RegisterPolicyCommand.class);
+            then(policyIngestionService).should().registerPolicy(captor.capture());
+            RegisterPolicyCommand reg = captor.getValue();
+            assertThat(reg.screeningMethod()).isEqualTo("심사방법");
+            assertThat(reg.submissionDocuments()).isEqualTo("주민등록등본");
+            assertThat(reg.additionalQualification()).isEqualTo("추가 자격");
+            assertThat(reg.participationRestriction()).isEqualTo("기존 수혜자 제외");
+            assertThat(reg.additionalNotes()).isEqualTo("기타");
+            assertThat(reg.businessPeriodStart()).isEqualTo(LocalDate.of(2026, 1, 1));
+            assertThat(reg.businessPeriodEnd()).isEqualTo(LocalDate.of(2026, 12, 31));
+            assertThat(reg.businessPeriodNote()).isEqualTo("특정기간");
+            assertThat(reg.supportScale()).isEqualTo(25);
+            assertThat(reg.firstComeFirstServed()).isTrue();
+            assertThat(reg.applyUrl()).isEqualTo("https://apply.kr");
+        }
+
+        private IngestPolicyCommand sampleCommandWithDetailFields() {
+            return new IngestPolicyCommand(
+                    "https://src.kr", "YOUTH_CENTER", LocalDateTime.now(),
+                    "EXT-1", "제목", "요약", "[지원대상]\n내용", "복지", "서울특별시",
+                    null, null, 2026, null, "보조금",
+                    "기관", "연락처",
+                    List.of(), List.of(), List.of(),
+                    List.of(), List.of(), List.of(),
+                    "심사방법", "주민등록등본", "추가 자격", "기존 수혜자 제외", "기타",
+                    LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "특정기간",
+                    25, true, "https://apply.kr",
+                    null
+            );
+        }
+
+        @Test
+        @DisplayName("rawCodes가 있고 REGISTERED 이면 CodeBasedRuleExtractionService 를 호출한다")
+        void receivePolicy_invokes_codeBased_extractor_when_rawCodes_present_and_REGISTERED() {
+            IngestPolicyCommand command = sampleCommandWithRawCodes();
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.registered(123L));
+
+            ingestionService.receivePolicy(command);
+
+            ArgumentCaptor<CodeBasedExtractionInput> captor = ArgumentCaptor.forClass(CodeBasedExtractionInput.class);
+            verify(codeBasedRuleExtractionService).extractAndPersist(eq(123L), captor.capture());
+            assertThat(captor.getValue().maritalStatusCd()).isEqualTo("0055002");
+            assertThat(captor.getValue().zipCodes()).containsExactly("11680");
+        }
+
+        @Test
+        @DisplayName("rawCodes가 있고 UPDATED 이면 CodeBasedRuleExtractionService 를 호출한다")
+        void receivePolicy_invokes_codeBased_extractor_when_rawCodes_present_and_UPDATED() {
+            IngestPolicyCommand command = sampleCommandWithRawCodes();
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.updated(456L));
+
+            ingestionService.receivePolicy(command);
+
+            verify(codeBasedRuleExtractionService).extractAndPersist(eq(456L), any());
+        }
+
+        @Test
+        @DisplayName("SKIPPED_DUPLICATE 이면 CodeBasedRuleExtractionService 를 호출하지 않는다")
+        void receivePolicy_skips_codeBased_extractor_when_SKIPPED_DUPLICATE() {
+            IngestPolicyCommand command = sampleCommandWithRawCodes();
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.skippedDuplicate(789L));
+
+            ingestionService.receivePolicy(command);
+
+            verify(codeBasedRuleExtractionService, never()).extractAndPersist(any(), any());
+        }
+
+        @Test
+        @DisplayName("rawCodes 가 null 이면 CodeBasedRuleExtractionService 를 호출하지 않는다")
+        void receivePolicy_skips_codeBased_extractor_when_rawCodes_null() {
+            IngestPolicyCommand command = sampleCommandWithoutRawCodes();
+            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
+                    .willReturn(PolicyPeriod.empty());
+            given(policyIngestionService.registerPolicy(any()))
+                    .willReturn(PolicyIngestionResult.registered(111L));
+
+            ingestionService.receivePolicy(command);
+
+            verify(codeBasedRuleExtractionService, never()).extractAndPersist(any(), any());
+        }
+
+        private IngestPolicyCommand sampleCommandWithRawCodes() {
+            return new IngestPolicyCommand(
+                    "https://src.kr", "YOUTH_CENTER", LocalDateTime.now(),
+                    "EXT-2", "제목", "요약", "[지원대상]\n내용", "복지", "서울특별시",
+                    null, null, 2026, null, "보조금",
+                    "기관", "연락처",
+                    List.of(), List.of(), List.of(),
+                    List.of(), List.of(), List.of(),
+                    null, null, null, null, null,
+                    null, null, null,
+                    null, null, null,
+                    new IngestPolicyCommand.RawCodes(
+                            19, 34, "Y",
+                            "0055002", "0043001", 0, 0, null,
+                            "0013001", "0049007", "0011005", "0014001",
+                            List.of("11680"))
+            );
+        }
+
+        private IngestPolicyCommand sampleCommandWithoutRawCodes() {
+            return new IngestPolicyCommand(
+                    "https://src.kr", "YOUTH_CENTER", LocalDateTime.now(),
+                    "EXT-3", "제목", "요약", "[지원대상]\n내용", "복지", "서울특별시",
+                    null, null, 2026, null, "보조금",
+                    "기관", "연락처",
+                    List.of(), List.of(), List.of(),
+                    List.of(), List.of(), List.of(),
+                    null, null, null, null, null,
+                    null, null, null,
+                    null, null, null,
+                    null  // rawCodes
+            );
+        }
+
         private IngestPolicyCommand commandWithoutPeriod(String body) {
             return new IngestPolicyCommand(
                     "https://example.com/policy/2",
@@ -265,7 +407,10 @@ class IngestionServiceTest {
                     List.of(),
                     List.of(),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null
             );
         }
 
@@ -292,7 +437,10 @@ class IngestionServiceTest {
                     List.of("저소득"),
                     List.of(),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null
             );
         }
     }

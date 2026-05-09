@@ -4,6 +4,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.event.PolicyUpsertedEvent;
+import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput;
+import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
 import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
@@ -58,6 +60,7 @@ public class IngestionService {
     private final CostGuard costGuard;
     private final IngestionRunLogRepository ingestionRunLogRepository;
     private final IngestionItemFailureRepository ingestionItemFailureRepository;
+    private final CodeBasedRuleExtractionService codeBasedRuleExtractionService;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Instant runStart = Instant.now();
@@ -96,6 +99,18 @@ public class IngestionService {
                     command.referenceYear(),
                     command.supportCycle(),
                     command.provideType(),
+                    // ── 신규 11개 ──
+                    command.screeningMethod(),
+                    command.submissionDocuments(),
+                    command.additionalQualification(),
+                    command.participationRestriction(),
+                    command.additionalNotes(),
+                    command.businessPeriodStart(),
+                    command.businessPeriodEnd(),
+                    command.businessPeriodNote(),
+                    command.supportScale(),
+                    Boolean.TRUE.equals(command.firstComeFirstServed()),
+                    command.applyUrl(),
                     toSet(command.lifeTags()),
                     toSet(command.themeTags()),
                     toSet(command.targetTags()),
@@ -114,6 +129,25 @@ public class IngestionService {
 
             if (ingestionResult.outcome() == Outcome.SKIPPED_DUPLICATE) {
                 return new IngestPolicyResult(UUID.randomUUID(), "SKIPPED_DUPLICATE");
+            }
+
+            if (command.rawCodes() != null) {
+                CodeBasedExtractionInput extractionInput = new CodeBasedExtractionInput(
+                        command.rawCodes().ageMin(),
+                        command.rawCodes().ageMax(),
+                        command.rawCodes().ageLimitYn(),
+                        command.rawCodes().maritalStatusCd(),
+                        command.rawCodes().earnConditionCd(),
+                        command.rawCodes().earnMin(),
+                        command.rawCodes().earnMax(),
+                        command.rawCodes().earnEtcCn(),
+                        command.rawCodes().employmentKindCd(),
+                        command.rawCodes().educationCd(),
+                        command.rawCodes().majorFieldCd(),
+                        command.rawCodes().specializationCd(),
+                        command.rawCodes().zipCodes() == null ? List.of() : command.rawCodes().zipCodes()
+                );
+                codeBasedRuleExtractionService.extractAndPersist(ingestionResult.policyId(), extractionInput);
             }
 
             eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
