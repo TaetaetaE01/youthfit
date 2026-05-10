@@ -10,9 +10,10 @@ interface Props {
   messages: QnaMessage[];
   onCopy: (content: string) => Promise<void>;
   onRetry: (assistantMessageId: string) => void;
+  onFollowUpPick: (question: string) => void;
 }
 
-export function QnaMessageList({ messages, onCopy, onRetry }: Props) {
+export function QnaMessageList({ messages, onCopy, onRetry, onFollowUpPick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
 
@@ -68,6 +69,7 @@ export function QnaMessageList({ messages, onCopy, onRetry }: Props) {
               message={msg}
               onCopy={onCopy}
               onRetry={onRetry}
+              onFollowUpPick={onFollowUpPick}
             />
           );
         })}

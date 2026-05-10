@@ -19,12 +19,26 @@ describe('QnaMessageBubble', () => {
   };
 
   it('user 메시지는 본문을 평문으로 렌더한다', () => {
-    render(<QnaMessageBubble message={baseUser} onCopy={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageBubble
+        message={baseUser}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     expect(screen.getByText('신청 자격은?')).toBeInTheDocument();
   });
 
   it('assistant 메시지는 마크다운 강조를 렌더한다', () => {
-    render(<QnaMessageBubble message={baseAssistant} onCopy={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageBubble
+        message={baseAssistant}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     const strong = screen.getByText('만 19세');
     expect(strong.tagName).toBe('STRONG');
   });
@@ -46,6 +60,7 @@ describe('QnaMessageBubble', () => {
         }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
       />,
     );
     expect(screen.getByText('출처')).toBeInTheDocument();
@@ -55,7 +70,14 @@ describe('QnaMessageBubble', () => {
 
   it('복사 버튼 클릭 시 onCopy 호출', () => {
     const onCopy = vi.fn().mockResolvedValue(undefined);
-    render(<QnaMessageBubble message={baseAssistant} onCopy={onCopy} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageBubble
+        message={baseAssistant}
+        onCopy={onCopy}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: '답변 복사' }));
     expect(onCopy).toHaveBeenCalledWith(baseAssistant.content);
   });
@@ -66,6 +88,7 @@ describe('QnaMessageBubble', () => {
         message={{ ...baseAssistant, status: 'error', content: '오류' }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
       />,
     );
     expect(screen.getByRole('button', { name: '답변 재생성' })).toBeInTheDocument();
@@ -78,6 +101,7 @@ describe('QnaMessageBubble', () => {
         message={{ ...baseAssistant, status: 'error' }}
         onCopy={vi.fn()}
         onRetry={onRetry}
+        onFollowUpPick={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: '답변 재생성' }));
@@ -90,13 +114,21 @@ describe('QnaMessageBubble', () => {
         message={{ ...baseAssistant, status: 'streaming', content: '안녕' }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
       />,
     );
     expect(container.querySelector('[data-qna-cursor]')).not.toBeNull();
   });
 
   it('user 메시지에는 복사/재시도 버튼이 없다', () => {
-    render(<QnaMessageBubble message={baseUser} onCopy={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageBubble
+        message={baseUser}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     expect(screen.queryByRole('button', { name: '답변 복사' })).toBeNull();
     expect(screen.queryByRole('button', { name: '답변 재생성' })).toBeNull();
   });
@@ -120,9 +152,76 @@ describe('QnaMessageBubble', () => {
         }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
       />,
     );
     expect(screen.queryByText('출처')).toBeNull();
     expect(screen.queryByText(/청년정책 시행계획/)).toBeNull();
+  });
+
+  describe('follow-up 칩', () => {
+    it('followUpQuestions 가 있고 status=done 이면 칩과 헤더가 렌더된다', () => {
+      const onFollowUpPick = vi.fn();
+      render(
+        <QnaMessageBubble
+          message={{
+            ...baseAssistant,
+            followUpQuestions: ['후속A', '후속B'],
+          }}
+          onCopy={vi.fn()}
+          onRetry={vi.fn()}
+          onFollowUpPick={onFollowUpPick}
+        />,
+      );
+      expect(screen.getByText('이어서 물어볼 만한 질문')).toBeInTheDocument();
+      expect(screen.getByText('후속A')).toBeInTheDocument();
+      expect(screen.getByText('후속B')).toBeInTheDocument();
+    });
+
+    it('칩 클릭 시 onFollowUpPick 이 호출된다', () => {
+      const onFollowUpPick = vi.fn();
+      render(
+        <QnaMessageBubble
+          message={{
+            ...baseAssistant,
+            followUpQuestions: ['후속A'],
+          }}
+          onCopy={vi.fn()}
+          onRetry={vi.fn()}
+          onFollowUpPick={onFollowUpPick}
+        />,
+      );
+      fireEvent.click(screen.getByText('후속A'));
+      expect(onFollowUpPick).toHaveBeenCalledWith('후속A');
+    });
+
+    it('followUpQuestions 가 없으면 칩 영역 자체가 렌더되지 않는다', () => {
+      render(
+        <QnaMessageBubble
+          message={baseAssistant}
+          onCopy={vi.fn()}
+          onRetry={vi.fn()}
+          onFollowUpPick={vi.fn()}
+        />,
+      );
+      expect(screen.queryByText('이어서 물어볼 만한 질문')).not.toBeInTheDocument();
+    });
+
+    it('streaming 상태에서는 칩이 렌더되지 않는다 (status=done 만)', () => {
+      render(
+        <QnaMessageBubble
+          message={{
+            ...baseAssistant,
+            status: 'streaming',
+            content: '답변 일부',
+            followUpQuestions: ['후속A'],
+          }}
+          onCopy={vi.fn()}
+          onRetry={vi.fn()}
+          onFollowUpPick={vi.fn()}
+        />,
+      );
+      expect(screen.queryByText('후속A')).not.toBeInTheDocument();
+    });
   });
 });
