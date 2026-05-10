@@ -101,7 +101,7 @@ function PolicyHeader({
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-neutral-500">
         <span className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
-          {getRegionName(policy.regionCode)}
+          {getRegionName(policy.regionCode, policy.sourceType)}
         </span>
         <span className="text-neutral-300">|</span>
         <span className="flex items-center gap-1">
