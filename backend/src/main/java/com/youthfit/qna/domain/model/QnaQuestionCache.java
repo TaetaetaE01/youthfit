@@ -52,18 +52,24 @@ public class QnaQuestionCache extends BaseTimeEntity {
     @Column(name = "sources_json", nullable = false, columnDefinition = "JSONB")
     private String sourcesJson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "follow_ups_json", columnDefinition = "JSONB")
+    private String followUpsJson;
+
     @Builder
     private QnaQuestionCache(Long policyId,
                              String sourceHash,
                              String questionText,
                              float[] embedding,
                              String answer,
-                             String sourcesJson) {
+                             String sourcesJson,
+                             String followUpsJson) {
         this.policyId = policyId;
         this.sourceHash = sourceHash;
         this.questionText = questionText;
         this.embedding = embedding;
         this.answer = answer;
         this.sourcesJson = sourcesJson;
+        this.followUpsJson = followUpsJson;
     }
 }

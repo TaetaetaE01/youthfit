@@ -44,7 +44,30 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             - 메타데이터와 본문 모두에 답이 없으면 "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다."라고 답변하세요.
             - 쉬운 한국어로 답변하세요.
             - 답변은 간결하고 핵심적으로 작성하세요.
+
+            출력 형식 가이드:
+            - 정보가 여러 항목이면 글머리 기호(`-`)로 정리하세요.
+            - 핵심 수치(금액·기간·연령·횟수)는 굵게(`**...**`) 표시하세요.
+            - 본문이 2개 이상의 명확한 섹션으로 나뉠 때만 `###` 헤더를 쓰세요.
+              헤더 앞에 이모지를 1개까지 쓸 수 있으나, 정확히 맞는 경우에만.
+            - 짧은 답이면 평문 한두 줄로도 충분합니다 — 형식을 위한 형식은 피하세요.
             """;
+
+    private static final String FOLLOW_UP_SYSTEM_PROMPT = """
+            당신은 청년 정책 후속 질문 제안 도우미입니다.
+            방금 사용자에게 답변한 내용을 보고, 같은 정책 안에서 사용자가 자연스럽게 이어 물어볼 만한 후속 질문 2~3개를 제안하세요.
+
+            규칙:
+            - 출력은 JSON 배열만 — 다른 텍스트·설명·코드펜스 금지.
+            - 예: ["질문1", "질문2", "질문3"]
+            - 이미 답변에 명확히 포함된 정보를 다시 묻지 마세요.
+            - 같은 정책 범위 안에서만 — 다른 정책으로 넘어가는 질문 금지.
+            - 한국어, 자연스러운 의문문.
+            """;
+
+    private static final int FOLLOW_UP_MAX_TOKENS = 200;
+
+    private static final ObjectMapper SHARED_PARSE_MAPPER = new ObjectMapper();
 
     private final OpenAiQnaProperties properties;
     private final ApplicationEventPublisher eventPublisher;
@@ -89,6 +112,85 @@ public class OpenAiQnaClient implements QnaLlmProvider {
         } catch (Exception e) {
             log.error("OpenAI Q&A 스트리밍 호출 실패: policyTitle={}", policyTitle, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
+        }
+    }
+
+    @Override
+    public List<String> generateFollowUpQuestions(String policyTitle, String question, String answer) {
+        String userMessage = "정책명: " + policyTitle + "\n\n사용자 질문: " + question + "\n\n방금 답변:\n" + answer;
+
+        Map<String, Object> requestBody = Map.of(
+                "model", properties.getModel(),
+                "max_tokens", FOLLOW_UP_MAX_TOKENS,
+                "temperature", 0.3,
+                "messages", List.of(
+                        Map.of("role", "system", "content", FOLLOW_UP_SYSTEM_PROMPT),
+                        Map.of("role", "user", "content", userMessage)
+                )
+        );
+
+        try {
+            String responseBody = restClient.post()
+                    .uri(CHAT_COMPLETIONS_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + properties.getApiKey())
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode choices = root.get("choices");
+            if (choices == null || choices.isEmpty()) return List.of();
+            String content = choices.get(0).path("message").path("content").asText("");
+
+            // 비용 메트릭 발행
+            JsonNode usage = root.get("usage");
+            int promptTokens = usage != null ? usage.path("prompt_tokens").asInt(0) : 0;
+            int completionTokens = usage != null ? usage.path("completion_tokens").asInt(0) : 0;
+            try {
+                eventPublisher.publishEvent(new LlmCallRecorded(
+                        LlmModule.QNA, properties.getModel(), promptTokens, completionTokens, Instant.now()
+                ));
+            } catch (Exception e) {
+                log.warn("qna follow-up LLM 비용 이벤트 발행 실패", e);
+            }
+
+            return parseFollowUps(content, objectMapper);
+        } catch (Exception e) {
+            log.warn("OpenAI follow-up 호출 실패: policyTitle={}, error={}", policyTitle, e.toString());
+            return List.of();
+        }
+    }
+
+    static List<String> parseFollowUps(String content) {
+        return parseFollowUps(content, SHARED_PARSE_MAPPER);
+    }
+
+    static List<String> parseFollowUps(String content, ObjectMapper mapper) {
+        if (content == null || content.isBlank()) return List.of();
+        String trimmed = content.trim();
+        // 코드펜스 제거
+        if (trimmed.startsWith("```")) {
+            int firstNewline = trimmed.indexOf('\n');
+            if (firstNewline > 0) trimmed = trimmed.substring(firstNewline + 1);
+            if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.length() - 3);
+            trimmed = trimmed.trim();
+        }
+        if (!trimmed.startsWith("[")) return List.of();
+
+        try {
+            JsonNode arr = mapper.readTree(trimmed);
+            if (!arr.isArray()) return List.of();
+            List<String> result = new ArrayList<>();
+            for (JsonNode node : arr) {
+                if (node != null && node.isString()) {
+                    String s = node.asText();
+                    if (!s.isBlank()) result.add(s);
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

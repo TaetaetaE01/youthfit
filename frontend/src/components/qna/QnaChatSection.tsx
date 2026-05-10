@@ -47,7 +47,12 @@ export function QnaChatSection({ isAuthenticated, policyId, onLoginPrompt }: Pro
             <QnaSuggestionChips onPick={handlePick} />
           </div>
         ) : (
-          <QnaMessageList messages={messages} onCopy={copy} onRetry={retry} />
+          <QnaMessageList
+            messages={messages}
+            onCopy={copy}
+            onRetry={retry}
+            onFollowUpPick={handlePick}
+          />
         )}
       </div>
 

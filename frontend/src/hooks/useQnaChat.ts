@@ -51,6 +51,13 @@ export function useQnaChat(policyId: number): UseQnaChat {
             prev.map((m) => (m.id === assistantId ? { ...m, sources } : m)),
           );
         },
+        onSuggestions: (questions) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, followUpQuestions: questions } : m,
+            ),
+          );
+        },
         onDone: () => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -107,7 +114,7 @@ export function useQnaChat(policyId: number): UseQnaChat {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
-            ? { ...m, content: '', sources: undefined, status: 'streaming' }
+            ? { ...m, content: '', sources: undefined, followUpQuestions: undefined, status: 'streaming' }
             : m,
         ),
       );

@@ -196,8 +196,8 @@ public class QnaService {
 
         // ⑤ LLM 스트림
         String fullAnswer;
+        PolicyMetadata metadata = PolicyMetadata.from(policy);
         try {
-            PolicyMetadata metadata = PolicyMetadata.from(policy);
             fullAnswer = qnaLlmProvider.generateAnswer(
                     policy.getTitle(), metadata, context, command.question(),
                     chunk -> sendChunkEvent(emitter, chunk)
@@ -210,9 +210,19 @@ public class QnaService {
             return;
         }
 
+        boolean isFallback = isFallbackAnswer(fullAnswer);
+
+        // 푸터 첨부 (fallback 답변엔 미첨부, organization/contact 둘 다 있을 때만).
+        // QnaContactFooter.formatFooter() 한 곳에서 결정해 cache 와 SSE 양쪽이 같은 출력을 쓴다.
+        String footer = QnaContactFooter.formatFooter(metadata.organization(), metadata.contact(), isFallback);
+        if (footer != null) {
+            fullAnswer = fullAnswer + footer;
+            sendChunkEvent(emitter, footer);
+        }
+
         // Fix B: LLM 이 fallback 메시지 출력 시 출처 모순 방지 — sources 비우기
         // Fix C: passing 0건 + fallback 아닌 답변 시 메타데이터 출처 entry 추가
-        if (isFallbackAnswer(fullAnswer)) {
+        if (isFallback) {
             sources = List.of();
         } else if (passing.isEmpty()) {
             sources = List.of(new QnaSourceResult(
@@ -222,11 +232,27 @@ public class QnaService {
         }
 
         sendSourcesEvent(emitter, sources);
+
+        // follow-up 생성 (fallback 답변엔 스킵 — 추가 액션을 추천하지 않음)
+        List<String> followUps = List.of();
+        if (!isFallback) {
+            try {
+                followUps = qnaLlmProvider.generateFollowUpQuestions(
+                        policy.getTitle(), command.question(), fullAnswer);
+            } catch (Exception e) {
+                log.warn("follow-up 생성 실패 (정상 흐름 진행): policyId={}, error={}",
+                        command.policyId(), e.toString());
+            }
+            if (!followUps.isEmpty()) {
+                sendSuggestionsEvent(emitter, followUps);
+            }
+        }
+
         sendDoneEvent(emitter);
         emitter.complete();
 
         // ⑥ 캐시 저장
-        CachedAnswer answer = new CachedAnswer(fullAnswer, sources, Instant.now());
+        CachedAnswer answer = new CachedAnswer(fullAnswer, sources, followUps, Instant.now());
         try {
             qnaAnswerCache.put(command.policyId(), command.question(), answer);
         } catch (Exception e) {
@@ -250,6 +276,9 @@ public class QnaService {
     private void sendCachedAnswer(SseEmitter emitter, CachedAnswer cached, Long historyId) {
         sendChunkEvent(emitter, cached.answer());
         sendSourcesEvent(emitter, cached.sources());
+        if (!cached.followUpQuestions().isEmpty()) {
+            sendSuggestionsEvent(emitter, cached.followUpQuestions());
+        }
         sendDoneEvent(emitter);
         emitter.complete();
         try {
@@ -330,6 +359,14 @@ public class QnaService {
             emitter.send(SseEmitter.event().data(Map.of("type", "SOURCES", "sources", sources)));
         } catch (IOException e) {
             log.warn("SSE SOURCES 이벤트 전송 실패", e);
+        }
+    }
+
+    private void sendSuggestionsEvent(SseEmitter emitter, List<String> questions) {
+        try {
+            emitter.send(SseEmitter.event().data(Map.of("type", "SUGGESTIONS", "questions", questions)));
+        } catch (IOException e) {
+            log.warn("SSE SUGGESTIONS 이벤트 전송 실패", e);
         }
     }
 

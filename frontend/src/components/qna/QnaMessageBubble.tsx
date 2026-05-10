@@ -3,14 +3,17 @@ import ReactMarkdown from 'react-markdown';
 import { Copy, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { QnaMessage } from '@/types/qna';
+import { QnaSourceItem } from './QnaSourceItem';
+import { QnaSuggestionChips } from './QnaSuggestionChips';
 
 interface Props {
   message: QnaMessage;
   onCopy: (content: string) => Promise<void>;
   onRetry: (assistantMessageId: string) => void;
+  onFollowUpPick: (question: string) => void;
 }
 
-export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
+export function QnaMessageBubble({ message, onCopy, onRetry, onFollowUpPick }: Props) {
   const isUser = message.role === 'user';
   const isError = message.status === 'error';
   const isStreaming = message.status === 'streaming';
@@ -129,15 +132,28 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-surface">
               출처
             </p>
-            <ul className="m-0 list-disc pl-[1.2em] marker:text-chat-soft">
+            <ul className="m-0 list-none p-0">
               {message.sources.map((src, i) => (
-                <li key={i} className="my-0.5">
-                  {src}
-                </li>
+                <QnaSourceItem key={i} source={src} />
               ))}
             </ul>
           </div>
         )}
+
+        {!isError &&
+          message.status === 'done' &&
+          message.followUpQuestions &&
+          message.followUpQuestions.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-soft">
+                이어서 물어볼 만한 질문
+              </p>
+              <QnaSuggestionChips
+                questions={message.followUpQuestions}
+                onPick={onFollowUpPick}
+              />
+            </div>
+          )}
 
         {!isError && message.status === 'done' && (
           <div className="mt-2 flex justify-end gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">

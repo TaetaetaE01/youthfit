@@ -23,7 +23,7 @@ describe('fetchQnaAnswer', () => {
     const stream = makeSseStream([
       'data: {"type":"CHUNK","content":"안녕"}',
       'data: {"type":"CHUNK","content":"하세요"}',
-      'data: {"type":"SOURCES","sources":[{"policyId":1,"attachmentLabel":"청년정책 시행계획","pageStart":12,"pageEnd":13}]}',
+      'data: {"type":"SOURCES","sources":[{"policyId":1,"attachmentLabel":"청년정책 시행계획","pageStart":12,"pageEnd":13,"excerpt":"본 사업은..."}]}',
       'data: {"type":"DONE"}',
     ]);
 
@@ -33,19 +33,29 @@ describe('fetchQnaAnswer', () => {
 
     const onChunk = vi.fn();
     const onSources = vi.fn();
+    const onSuggestions = vi.fn();
     const onDone = vi.fn();
     const onError = vi.fn();
 
     await fetchQnaAnswer(
       1,
       '신청 자격은?',
-      { onChunk, onSources, onDone, onError },
+      { onChunk, onSources, onSuggestions, onDone, onError },
       'token-abc',
     );
 
     expect(onChunk).toHaveBeenNthCalledWith(1, '안녕');
     expect(onChunk).toHaveBeenNthCalledWith(2, '하세요');
-    expect(onSources).toHaveBeenCalledWith(['청년정책 시행계획 p.12-13']);
+    expect(onSources).toHaveBeenCalledWith([
+      {
+        policyId: 1,
+        attachmentLabel: '청년정책 시행계획',
+        pageStart: 12,
+        pageEnd: 13,
+        excerpt: '본 사업은...',
+      },
+    ]);
+    expect(onSuggestions).not.toHaveBeenCalled();
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(onError).not.toHaveBeenCalled();
   });
@@ -67,7 +77,7 @@ describe('fetchQnaAnswer', () => {
     const p = fetchQnaAnswer(
       1,
       'q',
-      { onChunk: vi.fn(), onSources: vi.fn(), onDone, onError },
+      { onChunk: vi.fn(), onSources: vi.fn(), onSuggestions: vi.fn(), onDone, onError },
       'token',
       controller.signal,
     );
@@ -83,7 +93,7 @@ describe('fetchQnaAnswer', () => {
     await fetchQnaAnswer(
       1,
       'q',
-      { onChunk: vi.fn(), onSources: vi.fn(), onDone: vi.fn(), onError },
+      { onChunk: vi.fn(), onSources: vi.fn(), onSuggestions: vi.fn(), onDone: vi.fn(), onError },
       null,
     );
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: '인증이 필요합니다' }));

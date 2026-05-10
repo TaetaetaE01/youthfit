@@ -70,12 +70,21 @@ describe('QnaChatSection (통합)', () => {
     fireEvent.click(document.body); // no-op
     cb!.onChunk('주민등록등본');
     cb!.onChunk('이 필요합니다.');
-    cb!.onSources(['청년정책 시행계획 p.20']);
+    cb!.onSources([
+      {
+        policyId: 1,
+        attachmentLabel: '청년정책 시행계획',
+        pageStart: 20,
+        pageEnd: 20,
+        excerpt: null,
+      },
+    ]);
     cb!.onDone();
 
     await waitFor(() => {
       expect(screen.getByText(/주민등록등본이 필요합니다\./)).toBeInTheDocument();
-      expect(screen.getByText('청년정책 시행계획 p.20')).toBeInTheDocument();
+      expect(screen.getByText(/청년정책 시행계획/)).toBeInTheDocument();
+      expect(screen.getByText(/p\.20/)).toBeInTheDocument();
     });
   });
 

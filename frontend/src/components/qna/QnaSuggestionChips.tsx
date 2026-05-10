@@ -1,4 +1,4 @@
-const SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   '신청 자격이 어떻게 되나요?',
   '어떤 서류가 필요한가요?',
   '신청은 언제까지인가요?',
@@ -6,13 +6,17 @@ const SUGGESTIONS = [
 ] as const;
 
 interface Props {
+  questions?: readonly string[];
   onPick: (question: string) => void;
 }
 
-export function QnaSuggestionChips({ onPick }: Props) {
+export function QnaSuggestionChips({ questions, onPick }: Props) {
+  const items = questions ?? DEFAULT_SUGGESTIONS;
+  if (items.length === 0) return null;
+
   return (
     <div className="flex flex-wrap justify-center gap-2">
-      {SUGGESTIONS.map((q) => (
+      {items.map((q) => (
         <button
           key={q}
           type="button"

@@ -6,6 +6,7 @@ public record SimilarCachedAnswer(
         String sourceHash,
         String answer,
         String sourcesJson,
+        String followUpsJson,
         double distance
 ) {
 }

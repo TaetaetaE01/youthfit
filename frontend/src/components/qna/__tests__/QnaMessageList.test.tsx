@@ -26,7 +26,14 @@ describe('QnaMessageList', () => {
   ];
 
   it('메시지를 순서대로 렌더한다', () => {
-    render(<QnaMessageList messages={messages} onCopy={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageList
+        messages={messages}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     expect(screen.getByText('q')).toBeInTheDocument();
     expect(screen.getByText('답변')).toBeInTheDocument();
   });
@@ -36,13 +43,25 @@ describe('QnaMessageList', () => {
       { id: 'u1', role: 'user', content: 'q', status: 'done' },
       { id: 'a1', role: 'assistant', content: '', status: 'streaming', questionRef: 'u1' },
     ];
-    render(<QnaMessageList messages={streaming} onCopy={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <QnaMessageList
+        messages={streaming}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
+    );
     expect(screen.getByRole('status', { name: '답변 준비 중' })).toBeInTheDocument();
   });
 
   it('스크롤이 위에 있고 메시지 push 되면 jump 버튼 노출', () => {
     const { container, rerender } = render(
-      <QnaMessageList messages={messages} onCopy={vi.fn()} onRetry={vi.fn()} />,
+      <QnaMessageList
+        messages={messages}
+        onCopy={vi.fn()}
+        onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
+      />,
     );
     const scroller = container.querySelector('[data-qna-scroller]') as HTMLElement;
     scroller.setAttribute('data-scroll-height', '1000');
@@ -55,6 +74,7 @@ describe('QnaMessageList', () => {
         messages={[...messages, { id: 'u2', role: 'user', content: 'q2', status: 'done' }]}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
+        onFollowUpPick={vi.fn()}
       />,
     );
     expect(screen.getByRole('button', { name: '가장 최근 메시지로 이동' })).toBeInTheDocument();

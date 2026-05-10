@@ -33,7 +33,7 @@ class QnaCacheLookupClassifierTest {
     @Test
     void hit_closest_와_cachedAnswer_둘다있으면_HIT() {
         var match = new SemanticLookupMatch(1L, BigDecimal.valueOf(0.92), BigDecimal.valueOf(0.15));
-        var cachedAnswer = new CachedAnswer("테스트 답변", List.of(), Instant.now());
+        var cachedAnswer = new CachedAnswer("테스트 답변", List.of(), List.of(), Instant.now());
         var result = SemanticLookupResult.hit(match, cachedAnswer);
         assertThat(classifier.classify(result)).isEqualTo(LookupResultType.HIT);
     }
