@@ -32,7 +32,8 @@ public class QnaQuestionCacheRepositoryImpl implements QnaQuestionCacheRepositor
                 (String) row[2],                    // sourceHash
                 (String) row[3],                    // answer
                 (String) row[4],                    // sourcesJson
-                ((Number) row[5]).doubleValue()    // distance
+                (String) row[5],                    // followUpsJson (nullable)
+                ((Number) row[6]).doubleValue()    // distance
         ));
     }
 

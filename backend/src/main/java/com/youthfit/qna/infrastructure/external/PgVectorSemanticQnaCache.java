@@ -29,6 +29,7 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorSemanticQnaCache.class);
     private static final TypeReference<List<QnaSourceResult>> SOURCES_TYPE = new TypeReference<>() {};
+    private static final TypeReference<List<String>> FOLLOW_UPS_TYPE = new TypeReference<>() {};
 
     private final QnaQuestionCacheRepository repository;
     private final QnaProperties properties;
@@ -67,12 +68,28 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
     }
 
     private CachedAnswer toCachedAnswer(Long policyId, SimilarCachedAnswer c) {
+        List<QnaSourceResult> sources = parseSources(policyId, c.sourcesJson());
+        List<String> followUps = parseFollowUps(policyId, c.followUpsJson());
+        return new CachedAnswer(c.answer(), sources, followUps, Instant.now());
+    }
+
+    private List<QnaSourceResult> parseSources(Long policyId, String json) {
+        if (json == null || json.isBlank()) return List.of();
         try {
-            List<QnaSourceResult> sources = objectMapper.readValue(c.sourcesJson(), SOURCES_TYPE);
-            return new CachedAnswer(c.answer(), sources, Instant.now());
+            return objectMapper.readValue(json, SOURCES_TYPE);
         } catch (RuntimeException e) {
             log.warn("Q&A 의미 캐시 sources 역직렬화 실패: policyId={}, error={}", policyId, e.toString());
-            return new CachedAnswer(c.answer(), List.of(), Instant.now());
+            return List.of();
+        }
+    }
+
+    private List<String> parseFollowUps(Long policyId, String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, FOLLOW_UPS_TYPE);
+        } catch (RuntimeException e) {
+            log.warn("Q&A 의미 캐시 followUps 역직렬화 실패: policyId={}, error={}", policyId, e.toString());
+            return List.of();
         }
     }
 
@@ -80,6 +97,9 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
     public void put(Long policyId, String question, String sourceHash, float[] embedding, CachedAnswer answer) {
         try {
             String sourcesJson = objectMapper.writeValueAsString(answer.sources());
+            String followUpsJson = answer.followUpQuestions().isEmpty()
+                    ? null
+                    : objectMapper.writeValueAsString(answer.followUpQuestions());
             QnaQuestionCache entity = QnaQuestionCache.builder()
                     .policyId(policyId)
                     .sourceHash(sourceHash)
@@ -87,6 +107,7 @@ public class PgVectorSemanticQnaCache implements SemanticQnaCache {
                     .embedding(embedding)
                     .answer(answer.answer())
                     .sourcesJson(sourcesJson)
+                    .followUpsJson(followUpsJson)
                     .build();
             repository.save(entity);
         } catch (RuntimeException e) {

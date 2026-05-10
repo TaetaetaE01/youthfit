@@ -67,7 +67,7 @@ class PgVectorSemanticQnaCacheTest {
         @DisplayName("findSimilar_가까운_후보_있고_임계값_초과_belowThreshold — distance 0.30 > threshold 0.20")
         void findSimilar_가까운_후보_있고_임계값_초과_belowThreshold() {
             SimilarCachedAnswer candidate = new SimilarCachedAnswer(
-                    42L, "캐시된 질문", "hash-abc", "캐시된 답변", "[]", 0.30
+                    42L, "캐시된 질문", "hash-abc", "캐시된 답변", "[]", null, 0.30
             );
             when(repository.findClosestByPolicyId(eq(POLICY_ID), eq(EMBEDDING), any(Duration.class)))
                     .thenReturn(Optional.of(candidate));
@@ -83,7 +83,7 @@ class PgVectorSemanticQnaCacheTest {
         @DisplayName("findSimilar_가까운_후보_있고_임계값_이하_hit — distance 0.15 <= threshold 0.20")
         void findSimilar_가까운_후보_있고_임계값_이하_hit() {
             SimilarCachedAnswer candidate = new SimilarCachedAnswer(
-                    99L, "캐시된 질문", "hash-xyz", "캐시된 답변 내용", "[]", 0.15
+                    99L, "캐시된 질문", "hash-xyz", "캐시된 답변 내용", "[]", null, 0.15
             );
             when(repository.findClosestByPolicyId(eq(POLICY_ID), eq(EMBEDDING), any(Duration.class)))
                     .thenReturn(Optional.of(candidate));

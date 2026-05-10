@@ -135,6 +135,7 @@ class QnaServiceTest {
             CachedAnswer cached = new CachedAnswer(
                     "이전 답변",
                     List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
+                    List.of(),
                     Instant.now()
             );
             given(qnaAnswerCache.get(10L, "재학생도 가능?")).willReturn(Optional.of(cached));
@@ -330,6 +331,7 @@ class QnaServiceTest {
             CachedAnswer cached = new CachedAnswer(
                     "이전 답변(의미 일치)",
                     List.of(new QnaSourceResult(10L, null, null, null, null, "발췌")),
+                    List.of(),
                     Instant.now()
             );
             SemanticLookupResult hitResult = SemanticLookupResult.hit(
@@ -440,6 +442,81 @@ class QnaServiceTest {
 
             verify(qnaAnswerCache).put(eq(10L), anyString(), cacheCaptor.capture());
             assertThat(cacheCaptor.getValue().answer()).contains("📞 문의: ");
+        }
+    }
+
+    @Nested
+    @DisplayName("후속 추천질문")
+    class FollowUps {
+
+        @Test
+        @DisplayName("정상 답변 → follow-up LLM 호출 + 캐시에 저장")
+        void followUps_generated_for_normal_answer() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willAnswer(inv -> {
+                        Consumer<String> consumer = inv.getArgument(4);
+                        consumer.accept("정상 답변");
+                        return "정상 답변";
+                    });
+            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString()))
+                    .willReturn(List.of("후속A", "후속B"));
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            ArgumentCaptor<CachedAnswer> cacheCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+
+            qnaService.askQuestion(new AskQuestionCommand(10L, "신청 자격?", 1L));
+            Thread.sleep(200);
+
+            verify(qnaLlmProvider).generateFollowUpQuestions(anyString(), eq("신청 자격?"), anyString());
+            verify(qnaAnswerCache).put(eq(10L), anyString(), cacheCaptor.capture());
+            assertThat(cacheCaptor.getValue().followUpQuestions()).containsExactly("후속A", "후속B");
+        }
+
+        @Test
+        @DisplayName("fallback 답변 → follow-up 호출 스킵")
+        void followUps_skipped_for_fallback() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            String fallback = "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.";
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willAnswer(inv -> {
+                        Consumer<String> consumer = inv.getArgument(4);
+                        consumer.accept(fallback);
+                        return fallback;
+                    });
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            qnaService.askQuestion(new AskQuestionCommand(10L, "내가 받을 수 있나요?", 1L));
+            Thread.sleep(200);
+
+            verify(qnaLlmProvider, never()).generateFollowUpQuestions(anyString(), anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("follow-up LLM 빈 리스트 반환 → 본문 답변/캐시 정상, follow-up 만 빈 리스트")
+        void followUps_empty_graceful() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willAnswer(inv -> {
+                        Consumer<String> consumer = inv.getArgument(4);
+                        consumer.accept("정상 답변");
+                        return "정상 답변";
+                    });
+            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString()))
+                    .willReturn(List.of());
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            ArgumentCaptor<CachedAnswer> cacheCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+
+            qnaService.askQuestion(new AskQuestionCommand(10L, "질문?", 1L));
+            Thread.sleep(200);
+
+            verify(qnaAnswerCache).put(eq(10L), anyString(), cacheCaptor.capture());
+            assertThat(cacheCaptor.getValue().answer()).contains("정상 답변");
+            assertThat(cacheCaptor.getValue().followUpQuestions()).isEmpty();
         }
     }
 

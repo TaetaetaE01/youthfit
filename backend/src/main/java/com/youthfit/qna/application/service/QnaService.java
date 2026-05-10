@@ -232,11 +232,27 @@ public class QnaService {
         }
 
         sendSourcesEvent(emitter, sources);
+
+        // follow-up 생성 (fallback 답변엔 스킵 — 추가 액션을 추천하지 않음)
+        List<String> followUps = List.of();
+        if (!isFallback) {
+            try {
+                followUps = qnaLlmProvider.generateFollowUpQuestions(
+                        policy.getTitle(), command.question(), fullAnswer);
+            } catch (Exception e) {
+                log.warn("follow-up 생성 실패 (정상 흐름 진행): policyId={}, error={}",
+                        command.policyId(), e.toString());
+            }
+            if (!followUps.isEmpty()) {
+                sendSuggestionsEvent(emitter, followUps);
+            }
+        }
+
         sendDoneEvent(emitter);
         emitter.complete();
 
         // ⑥ 캐시 저장
-        CachedAnswer answer = new CachedAnswer(fullAnswer, sources, Instant.now());
+        CachedAnswer answer = new CachedAnswer(fullAnswer, sources, followUps, Instant.now());
         try {
             qnaAnswerCache.put(command.policyId(), command.question(), answer);
         } catch (Exception e) {
@@ -260,6 +276,9 @@ public class QnaService {
     private void sendCachedAnswer(SseEmitter emitter, CachedAnswer cached, Long historyId) {
         sendChunkEvent(emitter, cached.answer());
         sendSourcesEvent(emitter, cached.sources());
+        if (!cached.followUpQuestions().isEmpty()) {
+            sendSuggestionsEvent(emitter, cached.followUpQuestions());
+        }
         sendDoneEvent(emitter);
         emitter.complete();
         try {
@@ -340,6 +359,14 @@ public class QnaService {
             emitter.send(SseEmitter.event().data(Map.of("type", "SOURCES", "sources", sources)));
         } catch (IOException e) {
             log.warn("SSE SOURCES 이벤트 전송 실패", e);
+        }
+    }
+
+    private void sendSuggestionsEvent(SseEmitter emitter, List<String> questions) {
+        try {
+            emitter.send(SseEmitter.event().data(Map.of("type", "SUGGESTIONS", "questions", questions)));
+        } catch (IOException e) {
+            log.warn("SSE SUGGESTIONS 이벤트 전송 실패", e);
         }
     }
 
