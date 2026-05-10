@@ -32,7 +32,7 @@ export function QnaSourceItem({ source }: Props) {
             aria-label="발췌 펼치기"
             aria-expanded={expanded}
             onClick={() => setExpanded((v) => !v)}
-            className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-chat-soft hover:bg-chat-source-bg"
+            className="-my-2 -mr-2 ml-1 inline-flex h-11 w-11 items-center justify-center rounded text-chat-soft hover:bg-chat-source-bg"
           >
             <ChevronDown
               className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
