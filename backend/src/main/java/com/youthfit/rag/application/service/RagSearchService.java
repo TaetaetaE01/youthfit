@@ -18,7 +18,7 @@ import java.util.List;
 public class RagSearchService {
 
     private static final Logger log = LoggerFactory.getLogger(RagSearchService.class);
-    private static final int DEFAULT_TOP_K = 5;
+    private static final int DEFAULT_TOP_K = 10;
 
     private final PolicyDocumentRepository policyDocumentRepository;
     private final EmbeddingProvider embeddingProvider;
