@@ -196,8 +196,8 @@ public class QnaService {
 
         // ⑤ LLM 스트림
         String fullAnswer;
+        PolicyMetadata metadata = PolicyMetadata.from(policy);
         try {
-            PolicyMetadata metadata = PolicyMetadata.from(policy);
             fullAnswer = qnaLlmProvider.generateAnswer(
                     policy.getTitle(), metadata, context, command.question(),
                     chunk -> sendChunkEvent(emitter, chunk)
@@ -210,9 +210,18 @@ public class QnaService {
             return;
         }
 
+        boolean isFallback = isFallbackAnswer(fullAnswer);
+
+        // 푸터 첨부 (fallback 답변엔 미첨부, organization/contact 둘 다 있을 때만)
+        fullAnswer = QnaContactFooter.appendIfPossible(
+                fullAnswer, metadata.organization(), metadata.contact(), isFallback);
+        if (!isFallback && !isBlank(metadata.organization()) && !isBlank(metadata.contact())) {
+            sendChunkEvent(emitter, "\n\n---\n\n📞 문의: " + metadata.organization() + " · " + metadata.contact());
+        }
+
         // Fix B: LLM 이 fallback 메시지 출력 시 출처 모순 방지 — sources 비우기
         // Fix C: passing 0건 + fallback 아닌 답변 시 메타데이터 출처 entry 추가
-        if (isFallbackAnswer(fullAnswer)) {
+        if (isFallback) {
             sources = List.of();
         } else if (passing.isEmpty()) {
             sources = List.of(new QnaSourceResult(
@@ -311,6 +320,10 @@ public class QnaService {
      */
     private static boolean isFallbackAnswer(String answer) {
         return answer != null && answer.contains("명시되어 있지 않");
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     private String truncateExcerpt(String content) {

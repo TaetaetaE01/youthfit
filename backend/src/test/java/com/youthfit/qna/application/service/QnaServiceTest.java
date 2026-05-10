@@ -202,7 +202,9 @@ class QnaServiceTest {
             verify(embeddingProvider, times(1)).embed("질문");
             verify(qnaAnswerCache).put(eq(10L), eq("질문"), any(CachedAnswer.class));
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
-            verify(historyWriter).markCompleted(eq(99L), eq("답변 일부."), anyString());
+            ArgumentCaptor<String> answerCaptor = ArgumentCaptor.forClass(String.class);
+            verify(historyWriter).markCompleted(eq(99L), answerCaptor.capture(), anyString());
+            assertThat(answerCaptor.getValue()).startsWith("답변 일부.");
         }
 
         @Test
@@ -409,6 +411,33 @@ class QnaServiceTest {
 
             verify(qnaLlmProvider, times(1)).generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any());
             verify(eventPublisher).publishEvent(any(QnaCacheLookupEvent.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("푸터 첨부")
+    class ContactFooter {
+
+        @Test
+        @DisplayName("정상 답변 + organization/contact 있음 → 캐시에 푸터 포함")
+        void footer_appended_when_metadata_present() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willAnswer(inv -> {
+                        Consumer<String> consumer = inv.getArgument(4);
+                        consumer.accept("정상 답변");
+                        return "정상 답변";
+                    });
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            ArgumentCaptor<CachedAnswer> cacheCaptor = ArgumentCaptor.forClass(CachedAnswer.class);
+
+            qnaService.askQuestion(new AskQuestionCommand(10L, "신청 자격?", 1L));
+            Thread.sleep(200);
+
+            verify(qnaAnswerCache).put(eq(10L), anyString(), cacheCaptor.capture());
+            assertThat(cacheCaptor.getValue().answer()).contains("📞 문의: ");
         }
     }
 
