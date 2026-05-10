@@ -99,7 +99,7 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4 text-xs text-gray-400">
         <span className="flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5" />
-          {getRegionName(policy.regionCode)}
+          {getRegionName(policy.regionCode, policy.sourceType)}
           {policy.subRegions && policy.subRegions.length >= 2 && (
             <span className="text-gray-300">· {formatSubRegions(policy.subRegions)}</span>
           )}

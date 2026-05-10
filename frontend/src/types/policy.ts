@@ -299,7 +299,14 @@ export const REGION_OPTIONS = [
   { value: 'JEJU', label: '제주' },
 ] as const;
 
-export function getRegionName(regionCode: string): string {
-  if (regionCode === '전국') return '전국(중앙정부)';
+export function getRegionName(
+  regionCode: string,
+  sourceType?: SourceType | null,
+): string {
+  if (regionCode === '전국') {
+    if (sourceType === 'BOKJIRO_CENTRAL') return '전국(중앙정부)';
+    if (sourceType === 'YOUTH_CENTER') return '전국(여러 지자체)';
+    return '전국';
+  }
   return REGION_OPTIONS.find((r) => r.value === regionCode)?.label ?? regionCode;
 }
