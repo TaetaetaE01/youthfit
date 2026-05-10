@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Copy, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { QnaMessage } from '@/types/qna';
+import { QnaSourceItem } from './QnaSourceItem';
 
 interface Props {
   message: QnaMessage;
@@ -129,11 +130,9 @@ export function QnaMessageBubble({ message, onCopy, onRetry }: Props) {
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-surface">
               출처
             </p>
-            <ul className="m-0 list-disc pl-[1.2em] marker:text-chat-soft">
+            <ul className="m-0 list-none p-0">
               {message.sources.map((src, i) => (
-                <li key={i} className="my-0.5">
-                  {src}
-                </li>
+                <QnaSourceItem key={i} source={src} />
               ))}
             </ul>
           </div>

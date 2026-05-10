@@ -1,8 +1,11 @@
+import type { QnaSource } from '@/types/qna';
+
 const QNA_URL = '/api/v1/qna/ask';
 
 export interface QnaCallbacks {
   onChunk: (text: string) => void;
-  onSources: (sources: string[]) => void;
+  onSources: (sources: QnaSource[]) => void;
+  onSuggestions: (questions: string[]) => void;
   onDone: () => void;
   onError: (error: Error) => void;
 }
@@ -14,7 +17,7 @@ export async function fetchQnaAnswer(
   accessToken: string | null,
   signal?: AbortSignal,
 ): Promise<void> {
-  const { onChunk, onSources, onDone, onError } = callbacks;
+  const { onChunk, onSources, onSuggestions, onDone, onError } = callbacks;
 
   if (!accessToken) {
     onError(new Error('인증이 필요합니다'));
@@ -34,7 +37,7 @@ export async function fetchQnaAnswer(
     });
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
-      return; // 의도적 취소: silent
+      return;
     }
     onError(e instanceof Error ? e : new Error('네트워크 오류'));
     return;
@@ -73,28 +76,18 @@ export async function fetchQnaAnswer(
           if (parsed.type === 'CHUNK') {
             onChunk(parsed.content ?? '');
           } else if (parsed.type === 'SOURCES') {
-            const sourceStrings: string[] = Array.from(
-              new Set(
-                (parsed.sources ?? []).map(
-                  (s: {
-                    policyId?: number;
-                    attachmentLabel?: string | null;
-                    pageStart?: number | null;
-                    pageEnd?: number | null;
-                  }) => {
-                    const label = s.attachmentLabel ?? `정책 #${s.policyId}`;
-                    const page =
-                      s.pageStart && s.pageEnd
-                        ? s.pageStart === s.pageEnd
-                          ? ` p.${s.pageStart}`
-                          : ` p.${s.pageStart}-${s.pageEnd}`
-                        : '';
-                    return `${label}${page}`;
-                  },
-                ),
-              ),
+            const sources: QnaSource[] = (parsed.sources ?? []).map(
+              (s: Partial<QnaSource>) => ({
+                policyId: s.policyId ?? 0,
+                attachmentLabel: s.attachmentLabel ?? null,
+                pageStart: s.pageStart ?? null,
+                pageEnd: s.pageEnd ?? null,
+                excerpt: s.excerpt ?? null,
+              }),
             );
-            onSources(sourceStrings);
+            onSources(sources);
+          } else if (parsed.type === 'SUGGESTIONS') {
+            onSuggestions(parsed.questions ?? []);
           } else if (parsed.type === 'DONE') {
             onDone();
             return;
@@ -109,7 +102,7 @@ export async function fetchQnaAnswer(
     }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
-      return; // 의도적 취소: silent
+      return;
     }
     onError(e instanceof Error ? e : new Error('스트림 읽기 오류'));
     return;

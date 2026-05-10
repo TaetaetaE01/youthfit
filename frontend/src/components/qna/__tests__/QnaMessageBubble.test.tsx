@@ -32,13 +32,25 @@ describe('QnaMessageBubble', () => {
   it('출처가 있으면 출처 박스 렌더', () => {
     render(
       <QnaMessageBubble
-        message={{ ...baseAssistant, sources: ['청년정책 시행계획 p.12-13'] }}
+        message={{
+          ...baseAssistant,
+          sources: [
+            {
+              policyId: 1,
+              attachmentLabel: '청년정책 시행계획',
+              pageStart: 12,
+              pageEnd: 13,
+              excerpt: null,
+            },
+          ],
+        }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
       />,
     );
     expect(screen.getByText('출처')).toBeInTheDocument();
-    expect(screen.getByText('청년정책 시행계획 p.12-13')).toBeInTheDocument();
+    expect(screen.getByText(/청년정책 시행계획/)).toBeInTheDocument();
+    expect(screen.getByText(/p\.12-13/)).toBeInTheDocument();
   });
 
   it('복사 버튼 클릭 시 onCopy 호출', () => {
@@ -96,13 +108,21 @@ describe('QnaMessageBubble', () => {
           ...baseAssistant,
           status: 'error',
           content: '오류',
-          sources: ['청년정책 시행계획 p.12-13'],
+          sources: [
+            {
+              policyId: 1,
+              attachmentLabel: '청년정책 시행계획',
+              pageStart: 12,
+              pageEnd: 13,
+              excerpt: null,
+            },
+          ],
         }}
         onCopy={vi.fn()}
         onRetry={vi.fn()}
       />,
     );
     expect(screen.queryByText('출처')).toBeNull();
-    expect(screen.queryByText('청년정책 시행계획 p.12-13')).toBeNull();
+    expect(screen.queryByText(/청년정책 시행계획/)).toBeNull();
   });
 });

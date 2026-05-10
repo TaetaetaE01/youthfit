@@ -131,4 +131,37 @@ describe('useQnaChat', () => {
     act(() => result.current.send('q2'));
     expect(aborts[0].aborted).toBe(true);
   });
+
+  it('onSuggestions 콜백으로 followUpQuestions 가 메시지에 반영된다', async () => {
+    let callbacks: qnaApi.QnaCallbacks | null = null;
+    vi.mocked(qnaApi.fetchQnaAnswer).mockImplementation(async (_id, _q, cb) => {
+      callbacks = cb;
+    });
+
+    const { result } = renderHook(() => useQnaChat(1));
+    act(() => result.current.send('q'));
+    await waitFor(() => expect(callbacks).not.toBeNull());
+
+    act(() => callbacks!.onSuggestions(['후속A', '후속B', '후속C']));
+
+    expect(result.current.messages[1].followUpQuestions).toEqual(['후속A', '후속B', '후속C']);
+  });
+
+  it('onSources 가 raw QnaSource[] 를 받아 메시지 sources 에 저장한다', async () => {
+    let callbacks: qnaApi.QnaCallbacks | null = null;
+    vi.mocked(qnaApi.fetchQnaAnswer).mockImplementation(async (_id, _q, cb) => {
+      callbacks = cb;
+    });
+
+    const { result } = renderHook(() => useQnaChat(1));
+    act(() => result.current.send('q'));
+    await waitFor(() => expect(callbacks).not.toBeNull());
+
+    const sources = [
+      { policyId: 1, attachmentLabel: '시행계획', pageStart: 12, pageEnd: 13, excerpt: '본문...' },
+    ];
+    act(() => callbacks!.onSources(sources));
+
+    expect(result.current.messages[1].sources).toEqual(sources);
+  });
 });
