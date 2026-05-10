@@ -1,5 +1,5 @@
 import bokjiroLogo from '@/assets/source-logos/bokjiro.gif';
-import youthCenterLogo from '@/assets/source-logos/youth-center.svg';
+import youthCenterLogo from '@/assets/source-logos/youth-center.png';
 import youthSeoulLogo from '@/assets/source-logos/youth-seoul.svg';
 import { cn } from '@/lib/cn';
 import type { SourceType } from '@/types/policy';
@@ -10,11 +10,12 @@ const LOGO_MAP: Record<SourceType, string> = {
   YOUTH_SEOUL_CRAWL: youthSeoulLogo,
 };
 
-// 출처별 종횡비가 달라 (복지로 3:2, 텍스트 SVG 4:1) 같은 높이를 적용하면
-// 복지로 로고가 너무 작아 보인다. 복지로만 한 단계 더 크게 둔다.
+// 출처별 종횡비가 달라 같은 높이를 적용하면 시각적 균형이 맞지 않는다.
+// 복지로(3:2)·온통청년(약 1.7:1)은 로고형이라 약간 크게, 청년 서울(4:1)은
+// 텍스트 배지형이라 작게 둔다.
 const HEIGHT_MAP: Record<SourceType, { sm: string; md: string }> = {
   BOKJIRO_CENTRAL: { sm: 'h-7', md: 'h-9' },
-  YOUTH_CENTER: { sm: 'h-5', md: 'h-6' },
+  YOUTH_CENTER: { sm: 'h-7', md: 'h-9' },
   YOUTH_SEOUL_CRAWL: { sm: 'h-5', md: 'h-6' },
 };
 
