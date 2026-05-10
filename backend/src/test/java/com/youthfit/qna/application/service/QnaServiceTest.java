@@ -445,6 +445,12 @@ class QnaServiceTest {
         }
     }
 
+    /**
+     * 주의: 이 테스트들은 follow-up LLM 호출 결과가 캐시에 들어가는지만 검증한다.
+     * SUGGESTIONS SSE 이벤트가 실제로 emitter 로 송출되는지는 SseEmitter 가
+     * QnaService.askQuestion 내부에서 생성되어 주입 불가능한 구조라
+     * 이 슬라이스 테스트로는 검증 못한다. 수동 e2e 또는 Spring web layer 테스트 필요.
+     */
     @Nested
     @DisplayName("후속 추천질문")
     class FollowUps {

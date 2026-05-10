@@ -67,6 +67,8 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private static final int FOLLOW_UP_MAX_TOKENS = 200;
 
+    private static final ObjectMapper SHARED_PARSE_MAPPER = new ObjectMapper();
+
     private final OpenAiQnaProperties properties;
     private final ApplicationEventPublisher eventPublisher;
     private final RestClient restClient = RestClient.create();
@@ -153,7 +155,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                 log.warn("qna follow-up LLM 비용 이벤트 발행 실패", e);
             }
 
-            return parseFollowUps(content);
+            return parseFollowUps(content, objectMapper);
         } catch (Exception e) {
             log.warn("OpenAI follow-up 호출 실패: policyTitle={}, error={}", policyTitle, e.toString());
             return List.of();
@@ -161,6 +163,10 @@ public class OpenAiQnaClient implements QnaLlmProvider {
     }
 
     static List<String> parseFollowUps(String content) {
+        return parseFollowUps(content, SHARED_PARSE_MAPPER);
+    }
+
+    static List<String> parseFollowUps(String content, ObjectMapper mapper) {
         if (content == null || content.isBlank()) return List.of();
         String trimmed = content.trim();
         // 코드펜스 제거
@@ -173,7 +179,6 @@ public class OpenAiQnaClient implements QnaLlmProvider {
         if (!trimmed.startsWith("[")) return List.of();
 
         try {
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode arr = mapper.readTree(trimmed);
             if (!arr.isArray()) return List.of();
             List<String> result = new ArrayList<>();
