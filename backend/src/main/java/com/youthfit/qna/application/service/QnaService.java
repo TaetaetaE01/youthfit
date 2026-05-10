@@ -212,11 +212,12 @@ public class QnaService {
 
         boolean isFallback = isFallbackAnswer(fullAnswer);
 
-        // 푸터 첨부 (fallback 답변엔 미첨부, organization/contact 둘 다 있을 때만)
-        fullAnswer = QnaContactFooter.appendIfPossible(
-                fullAnswer, metadata.organization(), metadata.contact(), isFallback);
-        if (!isFallback && !isBlank(metadata.organization()) && !isBlank(metadata.contact())) {
-            sendChunkEvent(emitter, "\n\n---\n\n📞 문의: " + metadata.organization() + " · " + metadata.contact());
+        // 푸터 첨부 (fallback 답변엔 미첨부, organization/contact 둘 다 있을 때만).
+        // QnaContactFooter.formatFooter() 한 곳에서 결정해 cache 와 SSE 양쪽이 같은 출력을 쓴다.
+        String footer = QnaContactFooter.formatFooter(metadata.organization(), metadata.contact(), isFallback);
+        if (footer != null) {
+            fullAnswer = fullAnswer + footer;
+            sendChunkEvent(emitter, footer);
         }
 
         // Fix B: LLM 이 fallback 메시지 출력 시 출처 모순 방지 — sources 비우기
@@ -320,10 +321,6 @@ public class QnaService {
      */
     private static boolean isFallbackAnswer(String answer) {
         return answer != null && answer.contains("명시되어 있지 않");
-    }
-
-    private static boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
     }
 
     private String truncateExcerpt(String content) {

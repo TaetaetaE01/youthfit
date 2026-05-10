@@ -204,7 +204,9 @@ class QnaServiceTest {
             verify(semanticQnaCache).put(eq(10L), eq("질문"), eq("hash-abc"), any(), any(CachedAnswer.class));
             ArgumentCaptor<String> answerCaptor = ArgumentCaptor.forClass(String.class);
             verify(historyWriter).markCompleted(eq(99L), answerCaptor.capture(), anyString());
-            assertThat(answerCaptor.getValue()).startsWith("답변 일부.");
+            assertThat(answerCaptor.getValue())
+                    .startsWith("답변 일부.")
+                    .endsWith("📞 문의: 보건복지부 · 02-123-4567");
         }
 
         @Test
