@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/internal/ingestion")
 @RequiredArgsConstructor
-public class IngestionInternalController {
+public class IngestionInternalController implements IngestionInternalApi {
 
     private final AttachmentReindexService attachmentReindexService;
 
     @PostMapping("/reindex/{policyId:\\d+}")
+    @Override
     public ResponseEntity<Void> reindex(@PathVariable Long policyId) {
         attachmentReindexService.reindex(policyId);
         return ResponseEntity.noContent().build();
