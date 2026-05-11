@@ -194,23 +194,19 @@ public String computeHash(String content) {
 
 ### 6.2 재인덱싱 트리거
 
-기존 `RagIndexingService.indexPolicyDocument(policyId, content)` 그대로 사용. 운영 명령:
+플랜에서 신규 추가되는 internal endpoint `POST /api/internal/ingestion/reindex/{policyId}` 를 사용. 내부적으로 `AttachmentReindexService.reindex(policyId)` 가 호출되어 정책 본문 + 첨부를 합친 content 를 chunker 에 전달.
 
 ```bash
 # 1단계 — 정책 7번만
-curl -X POST http://localhost:8080/api/internal/rag/reindex \
-  -H "X-Internal-Api-Key: changeme" \
-  -d "{\"policyId\": 7}"
+curl -X POST http://localhost:8080/api/internal/ingestion/reindex/7 \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY"
 
 # 2단계 — 전체 정책 (검증 통과 후)
-for id in $(필요한 정책 id 리스트); do
-  curl -X POST http://localhost:8080/api/internal/rag/reindex \
-    -H "X-Internal-Api-Key: changeme" \
-    -d "{\"policyId\": $id}"
-done
+while read -r id; do
+  curl -X POST "http://localhost:8080/api/internal/ingestion/reindex/${id}" \
+    -H "X-Internal-Api-Key: $INTERNAL_API_KEY"
+done < /tmp/policy_ids.txt
 ```
-
-(정확한 endpoint 와 payload 는 구현 plan 에서 코드 확인 후 확정)
 
 embedding 비용: 정책 200개 기준 ~$0.05 (text-embedding-3-small, $0.02/1M tokens) — 무시 가능.
 
