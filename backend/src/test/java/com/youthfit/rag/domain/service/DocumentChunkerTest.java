@@ -101,19 +101,17 @@ class DocumentChunkerTest {
         }
 
         @Test
-        @DisplayName("각 청크의 크기가 maxChunkSize를 초과하지 않는다")
-        void chunkSize_doesNotExceedMax() {
-            // given
+        @DisplayName("각 청크의 크기가 maxChunkSize + overlap 한도를 초과하지 않는다 (soft limit)")
+        void chunkSize_doesNotExceedMaxPlusOverlap() {
             int maxSize = 100;
+            int overlapAllowance = 100;
             DocumentChunker smallChunker = new DocumentChunker(maxSize);
             String content = "A".repeat(50) + "\n\n" + "B".repeat(50) + "\n\n" + "C".repeat(50);
 
-            // when
             List<PolicyDocument> result = smallChunker.chunk(1L, content);
 
-            // then
             assertThat(result).allSatisfy(chunk ->
-                    assertThat(chunk.getContent().length()).isLessThanOrEqualTo(maxSize));
+                    assertThat(chunk.getContent().length()).isLessThanOrEqualTo(maxSize + overlapAllowance));
         }
 
         @Test
@@ -248,6 +246,57 @@ class DocumentChunkerTest {
             for (int i = 1; i < result.size(); i++) {
                 assertThat(result.get(i).getContent()).doesNotStartWith("다음은 중복 참여");
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("청크 간 overlap")
+    class Overlap {
+
+        @Test
+        @DisplayName("일반 평문 청크 사이에 ~80자 overlap 이 들어간다")
+        void normalChunks_haveOverlapPrefix() {
+            DocumentChunker chunker = new DocumentChunker(100);
+            String content = "지원 대상은 만 19세부터 34세까지의 청년이며 소득은 중위소득 100% 이하 가구입니다. "
+                    + "이는 청년이 자립할 수 있는 기반을 마련하기 위한 정책으로 정부가 매칭 지원금을 제공합니다. "
+                    + "신청은 복지로 또는 주민센터에서 가능하며 신청 후 약 4주 이내에 결과가 통보됩니다. "
+                    + "선정된 신청자는 매월 본인 저축액에 비례한 정부 지원금을 받게 됩니다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result.size()).isGreaterThanOrEqualTo(2);
+            String firstChunk = result.get(0).getContent();
+            String secondChunk = result.get(1).getContent();
+
+            int prefixLen = Math.min(80, secondChunk.length());
+            String secondPrefix = secondChunk.substring(0, prefixLen);
+            boolean foundOverlap = false;
+            for (int len = prefixLen; len >= 10; len--) {
+                if (firstChunk.contains(secondPrefix.substring(0, len))) {
+                    foundOverlap = true;
+                    break;
+                }
+            }
+            assertThat(foundOverlap).as("두 번째 청크 시작이 첫 번째 청크 끝 일부와 겹쳐야 함").isTrue();
+        }
+
+        @Test
+        @DisplayName("표 청크에는 overlap 이 적용되지 않는다 (헤더 prepend 가 그 역할)")
+        void tableChunks_skipOverlap() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String header = "사업번호 사업구분 시행기관";
+            String content = header + "\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).allSatisfy(chunk ->
+                    assertThat(chunk.getContent()).startsWith(header + "\n"));
         }
     }
 

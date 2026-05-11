@@ -45,7 +45,9 @@ public class DocumentChunker {
         List<PolicyDocument> documents = new ArrayList<>();
         int globalIndex = 0;
         for (Segment seg : segments) {
-            for (Chunk c : chunkSegment(seg)) {
+            List<Chunk> segChunks = chunkSegment(seg);
+            List<Chunk> withOverlap = applyOverlap(segChunks);
+            for (Chunk c : withOverlap) {
                 if (c.text().isBlank()) {
                     continue;
                 }
@@ -138,6 +140,65 @@ public class DocumentChunker {
             chunks.add(new Chunk(finalText, pr.start(), pr.end()));
         }
         return chunks;
+    }
+
+    private static final int OVERLAP_CHARS = 80;
+    private static final int OVERLAP_BACKTRACK_LIMIT = 20;
+
+    /**
+     * 일반 평문 청크에 ~80자 overlap 을 prepend. 표 청크(헤더로 시작)는 스킵.
+     */
+    private List<Chunk> applyOverlap(List<Chunk> chunks) {
+        if (chunks.size() < 2) return chunks;
+
+        List<Chunk> result = new ArrayList<>(chunks.size());
+        result.add(chunks.get(0));
+        for (int i = 1; i < chunks.size(); i++) {
+            Chunk prev = chunks.get(i - 1);
+            Chunk cur = chunks.get(i);
+
+            if (looksLikeTableChunk(cur.text())) {
+                result.add(cur);
+                continue;
+            }
+
+            String overlap = computeOverlapPrefix(prev.text());
+            if (overlap.isEmpty()) {
+                result.add(cur);
+            } else {
+                result.add(new Chunk(overlap + "\n" + cur.text(), cur.pageStart(), cur.pageEnd()));
+            }
+        }
+        return result;
+    }
+
+    private boolean looksLikeTableChunk(String text) {
+        String[] lines = text.split("\n", 3);
+        if (lines.length < 2) return false;
+        // 1) 헤더 prepend 된 표: line 0 = 비-번호 헤더, line 1 = 번호 행
+        // 2) 헤더 없는 표 (헤더 거부됨): line 0 = 번호 행, line 1 = 번호 행
+        if (NUMBER_ROW.matcher(lines[0]).find() && NUMBER_ROW.matcher(lines[1]).find()) {
+            return true;
+        }
+        return !NUMBER_ROW.matcher(lines[0]).find()
+                && NUMBER_ROW.matcher(lines[1]).find();
+    }
+
+    private String computeOverlapPrefix(String prevText) {
+        if (prevText.length() <= OVERLAP_CHARS) return prevText;
+        int start = prevText.length() - OVERLAP_CHARS;
+        int backtrack = 0;
+        while (start < prevText.length() && backtrack < OVERLAP_BACKTRACK_LIMIT) {
+            char ch = prevText.charAt(start);
+            if (Character.isWhitespace(ch) || ".,!?;:".indexOf(ch) >= 0) {
+                start++;
+                break;
+            }
+            start++;
+            backtrack++;
+        }
+        if (start >= prevText.length()) return "";
+        return prevText.substring(start);
     }
 
     private static final Pattern NUMBER_ROW = Pattern.compile(
