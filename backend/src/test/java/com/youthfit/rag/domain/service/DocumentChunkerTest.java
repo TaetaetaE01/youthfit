@@ -312,6 +312,59 @@ class DocumentChunkerTest {
     }
 
     @Nested
+    @DisplayName("단락형 표 인식 + 자연어 prefix")
+    class ParagraphTableExpansion {
+
+        @Test
+        @DisplayName("줄바꿈 없이 한 단락에 들어간 표를 식별하고 NUMBER 마다 줄바꿈 + 자연어 prefix 를 첨가한다")
+        void singleLineTable_isExpandedWithNaturalPrefix() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            // 정책 7번 chunk #84 와 유사한 단락형 표
+            String content = "중복 참여 가능 사업번호 사업구분 시행기관"
+                    + "1 디딤씨앗통장 보건복지부"
+                    + "2 청년내일채움공제 고용노동부"
+                    + "3 꿈나래통장 서울특별시"
+                    + "4 청년희망적금 금융위원회";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).isNotEmpty();
+            String combined = result.stream()
+                    .map(PolicyDocument::getContent)
+                    .reduce("", (a, b) -> a + "\n" + b);
+            // 자연어 prefix 가 들어가야 — 핵심 키워드 직접 포함
+            assertThat(combined).contains("표 항목:");
+            assertThat(combined).contains("디딤씨앗통장");
+            assertThat(combined).contains("꿈나래통장");
+        }
+
+        @Test
+        @DisplayName("순차 NUMBER 가 3 개 미만이면 표로 인식하지 않는다")
+        void fewerThanThreeNumbers_notRecognizedAsTable() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            String content = "지원 자격은 다음과 같다. 1 만 19세 이상 2 중위소득 100% 이하인 자.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).doesNotContain("표 항목:");
+        }
+
+        @Test
+        @DisplayName("순차 NUMBER 가 아니면(임의 숫자) 표로 인식하지 않는다")
+        void nonSequentialNumbers_notRecognizedAsTable() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            // 100, 200, 300 같은 비순차 숫자 - 표 아님
+            String content = "지원금은 100 만원이며 신청자는 200 명이고 선정 인원은 300 명이다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).doesNotContain("표 항목:");
+        }
+    }
+
+    @Nested
     @DisplayName("청크 간 overlap")
     class Overlap {
 

@@ -87,6 +87,7 @@ PDF 에서 추출된 표가 한 단락(`\n\n` 미포함)으로 1000자+ 들어�
 
 - Markdown extraction 으로 Tika 옵션 변경 (옵션 F5) — ingestion pipeline 전면 변경
 - Retrieval 측 변경 — top-K 확대(이미 PR #88 에서 10 으로 조정됨), MMR, hybrid BM25+vector
+  - **운영 검증 결과 retrieval 개선이 사실상 필요한 것으로 확인됨** (§11 참고). 후속 사이클 spec 으로 분리: `docs/superpowers/specs/2026-05-11-rag-retrieval-improvements-design.md`
 - 자동화 retrieval 벤치마크 (ground-truth chunk 매핑 필요)
 - 표 외 의미 단위 보존 — 명시적 섹션 헤더 prepend (■/▶/Ⅰ 등) 는 후속 사이클 후보
 
@@ -151,7 +152,21 @@ chunk → splitToSegments → chunkSegment(seg)
 
 이로써 표가 아닌 긴 평문 단락도 줄 boundary 가 보존됨.
 
-### 5.3 (c) 청크 간 overlap (~80자)
+### 5.3 (c-1) 단락형 표 인식 + 자연어 prefix (추가 fix, PR 1차 검증 후 추가)
+
+§1.6 가정과 달리 정책 7번 PDF 의 표는 줄바꿈 없이 한 단락으로 떨어지는 케이스가 핵심. 이를 잡기 위해 `chunkSegment` 진입 직전 `expandParagraphTables` 단계 추가.
+
+**식별 룰** (`findSequentialNumberPositions`):
+- 한 줄/단락 안에서 1, 2, 3, ... 순차 NUMBER chain 을 모두 추출 (chain 여러 개 공존 허용 — 페이지 36 에 "1~11 중복 가능" + "30~41 그 외" 두 표가 한 줄에 있는 케이스)
+- 길이 ≥ MIN_TABLE_ROWS(3) 인 chain 의 NUMBER 위치들이 표 행 후보
+
+**처리 룰** (`expandTableInLine`):
+- NUMBER 마다 줄바꿈 삽입 → 줄 단위 휴리스틱 (§5.1) 활성화
+- 표 항목 이름(NUMBER 직후 첫 토큰) 추출 후 청크 시작에 `"표 항목: A, B, C."` 자연어 prefix 첨가 → 표 청크가 자연어 query 와 embedding 거리상 더 가까워지도록
+
+이미 줄로 분리된 표(`1 ...\n2 ...\n3 ...`)는 한 줄에 NUMBER 1개라 자연 skip → 기존 §5.1 휴리스틱이 처리.
+
+### 5.4 (c) 청크 간 overlap (~80자)
 
 **적용 대상**: 일반 평문 청크에만. 표 청크는 헤더 prepend 가 같은 역할을 하므로 overlap 안 함.
 
@@ -160,7 +175,7 @@ chunk → splitToSegments → chunkSegment(seg)
 - 80자 경계가 공백·문장부호가 아닌 글자 한가운데(한국어는 단어 경계가 공백)에서 끊기면, 직전 공백/문장부호까지 backtrack (최대 20자). backtrack 한도를 초과해도 공백을 못 찾으면 그냥 80자 hard cut
 - chunk_index 의 의미는 그대로 (overlap 이 있어도 logical chunk index 는 1씩 증가)
 
-### 5.4 파라미터 요약
+### 5.5 파라미터 요약
 
 | 항목 | 값 | 비고 |
 |---|---|---|
@@ -278,8 +293,31 @@ embedding 비용: 정책 200개 기준 ~$0.05 (text-embedding-3-small, $0.02/1M 
 - `backend/src/main/java/com/youthfit/rag/application/service/RagSearchService.java` — retrieval (이번 사이클 변경 X)
 - `backend/src/main/java/com/youthfit/ingestion/infrastructure/external/TikaAttachmentExtractor.java` — 추출 형식 가정 근거
 
-## 11. 참고
+## 11. 운영 검증 결과 (PR 검증 단계, 머지 전 수행)
+
+PR #91 로컬 검증 단계에서 정책 7번 reindex 후 §8 query 모음을 던진 결과:
+
+| Query | 결과 | 비고 |
+|---|---|---|
+| 디딤씨앗통장 중복 가능? | ❌ 환각 (불가) | chunk #85 retrieved 안 됨 |
+| 꿈나래통장 중복 가능? | ❌ fallback | 동일 |
+| 중복수혜 안되는 통장 리스트 | ❌ fallback | chunk #82~83 retrieved 안 됨 |
+| 지원 금액은 얼마야? | ✅ 정답 (30만원/10만원) | 회귀 없음 |
+
+**Chunking 측은 의도대로 동작**:
+- 청크 #85 본문: "표 항목: 디딤씨앗통장, 청년내일채움공제, 꿈나래통장, 청년희망적금, ..." prefix 첨가됨
+- 청크 #82 본문: "표 항목: 청년재직자내일채움공제, ..." prefix 첨가됨
+- 30+ 청크에 자연어 prefix 적용
+
+**한계 — Retrieval 우선순위 한계**:
+- 표 청크의 prefix 가 들어가도 자연어 query 와 embedding 거리(0.6+)가 다른 자연어 청크보다 멀어 top-10 에서 밀려남
+- 자연어 query 와 더 가까운 청크 (예: chunk #80 "중복관리 대상사업 ... 디딤씨앗통장, 꿈나래통장 등 ... 중복 수혜 사실이 확인된 경우 즉시 참여 중단") 가 retrieve 되어 LLM 이 그 일반 설명을 답변으로 잘못 채택
+
+**의미**: 이번 사이클의 chunking 개선은 데이터 보존 측면에서는 가치 있음 (chunk #85 가 답을 통째로 담고 있음). 정책 7번의 특정 query 효과는 retrieval 측 변경 (`docs/superpowers/specs/2026-05-11-rag-retrieval-improvements-design.md`) 이 함께 적용되어야 측정 가능. 따라서 이번 사이클은 chunking 개선만으로 머지하고 검증 query 정답률은 후속 사이클에서 평가.
+
+## 12. 참고
 
 - 임시 완화책 적용 이력 (이미 머지됨): PR #88 에서 `RagSearchService.DEFAULT_TOP_K` 5 → 10 확대
 - 관련 트러블슈팅 노트: `docs/troubleshooting/2026-05-11-qna-rag-table-chunk-boundary-trouble.md`
 - 모체 사이클: `docs/superpowers/specs/DONE_2026-05-11-qna-rich-answer-design.md`
+- 후속 사이클 spec: `docs/superpowers/specs/2026-05-11-rag-retrieval-improvements-design.md`

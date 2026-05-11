@@ -134,9 +134,13 @@ public class DocumentChunker {
      * 한 segment (본문 또는 단일 첨부) 안에서 단락 우선 분할 + maxChunkSize 길이 제한.
      * 페이지 마커 (--- page=N ---) 위치를 추적해 청크별 (pageStart, pageEnd) 추출.
      * page=null 마커는 pageStart/pageEnd 를 null 로 유지 (HWP 등 페이지 메타 없음).
+     *
+     * 진입 시 expandParagraphTables 로 단락형 표(한 줄에 다 들어간 표) 를 줄 단위로 펼치고
+     * 자연어 prefix("표 항목: ...") 를 첨가한다. 이렇게 해야 표 청크가 자연어 query 의
+     * embedding 과 거리상 가까워져 retrieval 이 회수할 수 있다.
      */
     private List<Chunk> chunkSegment(Segment seg) {
-        String text = seg.text();
+        String text = expandParagraphTables(seg.text());
         List<PageMark> marks = collectPageMarks(text);
 
         List<TableBlock> tableBlocks = identifyTableBlocks(text);
@@ -212,6 +216,118 @@ public class DocumentChunker {
         }
         if (start >= prevText.length()) return "";
         return prevText.substring(start);
+    }
+
+    /**
+     * 줄 단위로 단락형 표(한 줄에 모든 행이 들어간 표) 를 식별하고 변환한다.
+     * - 변환 1: 순차 NUMBER(1, 2, 3...) 매치 위치마다 줄바꿈 삽입 → 기존 줄 단위 표 휴리스틱 활성화
+     * - 변환 2: 표 항목 이름 추출 후 청크 시작에 "표 항목: A, B, C." 자연어 prefix 첨가 →
+     *           표 청크가 자연어 query 와 embedding 거리상 가까워짐 (retrieval 정확도 향상)
+     *
+     * 이미 줄 단위로 분리된 표(`1 ...\n2 ...\n3 ...`)는 한 줄에 NUMBER 1개씩만 있어 자연스럽게
+     * skip 되고, 한 줄에 다 들어간 단락형 표만 expand 된다.
+     */
+    private String expandParagraphTables(String text) {
+        String[] lines = text.split("\n", -1);
+        StringBuilder result = new StringBuilder(text.length());
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) result.append('\n');
+            result.append(expandTableInLine(lines[i]));
+        }
+        return result.toString();
+    }
+
+    private String expandTableInLine(String paragraph) {
+        List<int[]> tableRows = findSequentialNumberPositions(paragraph);
+        if (tableRows.size() < MIN_TABLE_ROWS) return paragraph;
+
+        int firstMatch = tableRows.get(0)[0];
+        String beforeTable = paragraph.substring(0, firstMatch).replaceAll("\\s+$", "");
+        String tablePart = paragraph.substring(firstMatch);
+
+        // NUMBER 마다 줄바꿈 삽입 (역순으로 처리해 인덱스 안정)
+        StringBuilder sb = new StringBuilder(tablePart);
+        for (int i = tableRows.size() - 1; i > 0; i--) {
+            int pos = tableRows.get(i)[0] - firstMatch;
+            if (pos > 0 && pos < sb.length()) {
+                char prev = sb.charAt(pos - 1);
+                if (Character.isWhitespace(prev)) {
+                    sb.setCharAt(pos - 1, '\n');
+                } else {
+                    sb.insert(pos, '\n');
+                }
+            }
+        }
+        String linearizedTable = sb.toString();
+
+        // 표 항목 이름 추출 (각 행의 NUMBER 뒤 첫 토큰)
+        List<String> names = extractRowNames(linearizedTable);
+        String prefix = names.isEmpty()
+                ? "[표]"
+                : "표 항목: " + String.join(", ", names) + ".";
+
+        StringBuilder out = new StringBuilder();
+        if (!beforeTable.isEmpty()) {
+            out.append(beforeTable).append('\n');
+        }
+        out.append(prefix).append('\n');
+        out.append(linearizedTable);
+        return out.toString();
+    }
+
+    /**
+     * 단락 안에서 순차 NUMBER(1, 2, 3, ...) 가 등장하는 위치를 추출.
+     * 한 줄/단락에 여러 표가 있을 수 있으므로(예: 페이지 36 의 "중복 가능 1~11" + "그 외 30~41")
+     * 길이 >= MIN_TABLE_ROWS 인 모든 chain 의 위치를 합쳐 반환한다. 위치는 paragraph 기준 오름차순.
+     */
+    private List<int[]> findSequentialNumberPositions(String paragraph) {
+        Pattern numPat = Pattern.compile("\\d+");
+        Matcher m = numPat.matcher(paragraph);
+        List<int[]> all = new ArrayList<>();
+        while (m.find()) {
+            try {
+                int n = Integer.parseInt(m.group());
+                if (n > 0 && n < 1000) {
+                    all.add(new int[]{m.start(), m.end(), n});
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        boolean[] used = new boolean[all.size()];
+        for (int i = 0; i < all.size(); i++) {
+            if (used[i]) continue;
+            List<Integer> chainIndices = new ArrayList<>();
+            chainIndices.add(i);
+            int currentNum = all.get(i)[2];
+            for (int j = i + 1; j < all.size(); j++) {
+                if (used[j]) continue;
+                if (all.get(j)[2] == currentNum + 1) {
+                    chainIndices.add(j);
+                    currentNum++;
+                }
+            }
+            if (chainIndices.size() >= MIN_TABLE_ROWS) {
+                for (int idx : chainIndices) used[idx] = true;
+            }
+        }
+
+        List<int[]> result = new ArrayList<>();
+        for (int i = 0; i < all.size(); i++) {
+            if (used[i]) result.add(all.get(i));
+        }
+        return result;
+    }
+
+    private static final Pattern ROW_NAME = Pattern.compile("(?:^|\\n)\\d+\\s+(\\S+)");
+
+    private List<String> extractRowNames(String linearizedTable) {
+        Matcher m = ROW_NAME.matcher(linearizedTable);
+        List<String> names = new ArrayList<>();
+        while (m.find() && names.size() < 50) {
+            names.add(m.group(1));
+        }
+        return names;
     }
 
     private List<TableBlock> identifyTableBlocks(String text) {
