@@ -5,6 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -169,6 +172,21 @@ class DocumentChunkerTest {
             // then
             assertThat(hash).hasSize(64);
             assertThat(hash).matches("[0-9a-f]+");
+        }
+
+        @Test
+        @DisplayName("computeHash 는 chunker version 을 입력에 섞어 raw SHA-256 과 달라야 한다")
+        void computeHash_includesChunkerVersion() throws Exception {
+            DocumentChunker chunker = new DocumentChunker();
+            String content = "테스트 내용";
+
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] rawBytes = md.digest(content.getBytes(StandardCharsets.UTF_8));
+            String rawHash = HexFormat.of().formatHex(rawBytes);
+
+            String chunkerHash = chunker.computeHash(content);
+
+            assertThat(chunkerHash).isNotEqualTo(rawHash);
         }
     }
 

@@ -15,6 +15,7 @@ public class DocumentChunker {
 
     private static final int DEFAULT_MAX_CHUNK_SIZE = 500;
     private static final String PARAGRAPH_DELIMITER = "\n\n";
+    private static final String CHUNKER_VERSION = "v2";
 
     private static final Pattern ATTACHMENT_HEADER = Pattern.compile(
             "===\\s*첨부\\s+attachment-id=(\\d+)\\s+name=\"([^\"]*)\"\\s*===");
@@ -67,8 +68,9 @@ public class DocumentChunker {
 
     public String computeHash(String content) {
         try {
+            String input = CHUNKER_VERSION + ":" + content;
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(content.getBytes(StandardCharsets.UTF_8));
+            byte[] hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hashBytes);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm not available", e);
