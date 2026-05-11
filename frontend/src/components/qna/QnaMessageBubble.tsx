@@ -145,12 +145,13 @@ export function QnaMessageBubble({ message, onCopy, onRetry, onFollowUpPick }: P
           message.followUpQuestions &&
           message.followUpQuestions.length > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-soft">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-chat-surface">
                 이어서 물어볼 만한 질문
               </p>
               <QnaSuggestionChips
                 questions={message.followUpQuestions}
                 onPick={onFollowUpPick}
+                variant="light"
               />
             </div>
           )}
