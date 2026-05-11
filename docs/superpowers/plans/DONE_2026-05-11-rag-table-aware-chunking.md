@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, JUnit 5, AssertJ, PostgreSQL + pgvector, OpenAI text-embedding-3-small.
 
-**Spec:** [`docs/superpowers/specs/2026-05-11-rag-table-aware-chunking-design.md`](../specs/2026-05-11-rag-table-aware-chunking-design.md)
+**Spec:** [`docs/superpowers/specs/DONE_2026-05-11-rag-table-aware-chunking-design.md`](../specs/DONE_2026-05-11-rag-table-aware-chunking-design.md)
 
 ---
 

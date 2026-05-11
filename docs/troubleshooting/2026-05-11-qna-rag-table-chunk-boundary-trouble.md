@@ -112,7 +112,7 @@ PDF 추출 단계에서 표가 줄바꿈을 잃고 한 단락(1000 자+)으로 �
 
 다음 brainstorming 사이클에서 옵션 결정·구현 plan 단계부터 시작 가능하도록 디버깅 결과·근본 원인·옵션 후보(F1~F5)·결정 사항을 정리한 pre-spec note 작성:
 
-- `docs/superpowers/specs/2026-05-11-rag-table-aware-chunking.md` (작성 시점 파일명: `v1-rag-table-aware-chunking.md` → 같은 세션 후속 정리에서 날짜 접두사로 rename)
+- `docs/superpowers/specs/DONE_2026-05-11-rag-table-aware-chunking-design.md` (작성 시점 파일명: `v1-rag-table-aware-chunking.md` → 같은 세션 후속 정리에서 날짜 접두사로 rename, PR #91 머지 후 DONE_ prefix + -design 접미사 적용)
 
 ### 부수 효과
 
@@ -143,7 +143,7 @@ PDF 추출 단계에서 표가 줄바꿈을 잃고 한 단락(1000 자+)으로 �
 
 ## 7. 후속 / 미결 (Follow-ups)
 
-- **`docs/superpowers/specs/2026-05-11-rag-table-aware-chunking.md` 기반 brainstorming 진행 필요**.
+- **`docs/superpowers/specs/DONE_2026-05-11-rag-table-aware-chunking-design.md` 기반 brainstorming 진행 필요** (PR #91 로 완료).
   - 결정 사항: F1(maxChunkSize 확대) / F2(표 패턴 인식) / F3(overlap chunking) / F4(줄 단위 보존) / F5(PDF extractor 개선) 중 단독 또는 조합
   - 재인덱싱 비용 추정 (정책 N개 × 청크 평균 × OpenAI text-embedding-3-small 단가)
   - source_hash 변경에 따른 의미 캐시 무효화 영향 평가
@@ -156,7 +156,7 @@ PDF 추출 단계에서 표가 줄바꿈을 잃고 한 단락(1000 자+)으로 �
 
 - 관련 spec: `docs/superpowers/specs/DONE_2026-05-11-qna-rich-answer-design.md` (이번 PR 의 모체)
 - 관련 plan: `docs/superpowers/plans/DONE_2026-05-11-qna-rich-answer.md`
-- 후속 작업 spec: `docs/superpowers/specs/2026-05-11-rag-table-aware-chunking.md`
+- 후속 작업 spec: `docs/superpowers/specs/DONE_2026-05-11-rag-table-aware-chunking-design.md` (PR #91 로 머지 완료)
 - 관련 코드:
   - `backend/src/main/java/com/youthfit/rag/domain/service/DocumentChunker.java:216-223` (`splitBySize`)
   - `backend/src/main/java/com/youthfit/rag/application/service/RagSearchService.java:21` (`DEFAULT_TOP_K`)

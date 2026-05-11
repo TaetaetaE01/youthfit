@@ -120,7 +120,7 @@ PR #91 (rag-table-aware-chunking) 로컬 검증에서 발견:
 
 ## 11. 참고
 
-- 직전 사이클 spec: `docs/superpowers/specs/2026-05-11-rag-table-aware-chunking-design.md`
+- 직전 사이클 spec: `docs/superpowers/specs/DONE_2026-05-11-rag-table-aware-chunking-design.md`
 - 직전 사이클 PR: #91 (rag-table-aware-chunking)
 - v0 의미 캐시 spec (intent 기반 v1 후보): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`
 - 모체 사이클: `docs/superpowers/specs/DONE_2026-05-11-qna-rich-answer-design.md`
