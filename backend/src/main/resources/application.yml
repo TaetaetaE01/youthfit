@@ -99,6 +99,24 @@ youthfit:
     cache:
       estimated-savings-per-hit-usd: ${QNA_CACHE_ESTIMATED_SAVINGS_PER_HIT_USD:0.0015}
       retention-days: ${QNA_CACHE_RETENTION_DAYS:90}
+    keyword-boost:
+      enabled: ${QNA_KEYWORD_BOOST_ENABLED:true}
+      max-keywords: ${QNA_KEYWORD_BOOST_MAX_KEYWORDS:5}
+      stopwords:
+        - 뭐
+        - 무엇
+        - 어떤
+        - 어떻게
+        - 얼마
+        - 언제
+        - 어디
+        - 어디서
+        - 누구
+        - 가능
+        - 필요
+        - 알려줘
+        - 정보
+        - 내용
   email:
     transport: ${EMAIL_TRANSPORT:logging}
     from:
