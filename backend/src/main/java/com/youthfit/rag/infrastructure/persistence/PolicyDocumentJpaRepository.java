@@ -41,9 +41,9 @@ public interface PolicyDocumentJpaRepository extends JpaRepository<PolicyDocumen
                      WHEN hit_count = 2 THEN distance * 0.85
                      WHEN hit_count = 1 THEN distance * 0.92
                      ELSE distance
-                   END AS distance
+                   END AS boosted_distance
               FROM scored
-             ORDER BY 8
+             ORDER BY boosted_distance
              LIMIT :limit
             """, nativeQuery = true)
     List<Object[]> findSimilarByEmbedding(
