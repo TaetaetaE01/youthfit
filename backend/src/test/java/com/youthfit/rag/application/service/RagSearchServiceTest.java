@@ -1,6 +1,5 @@
 package com.youthfit.rag.application.service;
 
-import com.youthfit.qna.infrastructure.config.KeywordBoostProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
@@ -8,6 +7,7 @@ import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import com.youthfit.rag.domain.service.KeywordExtractor;
+import com.youthfit.rag.infrastructure.config.KeywordBoostProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

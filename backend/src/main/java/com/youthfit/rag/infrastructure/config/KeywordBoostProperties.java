@@ -1,10 +1,10 @@
-package com.youthfit.qna.infrastructure.config;
+package com.youthfit.rag.infrastructure.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 
-@ConfigurationProperties(prefix = "youthfit.qna.keyword-boost")
+@ConfigurationProperties(prefix = "youthfit.rag.keyword-boost")
 public record KeywordBoostProperties(
         boolean enabled,
         int maxKeywords,
