@@ -107,7 +107,8 @@ class DocumentChunkerTest {
         @DisplayName("각 청크의 크기가 maxChunkSize + overlap 한도를 초과하지 않는다 (soft limit)")
         void chunkSize_doesNotExceedMaxPlusOverlap() {
             int maxSize = 100;
-            int overlapAllowance = 100;
+            // OVERLAP_CHARS(80) + "\n" 구분자 1자 = 81 자 가 실제 상한.
+            int overlapAllowance = 81;
             DocumentChunker smallChunker = new DocumentChunker(maxSize);
             String content = "A".repeat(50) + "\n\n" + "B".repeat(50) + "\n\n" + "C".repeat(50);
 
@@ -264,6 +265,49 @@ class DocumentChunkerTest {
             for (int i = 1; i < result.size(); i++) {
                 assertThat(result.get(i).getContent()).doesNotStartWith("다음은 중복 참여");
             }
+        }
+
+        @Test
+        @DisplayName("표 block 끝에 plain text 가 이어질 때 표 끝 줄이 다음 청크로 새지 않는다")
+        void tableFollowedByPlainText_blockEndIncludesTrailingNewline() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            String content = "사업번호 사업구분 시행기관\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "여기는 표가 끝나고 시작하는 평문 단락입니다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            // 표 청크와 평문 청크가 분리되어야 함
+            // 표 청크: "사업번호 ... 3 디딤씨앗통장 복지부" — 마지막 줄까지
+            // 평문 청크: "여기는 표가 끝나고 시작하는 평문 단락입니다."
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getContent()).contains("3 디딤씨앗통장");
+            assertThat(result.get(0).getContent()).doesNotContain("여기는 표가 끝나고");
+            assertThat(result.get(1).getContent()).contains("여기는 표가 끝나고");
+            assertThat(result.get(1).getContent()).doesNotContain("3 디딤씨앗통장");
+        }
+
+        @Test
+        @DisplayName("직전 줄이 NUMBER_ROW 패턴이면 헤더 후보로 잡지 않는다 (방어 케이스)")
+        void prevLineIsNumberRow_notTreatedAsHeader() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            // 직전 줄이 그 자체로 number row 형태
+            String content = "1. 첫 번째 항목 설명\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            // "1. 첫 번째 항목 설명" 이 헤더로 잘못 잡혀서 prepend 되면 안 됨
+            // 그리고 자체적으로 이게 NUMBER_ROW 매칭이라 표 인식 시 함께 묶일 수도 있으니
+            // 핵심은: 결과 청크에 "1. 첫 번째 항목 설명" 이 헤더처럼 두 번 prepend 되지 않을 것
+            long countOfPrefix = result.stream()
+                    .filter(c -> c.getContent().contains("1. 첫 번째 항목 설명"))
+                    .count();
+            assertThat(countOfPrefix).isLessThanOrEqualTo(1);
         }
     }
 

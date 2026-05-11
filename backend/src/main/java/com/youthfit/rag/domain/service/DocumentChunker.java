@@ -13,10 +13,23 @@ import java.util.regex.Pattern;
 
 public class DocumentChunker {
 
+    // 청킹 관련 상수
     private static final int DEFAULT_MAX_CHUNK_SIZE = 500;
     private static final String PARAGRAPH_DELIMITER = "\n\n";
     private static final String CHUNKER_VERSION = "v2";
 
+    // 표 인식 관련 상수
+    private static final Pattern NUMBER_ROW = Pattern.compile(
+            "^(\\d+\\s+|\\d+\\.\\s+|[①②③④⑤⑥⑦⑧⑨⑩])");
+    private static final int MIN_TABLE_ROWS = 3;
+    private static final int HEADER_PLAINTEXT_MIN_LEN = 20;
+    private static final Pattern PLAINTEXT_END = Pattern.compile(".*[.?!]\\s*$");
+
+    // 오버랩 관련 상수
+    private static final int OVERLAP_CHARS = 80;
+    private static final int OVERLAP_BACKTRACK_LIMIT = 20;
+
+    // 첨부/페이지 마커
     private static final Pattern ATTACHMENT_HEADER = Pattern.compile(
             "===\\s*첨부\\s+attachment-id=(\\d+)\\s+name=\"([^\"]*)\"\\s*===");
     private static final String BODY_HEADER = "=== 정책 본문 ===";
@@ -144,11 +157,9 @@ public class DocumentChunker {
         return chunks;
     }
 
-    private static final int OVERLAP_CHARS = 80;
-    private static final int OVERLAP_BACKTRACK_LIMIT = 20;
-
     /**
      * 일반 평문 청크에 ~80자 overlap 을 prepend. 표 청크(헤더로 시작)는 스킵.
+     * prev 가 표 청크인 경우도 스킵: 표 내용이 다음 평문 청크로 새지 않도록.
      */
     private List<Chunk> applyOverlap(List<Chunk> chunks) {
         if (chunks.size() < 2) return chunks;
@@ -159,7 +170,7 @@ public class DocumentChunker {
             Chunk prev = chunks.get(i - 1);
             Chunk cur = chunks.get(i);
 
-            if (looksLikeTableChunk(cur.text())) {
+            if (looksLikeTableChunk(cur.text()) || looksLikeTableChunk(prev.text())) {
                 result.add(cur);
                 continue;
             }
@@ -203,12 +214,6 @@ public class DocumentChunker {
         return prevText.substring(start);
     }
 
-    private static final Pattern NUMBER_ROW = Pattern.compile(
-            "^(\\d+\\s+|\\d+\\.\\s+|[①②③④⑤⑥⑦⑧⑨⑩])");
-    private static final int MIN_TABLE_ROWS = 3;
-    private static final int HEADER_PLAINTEXT_MIN_LEN = 20;
-    private static final Pattern PLAINTEXT_END = Pattern.compile(".*[.?!]\\s*$");
-
     private List<TableBlock> identifyTableBlocks(String text) {
         List<TableBlock> blocks = new ArrayList<>();
         int len = text.length();
@@ -232,7 +237,9 @@ public class DocumentChunker {
                 if (runCount >= MIN_TABLE_ROWS) {
                     String header = pickHeader(text, prevLineStart, prevLineEnd);
                     int blockStart = (header != null && prevLineStart != null) ? prevLineStart : runStart;
-                    blocks.add(new TableBlock(blockStart, cursor - 1, header));
+                    // block end 는 마지막 표 행의 trailing newline 까지 포함 (off-by-one 보정).
+                    // cursor 는 현재 비-표 줄의 시작 위치이므로, 직전 \n 의 다음 위치 = cursor.
+                    blocks.add(new TableBlock(blockStart, cursor, header));
                 }
                 runStart = -1;
                 runCount = 0;
@@ -257,6 +264,12 @@ public class DocumentChunker {
         if (prevStart == null) return null;
         String candidate = text.substring(prevStart, prevEnd).trim();
         if (candidate.isEmpty()) return null;
+        // 방어: 직전 줄 자체가 number row 패턴이면 헤더로 잡지 않는다.
+        // (정상 흐름에서는 prevLine 은 비-표 줄이지만, 표 인식 규칙이 미래에 바뀌어
+        // number row 가 prev 로 들어올 가능성에 대비.)
+        if (NUMBER_ROW.matcher(candidate).find()) {
+            return null;
+        }
         if (candidate.length() > HEADER_PLAINTEXT_MIN_LEN
                 && PLAINTEXT_END.matcher(candidate).matches()) {
             return null;
