@@ -1,10 +1,12 @@
 package com.youthfit.rag.application.service;
 
+import com.youthfit.qna.infrastructure.config.KeywordBoostProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
+import com.youthfit.rag.domain.service.KeywordExtractor;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,8 @@ public class RagSearchService {
 
     private final PolicyDocumentRepository policyDocumentRepository;
     private final EmbeddingProvider embeddingProvider;
+    private final KeywordExtractor keywordExtractor;
+    private final KeywordBoostProperties keywordBoostProperties;
 
     @Transactional(readOnly = true)
     public List<PolicyDocumentChunkResult> searchRelevantChunks(SearchChunksCommand command) {
@@ -43,8 +47,12 @@ public class RagSearchService {
                     .toList();
         }
 
+        List<String> keywords = keywordBoostProperties.enabled()
+                ? keywordExtractor.extract(command.query())
+                : List.of();
+
         List<SimilarChunk> similar = policyDocumentRepository.findSimilarByEmbedding(
-                command.policyId(), precomputedEmbedding, List.of(), DEFAULT_TOP_K);
+                command.policyId(), precomputedEmbedding, keywords, DEFAULT_TOP_K);
 
         if (similar.isEmpty()) {
             log.info("벡터 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
@@ -57,6 +65,7 @@ public class RagSearchService {
                     .toList()
                     .toString();
             log.info("RAG 검색 결과: policyId={}, top{}={}", command.policyId(), similar.size(), distanceSummary);
+            log.info("RAG 키워드 boost: policyId={}, keywords={}", command.policyId(), keywords);
         }
 
         return similar.stream()
