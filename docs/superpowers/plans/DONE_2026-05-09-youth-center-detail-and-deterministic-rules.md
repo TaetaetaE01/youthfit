@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21 / Spring Boot 4.0.5 / Hibernate / PostgreSQL 17 / JUnit5 (백엔드), n8n Code 노드 / JavaScript (워크플로우), React 19 / TypeScript / TanStack Query / Tailwind (프론트)
 
-**Spec reference:** `docs/superpowers/specs/2026-05-09-youth-center-detail-and-deterministic-rules-design.md`
+**Spec reference:** `docs/superpowers/specs/DONE_2026-05-09-youth-center-detail-and-deterministic-rules-design.md`
 
 **Branch:** `feat/youth-center-detail-and-deterministic-rules` (이미 main에서 분기됨)
 
@@ -3624,7 +3624,7 @@ Expected:
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-05-09-youth-center-detail-and-deterministic-rules.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/DONE_2026-05-09-youth-center-detail-and-deterministic-rules.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration
 

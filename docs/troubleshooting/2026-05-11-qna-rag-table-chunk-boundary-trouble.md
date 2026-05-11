@@ -154,8 +154,8 @@ PDF 추출 단계에서 표가 줄바꿈을 잃고 한 단락(1000 자+)으로 �
 
 ## 8. 참고 (References)
 
-- 관련 spec: `docs/superpowers/specs/2026-05-11-qna-rich-answer-design.md` (이번 PR 의 모체)
-- 관련 plan: `docs/superpowers/plans/2026-05-11-qna-rich-answer.md`
+- 관련 spec: `docs/superpowers/specs/DONE_2026-05-11-qna-rich-answer-design.md` (이번 PR 의 모체)
+- 관련 plan: `docs/superpowers/plans/DONE_2026-05-11-qna-rich-answer.md`
 - 후속 작업 spec: `docs/superpowers/specs/2026-05-11-rag-table-aware-chunking.md`
 - 관련 코드:
   - `backend/src/main/java/com/youthfit/rag/domain/service/DocumentChunker.java:216-223` (`splitBySize`)

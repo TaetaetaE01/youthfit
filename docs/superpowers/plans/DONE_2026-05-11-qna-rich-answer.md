@@ -8,7 +8,7 @@
 
 **Tech Stack:** 백엔드 — Java 21, Spring Boot 4.0.5, JUnit 5, Mockito, AssertJ, PostgreSQL + pgvector, Redis. 프론트엔드 — React 19, TypeScript 5, Vitest, Testing Library, ReactMarkdown.
 
-**Spec:** [`docs/superpowers/specs/2026-05-11-qna-rich-answer-design.md`](../specs/2026-05-11-qna-rich-answer-design.md)
+**Spec:** [`docs/superpowers/specs/DONE_2026-05-11-qna-rich-answer-design.md`](../specs/DONE_2026-05-11-qna-rich-answer-design.md)
 
 ---
 

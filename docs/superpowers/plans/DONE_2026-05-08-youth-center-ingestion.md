@@ -9,7 +9,7 @@
 **Tech Stack:** Java 21 + Spring Boot 4.0.5, JPA + Hibernate, PostgreSQL 17 (GENERATED ALWAYS AS STORED, regexp_replace), n8n workflow (JSON), JUnit 5 + Mockito + AssertJ.
 
 **연관 문서:**
-- 스펙: `docs/superpowers/specs/2026-05-08-youth-center-ingestion-design.md`
+- 스펙: `docs/superpowers/specs/DONE_2026-05-08-youth-center-ingestion-design.md`
 - 코드 사전: `docs/prd/reference/youth-center-codes.xlsx`
 
 ---
@@ -1286,7 +1286,7 @@ git commit -m "feat(n8n): 온통청년 서울 청년 정책 수집 워크플로�
   등을 본문 [지원대상]/[지원내용]/[사업기간] 섹션 풀이로 전환
 - 첫 배포는 lastPage=1 강제 (1페이지만 처리). 검증 후 풀 페이징 활성화
 
-배경 스펙: docs/superpowers/specs/2026-05-08-youth-center-ingestion-design.md"
+배경 스펙: docs/superpowers/specs/DONE_2026-05-08-youth-center-ingestion-design.md"
 ```
 
 ---
