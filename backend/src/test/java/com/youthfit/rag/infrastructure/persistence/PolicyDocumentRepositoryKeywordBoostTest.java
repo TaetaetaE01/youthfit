@@ -129,6 +129,41 @@ class PolicyDocumentRepositoryKeywordBoostTest {
                 .isCloseTo(baseDistanceChunk0 * 0.85, org.assertj.core.data.Offset.offset(1e-6));
     }
 
+    @Test
+    @DisplayName("키워드 hit 청크가 boost 후 더 가까운 청크보다 ranking 상위로 이동한다")
+    void keywordsBoost_movesHitChunkAboveCloserChunk() {
+        Long shiftPolicyId = 9002L;
+        jpaRepository.deleteByPolicyId(shiftPolicyId);
+
+        // query = [1, 0]
+        float[] query = twoAxisVector(0, 1, 1.0f, 0.0f);
+
+        // chunk 0: cosine_sim = 0.6, distance ≈ 0.4. 키워드 3개 hit → distance × 0.78 ≈ 0.312
+        savePolicyDocument(shiftPolicyId, 0,
+                "표 항목: 디딤씨앗통장 청년내일채움공제 꿈나래통장 중복 가능 리스트",
+                twoAxisVector(0, 1, 0.6f, 0.8f));
+        // chunk 1: cosine_sim = 0.65, distance ≈ 0.35. 키워드 0 hit → boost 없음
+        savePolicyDocument(shiftPolicyId, 1,
+                "기타 일반 안내문",
+                twoAxisVector(0, 1, 0.65f, 0.7599f));
+
+        String[] keywords = new String[]{"디딤씨앗통장", "청년내일채움공제", "꿈나래통장"};
+
+        // boost 미적용: chunk 1 (0.35) 이 chunk 0 (0.4) 보다 가까움 → 1위 chunk 1
+        List<Object[]> baseRows = jpaRepository.findSimilarByEmbedding(
+                shiftPolicyId, toVectorLiteral(query), new String[0], 10);
+        assertThat(baseRows).hasSize(2);
+        assertThat((Integer) baseRows.get(0)[2]).isEqualTo(1);
+        assertThat((Integer) baseRows.get(1)[2]).isEqualTo(0);
+
+        // boost 적용: chunk 0 (0.312) 이 chunk 1 (0.35) 보다 가까워짐 → ranking 역전, 1위 chunk 0
+        List<Object[]> boostedRows = jpaRepository.findSimilarByEmbedding(
+                shiftPolicyId, toVectorLiteral(query), keywords, 10);
+        assertThat(boostedRows).hasSize(2);
+        assertThat((Integer) boostedRows.get(0)[2]).isEqualTo(0);
+        assertThat((Integer) boostedRows.get(1)[2]).isEqualTo(1);
+    }
+
     private float[] axisVector(int axis, float value) {
         float[] v = new float[EMBEDDING_DIM];
         v[axis] = value;
