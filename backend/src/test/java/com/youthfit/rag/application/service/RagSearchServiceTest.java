@@ -88,7 +88,7 @@ class RagSearchServiceTest {
             );
 
             given(embeddingProvider.embed("주거 지원")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(List.of()), eq(10)))
                     .willReturn(similar);
 
             // when
@@ -111,7 +111,7 @@ class RagSearchServiceTest {
             );
 
             given(embeddingProvider.embed("월세")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(List.of()), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 
@@ -135,7 +135,7 @@ class RagSearchServiceTest {
             );
 
             given(embeddingProvider.embed("HOUSING")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(List.of()), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 
@@ -158,7 +158,7 @@ class RagSearchServiceTest {
             );
 
             given(embeddingProvider.embed("존재하지않는키워드")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(List.of()), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 

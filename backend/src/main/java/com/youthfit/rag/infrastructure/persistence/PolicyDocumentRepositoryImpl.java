@@ -42,9 +42,11 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
     }
 
     @Override
-    public List<SimilarChunk> findSimilarByEmbedding(Long policyId, float[] queryEmbedding, int limit) {
+    public List<SimilarChunk> findSimilarByEmbedding(Long policyId, float[] queryEmbedding,
+                                                      List<String> keywords, int limit) {
         String vectorString = toVectorString(queryEmbedding);
-        return jpaRepository.findSimilarByEmbedding(policyId, vectorString, limit).stream()
+        String[] keywordArray = keywords == null ? new String[0] : keywords.toArray(new String[0]);
+        return jpaRepository.findSimilarByEmbedding(policyId, vectorString, keywordArray, limit).stream()
                 .map(this::toSimilarChunk)
                 .toList();
     }

@@ -44,7 +44,7 @@ public class RagSearchService {
         }
 
         List<SimilarChunk> similar = policyDocumentRepository.findSimilarByEmbedding(
-                command.policyId(), precomputedEmbedding, DEFAULT_TOP_K);
+                command.policyId(), precomputedEmbedding, List.of(), DEFAULT_TOP_K);
 
         if (similar.isEmpty()) {
             log.info("벡터 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
