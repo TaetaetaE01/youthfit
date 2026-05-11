@@ -5,6 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,19 +104,34 @@ class DocumentChunkerTest {
         }
 
         @Test
-        @DisplayName("각 청크의 크기가 maxChunkSize를 초과하지 않는다")
-        void chunkSize_doesNotExceedMax() {
-            // given
+        @DisplayName("각 청크의 크기가 maxChunkSize + overlap 한도를 초과하지 않는다 (soft limit)")
+        void chunkSize_doesNotExceedMaxPlusOverlap() {
             int maxSize = 100;
+            // OVERLAP_CHARS(80) + "\n" 구분자 1자 = 81 자 가 실제 상한.
+            int overlapAllowance = 81;
             DocumentChunker smallChunker = new DocumentChunker(maxSize);
             String content = "A".repeat(50) + "\n\n" + "B".repeat(50) + "\n\n" + "C".repeat(50);
 
-            // when
             List<PolicyDocument> result = smallChunker.chunk(1L, content);
 
-            // then
             assertThat(result).allSatisfy(chunk ->
-                    assertThat(chunk.getContent().length()).isLessThanOrEqualTo(maxSize));
+                    assertThat(chunk.getContent().length()).isLessThanOrEqualTo(maxSize + overlapAllowance));
+        }
+
+        @Test
+        @DisplayName("긴 단일 단락은 줄 boundary 에서 분할되어 행이 중간에 잘리지 않는다")
+        void longSingleParagraph_splitsAtLineBoundary_notMidLine() {
+            DocumentChunker smallChunker = new DocumentChunker(30);
+            String content = "사업번호1 사업A 기관A\n사업번호2 사업B 기관B\n사업번호3 사업C 기관C\n사업번호4 사업D 기관D";
+
+            List<PolicyDocument> result = smallChunker.chunk(1L, content);
+
+            assertThat(result).isNotEmpty();
+            assertThat(result).allSatisfy(chunk -> {
+                for (String line : chunk.getContent().split("\n")) {
+                    assertThat(line).matches("사업번호\\d+ 사업[A-Z] 기관[A-Z]");
+                }
+            });
         }
     }
 
@@ -156,6 +174,21 @@ class DocumentChunkerTest {
             assertThat(hash).hasSize(64);
             assertThat(hash).matches("[0-9a-f]+");
         }
+
+        @Test
+        @DisplayName("computeHash 는 chunker version 을 입력에 섞어 raw SHA-256 과 달라야 한다")
+        void computeHash_includesChunkerVersion() throws Exception {
+            DocumentChunker chunker = new DocumentChunker();
+            String content = "테스트 내용";
+
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] rawBytes = md.digest(content.getBytes(StandardCharsets.UTF_8));
+            String rawHash = HexFormat.of().formatHex(rawBytes);
+
+            String chunkerHash = chunker.computeHash(content);
+
+            assertThat(chunkerHash).isNotEqualTo(rawHash);
+        }
     }
 
     @Nested
@@ -170,6 +203,215 @@ class DocumentChunkerTest {
 
             assertThatThrownBy(() -> new DocumentChunker(-1))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("표 인식 + 헤더 prepend")
+    class TableAware {
+
+        @Test
+        @DisplayName("연속 번호 행 3+ 이 maxChunkSize 안에 들어가면 통째로 한 청크")
+        void shortTable_fitsInOneChunk() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            String content = "사업번호 사업구분 시행기관\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).contains("사업번호 사업구분 시행기관");
+            assertThat(result.get(0).getContent()).contains("4 청년저축계좌");
+        }
+
+        @Test
+        @DisplayName("표가 maxChunkSize 를 넘으면 행 boundary 에서 분할되, 각 청크에 헤더가 prepend 된다")
+        void longTable_splitsAtRowBoundary_withHeaderPrepended() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String header = "사업번호 사업구분 시행기관";
+            String content = header + "\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSizeGreaterThan(1);
+            assertThat(result).allSatisfy(chunk ->
+                    assertThat(chunk.getContent()).startsWith(header));
+        }
+
+        @Test
+        @DisplayName("직전 행이 평문(20자 초과 + 마침표 종결)이면 헤더 후보로 잡지 않는다")
+        void prevLineIsPlainSentence_noHeaderTreatedAsTableHeader() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String content = "다음은 중복 참여 불가 사업의 전체 목록입니다.\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSizeGreaterThan(1);
+            for (int i = 1; i < result.size(); i++) {
+                assertThat(result.get(i).getContent()).doesNotStartWith("다음은 중복 참여");
+            }
+        }
+
+        @Test
+        @DisplayName("표 block 끝에 plain text 가 이어질 때 표 끝 줄이 다음 청크로 새지 않는다")
+        void tableFollowedByPlainText_blockEndIncludesTrailingNewline() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            String content = "사업번호 사업구분 시행기관\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "여기는 표가 끝나고 시작하는 평문 단락입니다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            // 표 청크와 평문 청크가 분리되어야 함
+            // 표 청크: "사업번호 ... 3 디딤씨앗통장 복지부" — 마지막 줄까지
+            // 평문 청크: "여기는 표가 끝나고 시작하는 평문 단락입니다."
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getContent()).contains("3 디딤씨앗통장");
+            assertThat(result.get(0).getContent()).doesNotContain("여기는 표가 끝나고");
+            assertThat(result.get(1).getContent()).contains("여기는 표가 끝나고");
+            assertThat(result.get(1).getContent()).doesNotContain("3 디딤씨앗통장");
+        }
+
+        @Test
+        @DisplayName("직전 줄이 NUMBER_ROW 패턴이면 헤더 후보로 잡지 않는다 (방어 케이스)")
+        void prevLineIsNumberRow_notTreatedAsHeader() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            // 직전 줄이 그 자체로 number row 형태
+            String content = "1. 첫 번째 항목 설명\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            // "1. 첫 번째 항목 설명" 이 헤더로 잘못 잡혀서 prepend 되면 안 됨
+            // 그리고 자체적으로 이게 NUMBER_ROW 매칭이라 표 인식 시 함께 묶일 수도 있으니
+            // 핵심은: 결과 청크에 "1. 첫 번째 항목 설명" 이 헤더처럼 두 번 prepend 되지 않을 것
+            long countOfPrefix = result.stream()
+                    .filter(c -> c.getContent().contains("1. 첫 번째 항목 설명"))
+                    .count();
+            assertThat(countOfPrefix).isLessThanOrEqualTo(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("단락형 표 인식 + 자연어 prefix")
+    class ParagraphTableExpansion {
+
+        @Test
+        @DisplayName("줄바꿈 없이 한 단락에 들어간 표를 식별하고 NUMBER 마다 줄바꿈 + 자연어 prefix 를 첨가한다")
+        void singleLineTable_isExpandedWithNaturalPrefix() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            // 정책 7번 chunk #84 와 유사한 단락형 표
+            String content = "중복 참여 가능 사업번호 사업구분 시행기관"
+                    + "1 디딤씨앗통장 보건복지부"
+                    + "2 청년내일채움공제 고용노동부"
+                    + "3 꿈나래통장 서울특별시"
+                    + "4 청년희망적금 금융위원회";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).isNotEmpty();
+            String combined = result.stream()
+                    .map(PolicyDocument::getContent)
+                    .reduce("", (a, b) -> a + "\n" + b);
+            // 자연어 prefix 가 들어가야 — 핵심 키워드 직접 포함
+            assertThat(combined).contains("표 항목:");
+            assertThat(combined).contains("디딤씨앗통장");
+            assertThat(combined).contains("꿈나래통장");
+        }
+
+        @Test
+        @DisplayName("순차 NUMBER 가 3 개 미만이면 표로 인식하지 않는다")
+        void fewerThanThreeNumbers_notRecognizedAsTable() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            String content = "지원 자격은 다음과 같다. 1 만 19세 이상 2 중위소득 100% 이하인 자.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).doesNotContain("표 항목:");
+        }
+
+        @Test
+        @DisplayName("순차 NUMBER 가 아니면(임의 숫자) 표로 인식하지 않는다")
+        void nonSequentialNumbers_notRecognizedAsTable() {
+            DocumentChunker chunker = new DocumentChunker(1000);
+            // 100, 200, 300 같은 비순차 숫자 - 표 아님
+            String content = "지원금은 100 만원이며 신청자는 200 명이고 선정 인원은 300 명이다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).doesNotContain("표 항목:");
+        }
+    }
+
+    @Nested
+    @DisplayName("청크 간 overlap")
+    class Overlap {
+
+        @Test
+        @DisplayName("일반 평문 청크 사이에 ~80자 overlap 이 들어간다")
+        void normalChunks_haveOverlapPrefix() {
+            DocumentChunker chunker = new DocumentChunker(100);
+            String content = "지원 대상은 만 19세부터 34세까지의 청년이며 소득은 중위소득 100% 이하 가구입니다. "
+                    + "이는 청년이 자립할 수 있는 기반을 마련하기 위한 정책으로 정부가 매칭 지원금을 제공합니다. "
+                    + "신청은 복지로 또는 주민센터에서 가능하며 신청 후 약 4주 이내에 결과가 통보됩니다. "
+                    + "선정된 신청자는 매월 본인 저축액에 비례한 정부 지원금을 받게 됩니다.";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result.size()).isGreaterThanOrEqualTo(2);
+            String firstChunk = result.get(0).getContent();
+            String secondChunk = result.get(1).getContent();
+
+            int prefixLen = Math.min(80, secondChunk.length());
+            String secondPrefix = secondChunk.substring(0, prefixLen);
+            boolean foundOverlap = false;
+            for (int len = prefixLen; len >= 10; len--) {
+                if (firstChunk.contains(secondPrefix.substring(0, len))) {
+                    foundOverlap = true;
+                    break;
+                }
+            }
+            assertThat(foundOverlap).as("두 번째 청크 시작이 첫 번째 청크 끝 일부와 겹쳐야 함").isTrue();
+        }
+
+        @Test
+        @DisplayName("표 청크에는 overlap 이 적용되지 않는다 (헤더 prepend 가 그 역할)")
+        void tableChunks_skipOverlap() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String header = "사업번호 사업구분 시행기관";
+            String content = header + "\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).allSatisfy(chunk ->
+                    assertThat(chunk.getContent()).startsWith(header + "\n"));
         }
     }
 
