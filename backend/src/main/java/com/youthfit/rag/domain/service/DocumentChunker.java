@@ -188,7 +188,7 @@ public class DocumentChunker {
                         currentStart = -1;
                         currentEnd = -1;
                     }
-                    splitBySize(trimStart, trimEnd, ranges);
+                    splitByLines(text, trimStart, trimEnd, ranges);
                 } else if (currentStart == -1) {
                     currentStart = trimStart;
                     currentEnd = trimEnd;
@@ -213,12 +213,50 @@ public class DocumentChunker {
         return ranges;
     }
 
-    private void splitBySize(int start, int end, List<int[]> ranges) {
+    /**
+     * 단락(\n\n) 내부가 maxChunkSize 보다 긴 경우 줄(\n) 단위로 누적 분할.
+     * 단일 줄 자체가 maxChunkSize 를 넘는 극단 케이스만 글자 단위 cut (last-resort).
+     * 결과는 원문 text 의 [start, end) offset 페어 리스트로 반환한다.
+     */
+    private void splitByLines(String text, int start, int end, List<int[]> ranges) {
         int cursor = start;
+        int chunkStart = -1;
+        int chunkEnd = -1;
+
         while (cursor < end) {
-            int next = Math.min(cursor + maxChunkSize, end);
-            ranges.add(new int[]{cursor, next});
-            cursor = next;
+            int lineEnd = text.indexOf('\n', cursor);
+            int lineFinish = (lineEnd == -1 || lineEnd >= end) ? end : lineEnd;
+            int lineLen = lineFinish - cursor;
+
+            if (lineLen > maxChunkSize) {
+                if (chunkStart != -1) {
+                    ranges.add(new int[]{chunkStart, chunkEnd});
+                    chunkStart = -1;
+                    chunkEnd = -1;
+                }
+                int c = cursor;
+                while (c < lineFinish) {
+                    int next = Math.min(c + maxChunkSize, lineFinish);
+                    ranges.add(new int[]{c, next});
+                    c = next;
+                }
+            } else if (chunkStart == -1) {
+                chunkStart = cursor;
+                chunkEnd = lineFinish;
+            } else if ((chunkEnd - chunkStart) + 1 + lineLen > maxChunkSize) {
+                ranges.add(new int[]{chunkStart, chunkEnd});
+                chunkStart = cursor;
+                chunkEnd = lineFinish;
+            } else {
+                chunkEnd = lineFinish;
+            }
+
+            if (lineEnd == -1 || lineEnd >= end) break;
+            cursor = lineEnd + 1;
+        }
+
+        if (chunkStart != -1) {
+            ranges.add(new int[]{chunkStart, chunkEnd});
         }
     }
 

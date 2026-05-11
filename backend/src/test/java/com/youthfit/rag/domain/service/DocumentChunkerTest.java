@@ -115,6 +115,22 @@ class DocumentChunkerTest {
             assertThat(result).allSatisfy(chunk ->
                     assertThat(chunk.getContent().length()).isLessThanOrEqualTo(maxSize));
         }
+
+        @Test
+        @DisplayName("긴 단일 단락은 줄 boundary 에서 분할되어 행이 중간에 잘리지 않는다")
+        void longSingleParagraph_splitsAtLineBoundary_notMidLine() {
+            DocumentChunker smallChunker = new DocumentChunker(30);
+            String content = "사업번호1 사업A 기관A\n사업번호2 사업B 기관B\n사업번호3 사업C 기관C\n사업번호4 사업D 기관D";
+
+            List<PolicyDocument> result = smallChunker.chunk(1L, content);
+
+            assertThat(result).isNotEmpty();
+            assertThat(result).allSatisfy(chunk -> {
+                for (String line : chunk.getContent().split("\n")) {
+                    assertThat(line).matches("사업번호\\d+ 사업[A-Z] 기관[A-Z]");
+                }
+            });
+        }
     }
 
     @Nested
