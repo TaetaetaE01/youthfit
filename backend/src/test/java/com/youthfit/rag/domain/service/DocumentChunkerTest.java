@@ -190,6 +190,68 @@ class DocumentChunkerTest {
     }
 
     @Nested
+    @DisplayName("표 인식 + 헤더 prepend")
+    class TableAware {
+
+        @Test
+        @DisplayName("연속 번호 행 3+ 이 maxChunkSize 안에 들어가면 통째로 한 청크")
+        void shortTable_fitsInOneChunk() {
+            DocumentChunker chunker = new DocumentChunker(500);
+            String content = "사업번호 사업구분 시행기관\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).contains("사업번호 사업구분 시행기관");
+            assertThat(result.get(0).getContent()).contains("4 청년저축계좌");
+        }
+
+        @Test
+        @DisplayName("표가 maxChunkSize 를 넘으면 행 boundary 에서 분할되, 각 청크에 헤더가 prepend 된다")
+        void longTable_splitsAtRowBoundary_withHeaderPrepended() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String header = "사업번호 사업구분 시행기관";
+            String content = header + "\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSizeGreaterThan(1);
+            assertThat(result).allSatisfy(chunk ->
+                    assertThat(chunk.getContent()).startsWith(header));
+        }
+
+        @Test
+        @DisplayName("직전 행이 평문(20자 초과 + 마침표 종결)이면 헤더 후보로 잡지 않는다")
+        void prevLineIsPlainSentence_noHeaderTreatedAsTableHeader() {
+            DocumentChunker chunker = new DocumentChunker(60);
+            String content = "다음은 중복 참여 불가 사업의 전체 목록입니다.\n"
+                    + "1 기초생활보장 복지부\n"
+                    + "2 희망키움통장 복지부\n"
+                    + "3 디딤씨앗통장 복지부\n"
+                    + "4 청년저축계좌 복지부\n"
+                    + "5 청년내일채움 고용부\n"
+                    + "6 청년재직자공제 고용부";
+
+            List<PolicyDocument> result = chunker.chunk(1L, content);
+
+            assertThat(result).hasSizeGreaterThan(1);
+            for (int i = 1; i < result.size(); i++) {
+                assertThat(result.get(i).getContent()).doesNotStartWith("다음은 중복 참여");
+            }
+        }
+    }
+
+    @Nested
     @DisplayName("attachment boundary 분할 + 페이지 추적")
     class AttachmentBoundary {
 

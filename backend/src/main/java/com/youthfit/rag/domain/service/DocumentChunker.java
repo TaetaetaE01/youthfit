@@ -122,7 +122,8 @@ public class DocumentChunker {
         String text = seg.text();
         List<PageMark> marks = collectPageMarks(text);
 
-        List<int[]> rawChunks = paragraphAwareSplit(text);
+        List<TableBlock> tableBlocks = identifyTableBlocks(text);
+        List<int[]> rawChunks = chunkWithTableBlocks(text, tableBlocks);
 
         List<Chunk> chunks = new ArrayList<>(rawChunks.size());
         for (int[] range : rawChunks) {
@@ -132,11 +133,117 @@ public class DocumentChunker {
             if (chunkText.isBlank()) {
                 continue;
             }
+            String finalText = applyHeaderIfNeeded(chunkText, tableBlocks, start, end);
             PageRange pr = computePageRange(marks, start, end);
-            chunks.add(new Chunk(chunkText, pr.start(), pr.end()));
+            chunks.add(new Chunk(finalText, pr.start(), pr.end()));
         }
         return chunks;
     }
+
+    private static final Pattern NUMBER_ROW = Pattern.compile(
+            "^(\\d+\\s+|\\d+\\.\\s+|[①②③④⑤⑥⑦⑧⑨⑩])");
+    private static final int MIN_TABLE_ROWS = 3;
+    private static final int HEADER_PLAINTEXT_MIN_LEN = 20;
+    private static final Pattern PLAINTEXT_END = Pattern.compile(".*[.?!]\\s*$");
+
+    private List<TableBlock> identifyTableBlocks(String text) {
+        List<TableBlock> blocks = new ArrayList<>();
+        int len = text.length();
+        int cursor = 0;
+        Integer prevLineStart = null;
+        Integer prevLineEnd = null;
+        int runStart = -1;
+        int runCount = 0;
+
+        while (cursor <= len) {
+            int lineEnd = text.indexOf('\n', cursor);
+            int finish = (lineEnd == -1) ? len : lineEnd;
+            String line = text.substring(cursor, finish);
+
+            if (NUMBER_ROW.matcher(line).find()) {
+                if (runStart == -1) {
+                    runStart = cursor;
+                }
+                runCount++;
+            } else {
+                if (runCount >= MIN_TABLE_ROWS) {
+                    String header = pickHeader(text, prevLineStart, prevLineEnd);
+                    int blockStart = (header != null && prevLineStart != null) ? prevLineStart : runStart;
+                    blocks.add(new TableBlock(blockStart, cursor - 1, header));
+                }
+                runStart = -1;
+                runCount = 0;
+                prevLineStart = cursor;
+                prevLineEnd = finish;
+            }
+
+            if (lineEnd == -1) {
+                if (runCount >= MIN_TABLE_ROWS) {
+                    String header = pickHeader(text, prevLineStart, prevLineEnd);
+                    int blockStart = (header != null && prevLineStart != null) ? prevLineStart : runStart;
+                    blocks.add(new TableBlock(blockStart, finish, header));
+                }
+                break;
+            }
+            cursor = lineEnd + 1;
+        }
+        return blocks;
+    }
+
+    private String pickHeader(String text, Integer prevStart, Integer prevEnd) {
+        if (prevStart == null) return null;
+        String candidate = text.substring(prevStart, prevEnd).trim();
+        if (candidate.isEmpty()) return null;
+        if (candidate.length() > HEADER_PLAINTEXT_MIN_LEN
+                && PLAINTEXT_END.matcher(candidate).matches()) {
+            return null;
+        }
+        return candidate;
+    }
+
+    private List<int[]> chunkWithTableBlocks(String text, List<TableBlock> blocks) {
+        if (blocks.isEmpty()) {
+            return paragraphAwareSplit(text);
+        }
+
+        List<int[]> ranges = new ArrayList<>();
+        int cursor = 0;
+        for (TableBlock b : blocks) {
+            if (cursor < b.start) {
+                List<int[]> subRanges = paragraphAwareSplit(text.substring(cursor, b.start));
+                final int offset = cursor;
+                for (int[] r : subRanges) {
+                    ranges.add(new int[]{r[0] + offset, r[1] + offset});
+                }
+            }
+            List<int[]> tableRanges = new ArrayList<>();
+            splitByLines(text, b.start, b.end, tableRanges);
+            ranges.addAll(tableRanges);
+            cursor = b.end;
+        }
+        if (cursor < text.length()) {
+            List<int[]> subRanges = paragraphAwareSplit(text.substring(cursor));
+            final int offset = cursor;
+            for (int[] r : subRanges) {
+                ranges.add(new int[]{r[0] + offset, r[1] + offset});
+            }
+        }
+        return ranges;
+    }
+
+    private String applyHeaderIfNeeded(String chunkText, List<TableBlock> blocks, int start, int end) {
+        for (TableBlock b : blocks) {
+            if (start >= b.start && end <= b.end && b.header != null) {
+                if (chunkText.startsWith(b.header)) {
+                    return chunkText;
+                }
+                return b.header + "\n" + chunkText;
+            }
+        }
+        return chunkText;
+    }
+
+    private record TableBlock(int start, int end, String header) {}
 
     private List<PageMark> collectPageMarks(String text) {
         List<PageMark> marks = new ArrayList<>();
