@@ -32,9 +32,9 @@
   --color-chat-surface: #1C4D8D;
   --color-chat-soft: #4988C4;
   --color-chat-accent: #BDE8F5;
-  --color-chat-bubble: #FFFFFF;
+  --color-chat-bubble: #F4F8FC;
   --color-chat-bubble-text: #0F2854;
-  --color-chat-source-bg: #EFF7FA;
+  --color-chat-source-bg: #E3EFF7;
 }
 
 /* Animations */

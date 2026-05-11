@@ -41,7 +41,7 @@ export function QnaChatSection({ isAuthenticated, policyId, onLoginPrompt }: Pro
             <p className="mb-1 text-[15px] font-medium text-chat-accent">
               이 정책에 대해 궁금한 점을 질문해보세요
             </p>
-            <p className="mb-4 text-[13px] text-chat-accent/55">
+            <p className="mb-4 text-[13px] text-chat-accent/80">
               아래 추천 질문으로 빠르게 시작할 수 있어요
             </p>
             <QnaSuggestionChips onPick={handlePick} />
