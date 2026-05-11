@@ -6,6 +6,8 @@ import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
+import com.youthfit.rag.domain.service.KeywordExtractor;
+import com.youthfit.rag.infrastructure.config.KeywordBoostProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,12 @@ class RagSearchServiceTest {
 
     @Mock
     private EmbeddingProvider embeddingProvider;
+
+    @Mock
+    private KeywordExtractor keywordExtractor;
+
+    @Mock
+    private KeywordBoostProperties keywordBoostProperties;
 
     @Nested
     @DisplayName("searchRelevantChunks - 관련 청크 검색")
@@ -87,8 +95,11 @@ class RagSearchServiceTest {
                     createSimilarChunk(1L, 1L, 0, "주거 지원 관련 청크", 0.1)
             );
 
+            given(keywordBoostProperties.enabled()).willReturn(true);
+            given(keywordExtractor.extract("주거 지원")).willReturn(List.of("주거", "지원"));
             given(embeddingProvider.embed("주거 지원")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(List.of("주거", "지원")), eq(10)))
                     .willReturn(similar);
 
             // when
@@ -110,8 +121,11 @@ class RagSearchServiceTest {
                     createChunkWithId(2L, 1L, 1, "주거 안정 지원금")
             );
 
+            given(keywordBoostProperties.enabled()).willReturn(true);
+            given(keywordExtractor.extract("월세")).willReturn(List.of("월세"));
             given(embeddingProvider.embed("월세")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(List.of("월세")), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 
@@ -134,8 +148,11 @@ class RagSearchServiceTest {
                     createChunkWithId(2L, 1L, 1, "다른 내용")
             );
 
+            given(keywordBoostProperties.enabled()).willReturn(true);
+            given(keywordExtractor.extract("HOUSING")).willReturn(List.of("HOUSING"));
             given(embeddingProvider.embed("HOUSING")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(List.of("HOUSING")), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 
@@ -157,8 +174,11 @@ class RagSearchServiceTest {
                     createChunkWithId(1L, 1L, 0, "청년 주거 지원")
             );
 
+            given(keywordBoostProperties.enabled()).willReturn(true);
+            given(keywordExtractor.extract("존재하지않는키워드")).willReturn(List.of("존재하지않는키워드"));
             given(embeddingProvider.embed("존재하지않는키워드")).willReturn(queryEmbedding);
-            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(queryEmbedding), eq(10)))
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(List.of("존재하지않는키워드")), eq(10)))
                     .willReturn(List.of());
             given(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).willReturn(allChunks);
 
@@ -167,6 +187,50 @@ class RagSearchServiceTest {
 
             // then
             assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("keyword-boost 비활성화 시 keywords 는 빈 리스트로 전달된다")
+        void keywordBoostDisabled_passesEmptyKeywords() {
+            SearchChunksCommand command = new SearchChunksCommand(1L, "디딤씨앗통장 중복");
+            float[] queryEmbedding = new float[]{0.1f};
+            List<SimilarChunk> similar = List.of(
+                    createSimilarChunk(1L, 1L, 0, "표 항목 디딤씨앗통장", 0.5)
+            );
+
+            given(keywordBoostProperties.enabled()).willReturn(false);
+            given(embeddingProvider.embed("디딤씨앗통장 중복")).willReturn(queryEmbedding);
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(List.of()), eq(10)))
+                    .willReturn(similar);
+
+            List<PolicyDocumentChunkResult> result = ragSearchService.searchRelevantChunks(command);
+
+            assertThat(result).hasSize(1);
+            verify(keywordExtractor, never()).extract(any());
+        }
+
+        @Test
+        @DisplayName("keyword-boost 활성화 시 추출된 키워드를 repository 에 전달한다")
+        void keywordBoostEnabled_passesExtractedKeywords() {
+            SearchChunksCommand command = new SearchChunksCommand(1L, "디딤씨앗통장 중복 가능?");
+            float[] queryEmbedding = new float[]{0.1f};
+            List<String> extracted = List.of("디딤씨앗통장", "중복");
+            List<SimilarChunk> similar = List.of(
+                    createSimilarChunk(1L, 1L, 0, "표 항목 디딤씨앗통장", 0.5)
+            );
+
+            given(keywordBoostProperties.enabled()).willReturn(true);
+            given(keywordExtractor.extract("디딤씨앗통장 중복 가능?")).willReturn(extracted);
+            given(embeddingProvider.embed("디딤씨앗통장 중복 가능?")).willReturn(queryEmbedding);
+            given(policyDocumentRepository.findSimilarByEmbedding(
+                    eq(1L), eq(queryEmbedding), eq(extracted), eq(10)))
+                    .willReturn(similar);
+
+            List<PolicyDocumentChunkResult> result = ragSearchService.searchRelevantChunks(command);
+
+            assertThat(result).hasSize(1);
+            verify(keywordExtractor).extract("디딤씨앗통장 중복 가능?");
         }
     }
 
