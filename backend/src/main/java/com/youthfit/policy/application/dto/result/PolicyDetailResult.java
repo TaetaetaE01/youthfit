@@ -2,6 +2,7 @@ package com.youthfit.policy.application.dto.result;
 
 import com.youthfit.policy.domain.model.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,7 +51,9 @@ public record PolicyDetailResult(
         String sourceLabel,
         String sourceUrl,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        // ── enrichment (마스킹 후 노출) ──
+        Enrichment enrichment
 ) {
     public record Attachment(Long id, String name, String url, String mediaType) {
         public static Attachment from(PolicyAttachment attachment) {
@@ -80,7 +83,25 @@ public record PolicyDetailResult(
         }
     }
 
-    public static PolicyDetailResult from(Policy policy, PolicySource source, List<SubRegion> subRegions) {
+    public record Enrichment(
+            String sourceUrl,
+            Instant fetchedAt,
+            Sections sections,
+            List<ExtraAttachment> extraAttachments
+    ) {
+        public record Sections(
+                String supportTarget,
+                String supportContent,
+                String applyMethod,
+                String requiredDocuments,
+                String deadlineNote
+        ) {}
+
+        public record ExtraAttachment(String name, String url) {}
+    }
+
+    public static PolicyDetailResult from(Policy policy, PolicySource source, List<SubRegion> subRegions,
+                                          Enrichment enrichment) {
         SourceType sourceType = source != null ? source.getSourceType() : null;
         String sourceLabel = sourceType != null ? sourceType.getLabel() : null;
         String sourceUrl = source != null ? source.getSourceUrl() : null;
@@ -125,7 +146,8 @@ public record PolicyDetailResult(
                 sourceLabel,
                 sourceUrl,
                 policy.getCreatedAt(),
-                policy.getUpdatedAt()
+                policy.getUpdatedAt(),
+                enrichment
         );
     }
 }

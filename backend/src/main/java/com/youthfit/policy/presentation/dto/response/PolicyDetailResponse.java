@@ -6,6 +6,7 @@ import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.SourceType;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,7 +55,8 @@ public record PolicyDetailResponse(
         String sourceLabel,
         String sourceUrl,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Enrichment enrichment
 ) {
     public record Attachment(Long id, String name, String url, String mediaType) {
         static Attachment from(PolicyDetailResult.Attachment a) {
@@ -78,6 +80,43 @@ public record PolicyDetailResponse(
         static SubRegion from(PolicyDetailResult.SubRegion s) {
             return new SubRegion(s.code(), s.sidoCode(), s.sidoName(), s.name());
         }
+    }
+
+    public record Enrichment(
+            String sourceUrl,
+            Instant fetchedAt,
+            Sections sections,
+            List<ExtraAttachment> extraAttachments
+    ) {
+        static Enrichment from(PolicyDetailResult.Enrichment src) {
+            if (src == null) return null;
+            Sections sections = src.sections() == null ? null
+                    : new Sections(
+                            src.sections().supportTarget(),
+                            src.sections().supportContent(),
+                            src.sections().applyMethod(),
+                            src.sections().requiredDocuments(),
+                            src.sections().deadlineNote()
+                    );
+            return new Enrichment(
+                    src.sourceUrl(),
+                    src.fetchedAt(),
+                    sections,
+                    src.extraAttachments().stream()
+                            .map(a -> new ExtraAttachment(a.name(), a.url()))
+                            .toList()
+            );
+        }
+
+        public record Sections(
+                String supportTarget,
+                String supportContent,
+                String applyMethod,
+                String requiredDocuments,
+                String deadlineNote
+        ) {}
+
+        public record ExtraAttachment(String name, String url) {}
     }
 
     public static PolicyDetailResponse from(PolicyDetailResult result) {
@@ -122,7 +161,8 @@ public record PolicyDetailResponse(
                 result.sourceLabel(),
                 result.sourceUrl(),
                 result.createdAt(),
-                result.updatedAt()
+                result.updatedAt(),
+                Enrichment.from(result.enrichment())
         );
     }
 }
