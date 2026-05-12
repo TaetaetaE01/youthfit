@@ -77,6 +77,9 @@ public class PolicyIngestionService {
                 policy.replaceAttachments(toAttachments(command.attachments()));
                 policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
                 policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
+                if (command.enrichment() != null) {
+                    policy.replaceEnrichment(command.enrichment());
+                }
                 policyAttachmentApplicationService.markPendingReextraction(policy.getId());
                 return PolicyIngestionResult.updated(source.getPolicy().getId());
             }
@@ -116,6 +119,9 @@ public class PolicyIngestionService {
         policy.replaceAttachments(toAttachments(command.attachments()));
         policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
         policy.replaceApplyMethods(toApplyMethods(command.applyMethods()));
+        if (command.enrichment() != null) {
+            policy.replaceEnrichment(command.enrichment());
+        }
         Policy savedPolicy = policyRepository.save(policy);
 
         PolicySource policySource = PolicySource.builder()

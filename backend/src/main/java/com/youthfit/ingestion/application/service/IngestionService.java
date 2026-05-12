@@ -22,11 +22,13 @@ import com.youthfit.policy.application.dto.result.PolicyIngestionResult.Outcome;
 import com.youthfit.policy.application.service.PolicyIngestionService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.SourceType;
+import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -36,6 +38,7 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -61,6 +64,7 @@ public class IngestionService {
     private final IngestionRunLogRepository ingestionRunLogRepository;
     private final IngestionItemFailureRepository ingestionItemFailureRepository;
     private final CodeBasedRuleExtractionService codeBasedRuleExtractionService;
+    private final PolicySourceRepository policySourceRepository;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Instant runStart = Instant.now();
@@ -72,7 +76,9 @@ public class IngestionService {
             Category category = mapCategory(command.category());
             SourceType sourceType = resolveSourceType(command.sourceType());
             String rawJson = serialize(command);
-            String sourceHash = sha256(rawJson);
+            String sourceHash = command.providedSourceHash() != null && !command.providedSourceHash().isBlank()
+                    ? command.providedSourceHash()
+                    : sha256(rawJson);
             String externalId = command.externalId() != null && !command.externalId().isBlank()
                     ? command.externalId()
                     : command.sourceUrl();
@@ -125,7 +131,8 @@ public class IngestionService {
                     externalId,
                     command.sourceUrl(),
                     rawJson,
-                    sourceHash
+                    sourceHash,
+                    command.enrichment()
             );
 
             PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
@@ -157,6 +164,13 @@ public class IngestionService {
             eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
             triggerAttachmentDownload(ingestionResult.policyId());
 
+            if (command.enrichment() != null) {
+                log.info("enrichment received: externalId={}, status={}, confidence={}",
+                        command.externalId(),
+                        command.enrichment().status(),
+                        command.enrichment().confidence());
+            }
+
             return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
         } catch (RuntimeException e) {
             failed = true;
@@ -173,6 +187,17 @@ public class IngestionService {
                 log.warn("ingestion run log 적재 실패 (정상 흐름 진행): source={}", sourceLabel, e);
             }
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> findExternalIdHashes(String sourceType) {
+        SourceType type;
+        try {
+            type = SourceType.valueOf(sourceType);
+        } catch (IllegalArgumentException e) {
+            return Map.of();
+        }
+        return policySourceRepository.findExternalIdHashMap(type);
     }
 
     private Category mapCategory(String category) {

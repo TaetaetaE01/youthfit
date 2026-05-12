@@ -1,6 +1,7 @@
 package com.youthfit.policy.application.dto.command;
 
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.model.SourceType;
 
 import java.time.LocalDate;
@@ -47,7 +48,9 @@ public record RegisterPolicyCommand(
         String externalId,
         String sourceUrl,
         String rawJson,
-        String sourceHash
+        String sourceHash,
+        // ── enrichment ──
+        PolicyEnrichment enrichment
 ) {
     public record Attachment(String name, String url, String mediaType) {}
     public record ReferenceSite(String name, String url) {}
