@@ -47,6 +47,7 @@ services:
       - BOKJIRO_SERVICE_KEY=${BOKJIRO_SERVICE_KEY:-}
       - YOUTH_CENTER_API_KEY=${YOUTH_CENTER_API_KEY:-}
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - NODE_FUNCTION_ALLOW_EXTERNAL=cheerio
     ports:
       - "5678:5678"
     volumes:
