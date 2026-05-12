@@ -31,7 +31,7 @@ class PolicyEnrichmentTest {
         var original = new PolicyEnrichment(
                 "https://example.com", Instant.parse("2026-05-12T15:30:00Z"),
                 "openai:gpt-4o-mini", 0.85, EnrichmentStatus.OK,
-                new PolicyEnrichment.Sections("청년", "월 20만원", "온라인", null, null),
+                new PolicyEnrichment.Sections("청년", "월 20만원", "온라인", null, null, null, null, null, null),
                 List.of(new PolicyEnrichment.ExtraAttachment("apply.hwp", "https://example.com/x.hwp")));
         ObjectMapper m = jacksonWithJavaTime();
         String json = m.writeValueAsString(original);

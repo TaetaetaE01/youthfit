@@ -64,7 +64,7 @@ class PolicyQueryServiceEnrichmentMaskingTest {
                 "test-extractor",
                 confidence,
                 status,
-                new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고"),
+                new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
                 List.of(new PolicyEnrichment.ExtraAttachment("첨부", "https://att.example.com"))
         );
     }
@@ -188,6 +188,36 @@ class PolicyQueryServiceEnrichmentMaskingTest {
             assertThat(result.enrichment().extraAttachments()).hasSize(1);
             assertThat(result.enrichment().extraAttachments().getFirst().name()).isEqualTo("첨부");
             assertThat(result.enrichment().extraAttachments().getFirst().url()).isEqualTo("https://att.example.com");
+        }
+
+        @Test
+        @DisplayName("신규 4개 필드(policyOverview/eligibilityCriteria/operatingOrganization/contactPhone)가 결과에 전파된다")
+        void new_four_fields_propagate_to_result() {
+            Policy policy = createPolicy();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://example.com/policy/1",
+                    Instant.parse("2026-05-01T00:00:00Z"),
+                    "test-extractor",
+                    0.9,
+                    EnrichmentStatus.OK,
+                    new PolicyEnrichment.Sections(
+                            "대상", "내용", "신청 방법", "서류", "마감 비고",
+                            "인천 계양구 청년 일자리 지원 사업",
+                            "만 18세 이상 39세 이하, 계양구 거주자",
+                            "인천광역시 계양구 일자리정책과",
+                            "032-450-8354"
+                    ),
+                    List.of()
+            );
+            givenPolicyWithEnrichment(policy, enrichment);
+
+            PolicyDetailResult result = policyQueryService.findPolicyById(1L);
+
+            PolicyDetailResult.Enrichment.Sections sections = result.enrichment().sections();
+            assertThat(sections.policyOverview()).isEqualTo("인천 계양구 청년 일자리 지원 사업");
+            assertThat(sections.eligibilityCriteria()).isEqualTo("만 18세 이상 39세 이하, 계양구 거주자");
+            assertThat(sections.operatingOrganization()).isEqualTo("인천광역시 계양구 일자리정책과");
+            assertThat(sections.contactPhone()).isEqualTo("032-450-8354");
         }
 
         @Test

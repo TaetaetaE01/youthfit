@@ -96,7 +96,11 @@ public record PolicyDetailResponse(
                             src.sections().supportContent(),
                             src.sections().applyMethod(),
                             src.sections().requiredDocuments(),
-                            src.sections().deadlineNote()
+                            src.sections().deadlineNote(),
+                            src.sections().policyOverview(),
+                            src.sections().eligibilityCriteria(),
+                            src.sections().operatingOrganization(),
+                            src.sections().contactPhone()
                     );
             return new Enrichment(
                     src.sourceUrl(),
@@ -113,7 +117,11 @@ public record PolicyDetailResponse(
                 String supportContent,
                 String applyMethod,
                 String requiredDocuments,
-                String deadlineNote
+                String deadlineNote,
+                String policyOverview,
+                String eligibilityCriteria,
+                String operatingOrganization,
+                String contactPhone
         ) {}
 
         public record ExtraAttachment(String name, String url) {}

@@ -30,7 +30,11 @@ public record PolicyEnrichment(
             String supportContent,
             String applyMethod,
             String requiredDocuments,
-            String deadlineNote
+            String deadlineNote,
+            String policyOverview,
+            String eligibilityCriteria,
+            String operatingOrganization,
+            String contactPhone
     ) {
         @JsonCreator
         public Sections(
@@ -38,13 +42,21 @@ public record PolicyEnrichment(
                 @JsonProperty("supportContent") String supportContent,
                 @JsonProperty("applyMethod") String applyMethod,
                 @JsonProperty("requiredDocuments") String requiredDocuments,
-                @JsonProperty("deadlineNote") String deadlineNote
+                @JsonProperty("deadlineNote") String deadlineNote,
+                @JsonProperty("policyOverview") String policyOverview,
+                @JsonProperty("eligibilityCriteria") String eligibilityCriteria,
+                @JsonProperty("operatingOrganization") String operatingOrganization,
+                @JsonProperty("contactPhone") String contactPhone
         ) {
             this.supportTarget = supportTarget;
             this.supportContent = supportContent;
             this.applyMethod = applyMethod;
             this.requiredDocuments = requiredDocuments;
             this.deadlineNote = deadlineNote;
+            this.policyOverview = policyOverview;
+            this.eligibilityCriteria = eligibilityCriteria;
+            this.operatingOrganization = operatingOrganization;
+            this.contactPhone = contactPhone;
         }
     }
 

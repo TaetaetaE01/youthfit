@@ -92,7 +92,11 @@ public record IngestPolicyRequest(
                         p.sections().supportContent(),
                         p.sections().applyMethod(),
                         p.sections().requiredDocuments(),
-                        p.sections().deadlineNote()
+                        p.sections().deadlineNote(),
+                        p.sections().policyOverview(),
+                        p.sections().eligibilityCriteria(),
+                        p.sections().operatingOrganization(),
+                        p.sections().contactPhone()
                 );
         List<PolicyEnrichment.ExtraAttachment> atts = p.extraAttachments() == null
                 ? List.of()
@@ -200,7 +204,11 @@ public record IngestPolicyRequest(
             String supportContent,
             String applyMethod,
             String requiredDocuments,
-            String deadlineNote
+            String deadlineNote,
+            String policyOverview,
+            String eligibilityCriteria,
+            String operatingOrganization,
+            String contactPhone
     ) {}
 
     public record ExtraAttachmentPayload(

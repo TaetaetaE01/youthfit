@@ -94,7 +94,11 @@ public record PolicyDetailResult(
                 String supportContent,
                 String applyMethod,
                 String requiredDocuments,
-                String deadlineNote
+                String deadlineNote,
+                String policyOverview,
+                String eligibilityCriteria,
+                String operatingOrganization,
+                String contactPhone
         ) {}
 
         public record ExtraAttachment(String name, String url) {}

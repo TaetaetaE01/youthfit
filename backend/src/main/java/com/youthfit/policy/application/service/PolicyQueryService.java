@@ -67,7 +67,11 @@ public class PolicyQueryService {
                         e.sections().supportContent(),
                         e.sections().applyMethod(),
                         e.sections().requiredDocuments(),
-                        e.sections().deadlineNote()
+                        e.sections().deadlineNote(),
+                        e.sections().policyOverview(),
+                        e.sections().eligibilityCriteria(),
+                        e.sections().operatingOrganization(),
+                        e.sections().contactPhone()
                 );
         List<PolicyDetailResult.Enrichment.ExtraAttachment> atts =
                 e.extraAttachments() == null ? List.of()

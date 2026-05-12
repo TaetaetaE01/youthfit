@@ -392,7 +392,7 @@ class DocumentChunkerTest {
                     "test-extractor",
                     0.5,
                     EnrichmentStatus.LOW_CONFIDENCE,
-                    new PolicyEnrichment.Sections("지원대상", "지원내용", null, null, null),
+                    new PolicyEnrichment.Sections("지원대상", "지원내용", null, null, null, null, null, null, null),
                     List.of()
             );
         }
@@ -425,7 +425,8 @@ class DocumentChunkerTest {
                     "월 50만 원 지원",    // supportContent
                     "온라인 신청",         // applyMethod
                     null,                  // requiredDocuments — null, 청크 미생성
-                    null                   // deadlineNote — null, 청크 미생성
+                    null,                  // deadlineNote — null, 청크 미생성
+                    null, null, null, null
             );
             PolicyEnrichment enrichment = exposableEnrichment(sections);
 
@@ -448,7 +449,8 @@ class DocumentChunkerTest {
                     "월 50만 원 지원",
                     null,
                     "주민등록등본",
-                    "2024년 12월 31일"
+                    "2024년 12월 31일",
+                    null, null, null, null
             );
             PolicyEnrichment enrichment = exposableEnrichment(sections);
 
@@ -465,7 +467,7 @@ class DocumentChunkerTest {
         @DisplayName("enriched 청크의 chunkIndex 는 기본 청크 이후로 연속된다")
         void enriched_chunks_have_consecutive_chunk_indices() {
             PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(
-                    "지원대상 텍스트", "지원내용 텍스트", null, null, null
+                    "지원대상 텍스트", "지원내용 텍스트", null, null, null, null, null, null, null
             );
             PolicyEnrichment enrichment = exposableEnrichment(sections);
 
@@ -479,7 +481,7 @@ class DocumentChunkerTest {
         @Test
         @DisplayName("sections 의 모든 필드가 null 이면 enriched 청크를 추가하지 않는다")
         void all_null_sections_produces_no_enriched_chunks() {
-            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(null, null, null, null, null);
+            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(null, null, null, null, null, null, null, null, null);
             PolicyEnrichment enrichment = exposableEnrichment(sections);
 
             List<PolicyDocument> base = chunker.chunk(1L, BASE_CONTENT);
