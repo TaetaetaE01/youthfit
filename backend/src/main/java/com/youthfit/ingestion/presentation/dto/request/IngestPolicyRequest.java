@@ -1,12 +1,15 @@
 package com.youthfit.ingestion.presentation.dto.request;
 
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
+import com.youthfit.policy.domain.model.EnrichmentStatus;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 public record IngestPolicyRequest(
@@ -69,7 +72,41 @@ public record IngestPolicyRequest(
                         rawData.rawCodes().majorFieldCd(),
                         rawData.rawCodes().specializationCd(),
                         rawData.rawCodes().zipCodes() == null ? List.of() : rawData.rawCodes().zipCodes()
-                )
+                ),
+                rawData.sourceHash(),
+                mapEnrichment(rawData.enrichment())
+        );
+    }
+
+    private static PolicyEnrichment mapEnrichment(EnrichmentPayload p) {
+        if (p == null) return null;
+        EnrichmentStatus status;
+        try {
+            status = EnrichmentStatus.valueOf(p.status());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return null;
+        }
+        PolicyEnrichment.Sections sections = p.sections() == null ? null
+                : new PolicyEnrichment.Sections(
+                        p.sections().supportTarget(),
+                        p.sections().supportContent(),
+                        p.sections().applyMethod(),
+                        p.sections().requiredDocuments(),
+                        p.sections().deadlineNote()
+                );
+        List<PolicyEnrichment.ExtraAttachment> atts = p.extraAttachments() == null
+                ? List.of()
+                : p.extraAttachments().stream()
+                        .map(a -> new PolicyEnrichment.ExtraAttachment(a.name(), a.url()))
+                        .toList();
+        return new PolicyEnrichment(
+                p.sourceUrl(),
+                p.fetchedAt().toInstant(ZoneOffset.UTC),
+                p.extractor(),
+                p.confidence(),
+                status,
+                sections,
+                atts
         );
     }
 
@@ -110,7 +147,10 @@ public record IngestPolicyRequest(
             Integer supportScale,
             Boolean firstComeFirstServed,
             String applyUrl,
-            @Valid RawCodes rawCodes
+            @Valid RawCodes rawCodes,
+            // ── NEW ──
+            String sourceHash,
+            @Valid EnrichmentPayload enrichment
     ) {}
 
     public record Attachment(
@@ -143,5 +183,28 @@ public record IngestPolicyRequest(
             String majorFieldCd,
             String specializationCd,
             List<String> zipCodes
+    ) {}
+
+    public record EnrichmentPayload(
+            String sourceUrl,                   // NO_LINK 시 null 허용
+            @NotNull LocalDateTime fetchedAt,
+            @NotBlank String extractor,
+            Double confidence,
+            @NotBlank String status,
+            @Valid EnrichmentSectionsPayload sections,
+            List<@Valid ExtraAttachmentPayload> extraAttachments
+    ) {}
+
+    public record EnrichmentSectionsPayload(
+            String supportTarget,
+            String supportContent,
+            String applyMethod,
+            String requiredDocuments,
+            String deadlineNote
+    ) {}
+
+    public record ExtraAttachmentPayload(
+            @NotBlank String name,
+            @NotBlank String url
     ) {}
 }
