@@ -66,6 +66,11 @@ export interface PolicyEnrichmentSections {
   applyMethod: string | null;
   requiredDocuments: string | null;
   deadlineNote: string | null;
+  // NEW
+  policyOverview: string | null;
+  eligibilityCriteria: string | null;
+  operatingOrganization: string | null;
+  contactPhone: string | null;
 }
 
 export interface PolicyEnrichmentAttachment {

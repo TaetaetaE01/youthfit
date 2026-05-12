@@ -1,14 +1,18 @@
 import { ExternalLink, Bot } from 'lucide-react';
-import type { PolicyEnrichment, PolicyEnrichmentSections } from '@/types/policy';
+import type { PolicyEnrichment } from '@/types/policy';
 
 type Props = { enrichment: PolicyEnrichment | null };
 
-const SECTION_LABELS: Array<[keyof PolicyEnrichmentSections, string]> = [
-  ['supportTarget', '지원대상'],
-  ['supportContent', '지원내용'],
-  ['applyMethod', '신청방법'],
-  ['requiredDocuments', '제출서류'],
-  ['deadlineNote', '마감안내'],
+const SECTION_LABELS: Array<[keyof NonNullable<PolicyEnrichment['sections']>, string]> = [
+  ['policyOverview',        '정책 개요'],
+  ['supportTarget',         '지원대상'],
+  ['eligibilityCriteria',   '지원자격'],
+  ['supportContent',        '지원내용'],
+  ['applyMethod',           '신청방법'],
+  ['requiredDocuments',     '제출서류'],
+  ['deadlineNote',          '마감안내'],
+  ['operatingOrganization', '운영기관'],
+  ['contactPhone',          '문의처'],
 ];
 
 export function PolicyEnrichmentSection({ enrichment }: Props) {
