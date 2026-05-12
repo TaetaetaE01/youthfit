@@ -1,5 +1,7 @@
 package com.youthfit.rag.domain.service;
 
+import com.youthfit.policy.domain.model.EnrichmentStatus;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -7,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 
@@ -361,6 +364,129 @@ class DocumentChunkerTest {
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getContent()).doesNotContain("표 항목:");
+        }
+    }
+
+    @Nested
+    @DisplayName("chunkWithEnrichment - enrichment 섹션 청크 포함")
+    class ChunkWithEnrichment {
+
+        private static final String BASE_CONTENT = "청년 지원 정책 본문입니다.";
+
+        private PolicyEnrichment exposableEnrichment(PolicyEnrichment.Sections sections) {
+            return new PolicyEnrichment(
+                    "https://example.com",
+                    Instant.now(),
+                    "test-extractor",
+                    0.9,
+                    EnrichmentStatus.OK,
+                    sections,
+                    List.of()
+            );
+        }
+
+        private PolicyEnrichment nonExposableEnrichment() {
+            return new PolicyEnrichment(
+                    "https://example.com",
+                    Instant.now(),
+                    "test-extractor",
+                    0.5,
+                    EnrichmentStatus.LOW_CONFIDENCE,
+                    new PolicyEnrichment.Sections("지원대상", "지원내용", null, null, null),
+                    List.of()
+            );
+        }
+
+        @Test
+        @DisplayName("enrichment 가 null 이면 enriched 청크를 추가하지 않는다")
+        void enrichment_null_produces_no_enriched_chunks() {
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, null);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getContent()).doesNotContain("[자동수집-");
+        }
+
+        @Test
+        @DisplayName("isExposable() 이 false 이면 enriched 청크를 추가하지 않는다 (LOW_CONFIDENCE)")
+        void non_exposable_enrichment_produces_no_enriched_chunks() {
+            PolicyEnrichment enrichment = nonExposableEnrichment();
+
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, enrichment);
+
+            assertThat(result).hasSize(1);
+            assertThat(result).noneMatch(c -> c.getContent().startsWith("[자동수집-"));
+        }
+
+        @Test
+        @DisplayName("노출 가능한 enrichment 의 non-null 섹션마다 별도 청크가 추가된다")
+        void exposable_enrichment_produces_one_chunk_per_non_null_section() {
+            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(
+                    "만 19~34세 청년",   // supportTarget
+                    "월 50만 원 지원",    // supportContent
+                    "온라인 신청",         // applyMethod
+                    null,                  // requiredDocuments — null, 청크 미생성
+                    null                   // deadlineNote — null, 청크 미생성
+            );
+            PolicyEnrichment enrichment = exposableEnrichment(sections);
+
+            List<PolicyDocument> base = chunker.chunk(1L, BASE_CONTENT);
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, enrichment);
+
+            // non-null 섹션 3개(지원대상, 지원내용, 신청방법)
+            assertThat(result).hasSize(base.size() + 3);
+            List<PolicyDocument> enrichedChunks = result.stream()
+                    .filter(c -> c.getContent().startsWith("[자동수집-"))
+                    .toList();
+            assertThat(enrichedChunks).hasSize(3);
+        }
+
+        @Test
+        @DisplayName("enriched 청크는 '[자동수집-섹션명]' prefix 로 출처를 표기한다")
+        void enriched_chunks_carry_source_prefix_metadata() {
+            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(
+                    "만 19~34세 청년",
+                    "월 50만 원 지원",
+                    null,
+                    "주민등록등본",
+                    "2024년 12월 31일"
+            );
+            PolicyEnrichment enrichment = exposableEnrichment(sections);
+
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, enrichment);
+
+            List<String> contents = result.stream().map(PolicyDocument::getContent).toList();
+            assertThat(contents).anyMatch(c -> c.startsWith("[자동수집-지원대상]") && c.contains("만 19~34세 청년"));
+            assertThat(contents).anyMatch(c -> c.startsWith("[자동수집-지원내용]") && c.contains("월 50만 원 지원"));
+            assertThat(contents).anyMatch(c -> c.startsWith("[자동수집-제출서류]") && c.contains("주민등록등본"));
+            assertThat(contents).anyMatch(c -> c.startsWith("[자동수집-마감안내]") && c.contains("2024년 12월 31일"));
+        }
+
+        @Test
+        @DisplayName("enriched 청크의 chunkIndex 는 기본 청크 이후로 연속된다")
+        void enriched_chunks_have_consecutive_chunk_indices() {
+            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(
+                    "지원대상 텍스트", "지원내용 텍스트", null, null, null
+            );
+            PolicyEnrichment enrichment = exposableEnrichment(sections);
+
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, enrichment);
+
+            for (int i = 0; i < result.size(); i++) {
+                assertThat(result.get(i).getChunkIndex()).isEqualTo(i);
+            }
+        }
+
+        @Test
+        @DisplayName("sections 의 모든 필드가 null 이면 enriched 청크를 추가하지 않는다")
+        void all_null_sections_produces_no_enriched_chunks() {
+            PolicyEnrichment.Sections sections = new PolicyEnrichment.Sections(null, null, null, null, null);
+            PolicyEnrichment enrichment = exposableEnrichment(sections);
+
+            List<PolicyDocument> base = chunker.chunk(1L, BASE_CONTENT);
+            List<PolicyDocument> result = chunker.chunkWithEnrichment(1L, BASE_CONTENT, enrichment);
+
+            assertThat(result).hasSize(base.size());
+            assertThat(result).noneMatch(c -> c.getContent().startsWith("[자동수집-"));
         }
     }
 
