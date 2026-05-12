@@ -2,10 +2,13 @@ package com.youthfit.ingestion.presentation.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
 
 @Tag(name = "Ingestion Internal", description = "운영용 내부 ingestion API")
 public interface IngestionInternalApi {
@@ -18,4 +21,17 @@ public interface IngestionInternalApi {
     @SecurityRequirements
     ResponseEntity<Void> reindex(
             @Parameter(description = "재인덱싱 대상 정책 id", required = true) Long policyId);
+
+    @Operation(
+            summary = "특정 source 의 external_id → source_hash 맵",
+            description = "n8n 워크플로우가 변동 식별을 위해 호출. X-Internal-Api-Key 필수."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "external_id → hash 맵"),
+            @ApiResponse(responseCode = "401", description = "인증 실패"),
+            @ApiResponse(responseCode = "400", description = "필수 파라미터 누락")
+    })
+    ResponseEntity<Map<String, String>> getExternalHashes(
+            @Parameter(description = "source type (예: YOUTH_CENTER)", required = true)
+            String source);
 }
