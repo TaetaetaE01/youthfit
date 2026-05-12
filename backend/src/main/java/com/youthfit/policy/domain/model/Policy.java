@@ -147,6 +147,10 @@ public class Policy extends BaseTimeEntity {
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PolicyAttachment> attachments = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "enrichment", columnDefinition = "jsonb")
+    private PolicyEnrichment enrichment;
+
     @Builder
     private Policy(String title, String summary, String body,
                    String supportTarget, String selectionCriteria, String supportContent,
@@ -305,5 +309,9 @@ public class Policy extends BaseTimeEntity {
             a.assignTo(this);
             this.attachments.add(a);
         }
+    }
+
+    public void replaceEnrichment(PolicyEnrichment newEnrichment) {
+        this.enrichment = newEnrichment;
     }
 }
