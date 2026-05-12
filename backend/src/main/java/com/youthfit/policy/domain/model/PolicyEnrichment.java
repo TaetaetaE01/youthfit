@@ -1,6 +1,7 @@
 package com.youthfit.policy.domain.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
@@ -17,6 +18,7 @@ public record PolicyEnrichment(
 ) {
     public static final double EXPOSURE_CONFIDENCE_THRESHOLD = 0.6;
 
+    @JsonIgnore
     public boolean isExposable() {
         return status == EnrichmentStatus.OK
                 && confidence != null
