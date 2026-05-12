@@ -60,6 +60,26 @@ export interface PolicyApplyMethod {
   description: string | null;
 }
 
+export interface PolicyEnrichmentSections {
+  supportTarget: string | null;
+  supportContent: string | null;
+  applyMethod: string | null;
+  requiredDocuments: string | null;
+  deadlineNote: string | null;
+}
+
+export interface PolicyEnrichmentAttachment {
+  name: string;
+  url: string;
+}
+
+export interface PolicyEnrichment {
+  sourceUrl: string;
+  fetchedAt: string;
+  sections: PolicyEnrichmentSections | null;
+  extraAttachments: PolicyEnrichmentAttachment[];
+}
+
 export interface PolicyDetail extends Omit<Policy, 'subRegions'> {
   subRegions: PolicySubRegion[];
   body: string | null;
@@ -91,6 +111,7 @@ export interface PolicyDetail extends Omit<Policy, 'subRegions'> {
   sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  enrichment: PolicyEnrichment | null;
 }
 
 export interface PolicyPage {
