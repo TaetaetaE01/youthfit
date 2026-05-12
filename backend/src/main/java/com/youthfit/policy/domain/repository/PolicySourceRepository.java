@@ -15,5 +15,7 @@ public interface PolicySourceRepository {
 
     Map<Long, PolicySource> findFirstByPolicyIds(List<Long> policyIds);
 
+    Map<String, String> findExternalIdHashMap(SourceType sourceType);
+
     PolicySource save(PolicySource policySource);
 }
