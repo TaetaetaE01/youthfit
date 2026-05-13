@@ -65,7 +65,7 @@ class RagIndexingServiceTest {
 
             given(documentChunker.computeHash("정책 내용")).willReturn(hash);
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
-            given(documentChunker.chunk(1L, "정책 내용")).willReturn(chunks);
+            given(documentChunker.chunkWithEnrichment(1L, "정책 내용", null)).willReturn(chunks);
             given(embeddingProvider.embedBatch(List.of("청크1", "청크2")))
                     .willReturn(List.of(new float[]{0.1f}, new float[]{0.2f}));
             given(policyDocumentRepository.saveAll(anyList())).willReturn(chunks);
@@ -116,7 +116,7 @@ class RagIndexingServiceTest {
 
             given(documentChunker.computeHash("변경된 내용")).willReturn(newHash);
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
-            given(documentChunker.chunk(1L, "변경된 내용")).willReturn(newChunks);
+            given(documentChunker.chunkWithEnrichment(1L, "변경된 내용", null)).willReturn(newChunks);
             given(embeddingProvider.embedBatch(List.of("새 청크")))
                     .willReturn(List.of(new float[]{0.5f}));
             given(policyDocumentRepository.saveAll(anyList())).willReturn(newChunks);
@@ -139,7 +139,7 @@ class RagIndexingServiceTest {
 
             given(documentChunker.computeHash("변경된 내용")).willReturn("new-hash");
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
-            given(documentChunker.chunk(1L, "변경된 내용"))
+            given(documentChunker.chunkWithEnrichment(1L, "변경된 내용", null))
                     .willReturn(List.of(createChunk(1L, 0, "새 청크", "new-hash")));
             given(embeddingProvider.embedBatch(List.of("새 청크")))
                     .willReturn(List.of(new float[]{0.5f}));
@@ -168,7 +168,7 @@ class RagIndexingServiceTest {
             IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "정책 내용");
             given(documentChunker.computeHash("정책 내용")).willReturn("hash");
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
-            given(documentChunker.chunk(1L, "정책 내용"))
+            given(documentChunker.chunkWithEnrichment(1L, "정책 내용", null))
                     .willReturn(List.of(createChunk(1L, 0, "청크", "hash")));
             given(embeddingProvider.embedBatch(any())).willReturn(List.of(new float[]{0.1f}));
 

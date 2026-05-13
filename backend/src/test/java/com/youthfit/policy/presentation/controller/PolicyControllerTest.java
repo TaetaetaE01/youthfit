@@ -126,7 +126,7 @@ class PolicyControllerTest {
                 java.util.List.of(),
                 null, null,
                 "https://youth.seoul.go.kr/policy/1",
-                now, now);
+                now, now, null);
 
         given(policyQueryService.findPolicyById(1L)).willReturn(detail);
 

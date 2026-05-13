@@ -1,5 +1,7 @@
 package com.youthfit.ingestion.application.dto.command;
 
+import com.youthfit.policy.domain.model.PolicyEnrichment;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,7 +42,10 @@ public record IngestPolicyCommand(
         Boolean firstComeFirstServed,
         String applyUrl,
         // ── 신규 rawCodes ──
-        RawCodes rawCodes
+        RawCodes rawCodes,
+        // ── 신규 enrichment ──
+        String providedSourceHash,
+        PolicyEnrichment enrichment
 ) {
     public record Attachment(String name, String url, String mediaType) {}
     public record ReferenceSite(String name, String url) {}

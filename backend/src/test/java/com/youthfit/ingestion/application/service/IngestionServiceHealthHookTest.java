@@ -60,7 +60,7 @@ class IngestionServiceHealthHookTest {
                 List.of(), List.of(), List.of(),
                 null, null, null, null, null,
                 null, null, null, null, null, null,
-                null
+                null, null, null
         );
     }
 
@@ -102,7 +102,7 @@ class IngestionServiceHealthHookTest {
                 null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null, null,
-                null
+                null, null, null
         );
 
         assertThatThrownBy(() -> service.receivePolicy(bad))

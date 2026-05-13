@@ -43,6 +43,16 @@ public class PolicySourceRepositoryImpl implements PolicySourceRepository {
     }
 
     @Override
+    public Map<String, String> findExternalIdHashMap(SourceType sourceType) {
+        List<Object[]> rows = jpaRepository.findExternalIdAndHashBySourceType(sourceType);
+        Map<String, String> result = new HashMap<>(rows.size());
+        for (Object[] row : rows) {
+            result.put((String) row[0], (String) row[1]);
+        }
+        return result;
+    }
+
+    @Override
     public PolicySource save(PolicySource policySource) {
         return jpaRepository.save(policySource);
     }

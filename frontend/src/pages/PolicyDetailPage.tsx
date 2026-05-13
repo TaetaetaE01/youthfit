@@ -36,6 +36,7 @@ import { useJudgeEligibility } from '@/hooks/mutations/useJudgeEligibility';
 import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { useUnsubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 import { QnaChatSection } from '@/components/qna/QnaChatSection';
+import { PolicyEnrichmentSection } from '@/components/policy/PolicyEnrichmentSection';
 import { getRegionName } from '@/types/policy';
 import type { PolicyDetail, EligibilityResponse, PolicySubRegion } from '@/types/policy';
 import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
@@ -627,6 +628,9 @@ export default function PolicyDetailPage() {
 
           {/* Attachments */}
           <AttachmentSection attachments={policy.attachments} />
+
+          {/* Enrichment (AI 자동 수집 — YOUTH_CENTER 전용, 백엔드가 신뢰 임계값 통과 시에만 내려줌) */}
+          <PolicyEnrichmentSection enrichment={policy.enrichment ?? null} />
 
           {/* Official Application Link */}
           {policy.sourceUrl && (

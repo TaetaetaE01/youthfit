@@ -1,5 +1,6 @@
 package com.youthfit.rag.domain.service;
 
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.rag.domain.model.PolicyDocument;
 
 import java.nio.charset.StandardCharsets;
@@ -8,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -77,6 +79,67 @@ public class DocumentChunker {
             }
         }
         return documents;
+    }
+
+    /**
+     * 기본 chunk 처리 후, PolicyEnrichment 가 노출 가능(isExposable)하면
+     * Sections 의 non-null 필드를 각각 별도 청크로 추가한다.
+     *
+     * 각 enrichment 청크는 "[자동수집-섹션명] ..." 형태의 텍스트 prefix 로 출처를 표기한다.
+     * 이 방식은 PolicyDocument 스키마 변경 없이도 검색 인용 시 출처 구분이 가능하다.
+     *
+     * @param policyId   정책 ID
+     * @param content    기존 정책 본문 + 첨부 merged content
+     * @param enrichment nullable — null 이면 기존 chunk() 와 동일
+     * @return 기본 청크 + enrichment 청크 (globalIndex 연속)
+     */
+    public List<PolicyDocument> chunkWithEnrichment(Long policyId, String content,
+                                                     PolicyEnrichment enrichment) {
+        List<PolicyDocument> base = chunk(policyId, content);
+
+        if (enrichment == null || !enrichment.isExposable() || enrichment.sections() == null) {
+            return base;
+        }
+
+        PolicyEnrichment.Sections sections = enrichment.sections();
+
+        // 섹션명 → 텍스트 매핑 (null 제외)
+        Map<String, String> sectionEntries = new java.util.LinkedHashMap<>();
+        if (sections.supportTarget() != null && !sections.supportTarget().isBlank()) {
+            sectionEntries.put("지원대상", sections.supportTarget());
+        }
+        if (sections.supportContent() != null && !sections.supportContent().isBlank()) {
+            sectionEntries.put("지원내용", sections.supportContent());
+        }
+        if (sections.applyMethod() != null && !sections.applyMethod().isBlank()) {
+            sectionEntries.put("신청방법", sections.applyMethod());
+        }
+        if (sections.requiredDocuments() != null && !sections.requiredDocuments().isBlank()) {
+            sectionEntries.put("제출서류", sections.requiredDocuments());
+        }
+        if (sections.deadlineNote() != null && !sections.deadlineNote().isBlank()) {
+            sectionEntries.put("마감안내", sections.deadlineNote());
+        }
+
+        if (sectionEntries.isEmpty()) {
+            return base;
+        }
+
+        List<PolicyDocument> result = new ArrayList<>(base);
+        int globalIndex = base.size();
+        String sourceHash = computeHash(content);
+
+        for (Map.Entry<String, String> entry : sectionEntries.entrySet()) {
+            String enrichedContent = "[자동수집-" + entry.getKey() + "] " + entry.getValue();
+            result.add(PolicyDocument.builder()
+                    .policyId(policyId)
+                    .chunkIndex(globalIndex++)
+                    .content(enrichedContent)
+                    .sourceHash(sourceHash)
+                    .build());
+        }
+
+        return result;
     }
 
     public String computeHash(String content) {

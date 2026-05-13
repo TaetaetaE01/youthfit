@@ -46,7 +46,8 @@ public class RagIndexingService {
             qnaCacheInvalidator.invalidatePolicy(command.policyId());
         }
 
-        List<PolicyDocument> chunks = documentChunker.chunk(command.policyId(), command.content());
+        List<PolicyDocument> chunks = documentChunker.chunkWithEnrichment(
+                command.policyId(), command.content(), command.enrichment());
         generateEmbeddings(chunks);
         policyDocumentRepository.saveAll(chunks);
 

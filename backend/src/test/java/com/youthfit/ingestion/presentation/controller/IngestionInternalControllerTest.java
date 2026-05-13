@@ -3,6 +3,7 @@ package com.youthfit.ingestion.presentation.controller;
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationFilter;
 import com.youthfit.common.config.SecurityConfig;
 import com.youthfit.ingestion.application.service.AttachmentReindexService;
+import com.youthfit.ingestion.application.service.IngestionService;
 import com.youthfit.ingestion.infrastructure.config.InternalApiKeyFilter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class IngestionInternalControllerTest {
 
     @MockitoBean
     AttachmentReindexService attachmentReindexService;
+
+    @MockitoBean
+    IngestionService ingestionService;
 
     @Test
     @DisplayName("POST /api/internal/ingestion/reindex/{policyId} 가 AttachmentReindexService.reindex 를 호출한다")

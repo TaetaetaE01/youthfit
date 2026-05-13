@@ -287,7 +287,7 @@ class IngestionServiceTest {
                     "심사방법", "주민등록등본", "추가 자격", "기존 수혜자 제외", "기타",
                     LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), "특정기간",
                     25, true, "https://apply.kr",
-                    null
+                    null, null, null
             );
         }
 
@@ -365,7 +365,8 @@ class IngestionServiceTest {
                             19, 34, "Y",
                             "0055002", "0043001", 0, 0, null,
                             "0013001", "0049007", "0011005", "0014001",
-                            List.of("11680"))
+                            List.of("11680")),
+                    null, null
             );
         }
 
@@ -380,7 +381,7 @@ class IngestionServiceTest {
                     null, null, null, null, null,
                     null, null, null,
                     null, null, null,
-                    null  // rawCodes
+                    null, null, null  // rawCodes, providedSourceHash, enrichment
             );
         }
 
@@ -410,7 +411,7 @@ class IngestionServiceTest {
                     List.of(),
                     null, null, null, null, null,
                     null, null, null, null, null, null,
-                    null
+                    null, null, null
             );
         }
 
@@ -440,7 +441,7 @@ class IngestionServiceTest {
                     List.of(),
                     null, null, null, null, null,
                     null, null, null, null, null, null,
-                    null
+                    null, null, null
             );
         }
     }

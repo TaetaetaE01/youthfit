@@ -56,7 +56,7 @@ public class AttachmentReindexService {
         List<PolicyAttachment> attachments = attachmentRepository.findExtractedByPolicyId(resolvedId);
         String merged = mergeContent(policy, attachments);
 
-        IndexPolicyDocumentCommand cmd = new IndexPolicyDocumentCommand(resolvedId, merged);
+        IndexPolicyDocumentCommand cmd = new IndexPolicyDocumentCommand(resolvedId, merged, policy.getEnrichment());
         IndexingResult result = ragIndexingService.indexPolicyDocument(cmd);
         log.info("reindex policyId={} chunks={} updated={}", resolvedId, result.chunkCount(), result.updated());
 

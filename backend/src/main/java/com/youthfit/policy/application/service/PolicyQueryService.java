@@ -8,6 +8,7 @@ import com.youthfit.policy.application.dto.result.PolicySummaryResult;
 import com.youthfit.policy.application.port.RegionCodeRegistry;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionCode;
@@ -52,7 +53,32 @@ public class PolicyQueryService {
                         .stream()
                         .map(PolicyDetailResult.SubRegion::from)
                         .toList();
-        return PolicyDetailResult.from(policy, source, subRegions);
+        PolicyDetailResult.Enrichment enrichmentResult = buildEnrichmentResult(policy.getEnrichment());
+        return PolicyDetailResult.from(policy, source, subRegions, enrichmentResult);
+    }
+
+    private PolicyDetailResult.Enrichment buildEnrichmentResult(PolicyEnrichment e) {
+        if (e == null || !e.isExposable()) {
+            return null;
+        }
+        PolicyDetailResult.Enrichment.Sections sections = e.sections() == null ? null
+                : new PolicyDetailResult.Enrichment.Sections(
+                        e.sections().supportTarget(),
+                        e.sections().supportContent(),
+                        e.sections().applyMethod(),
+                        e.sections().requiredDocuments(),
+                        e.sections().deadlineNote(),
+                        e.sections().policyOverview(),
+                        e.sections().eligibilityCriteria(),
+                        e.sections().operatingOrganization(),
+                        e.sections().contactPhone()
+                );
+        List<PolicyDetailResult.Enrichment.ExtraAttachment> atts =
+                e.extraAttachments() == null ? List.of()
+                : e.extraAttachments().stream()
+                        .map(a -> new PolicyDetailResult.Enrichment.ExtraAttachment(a.name(), a.url()))
+                        .toList();
+        return new PolicyDetailResult.Enrichment(e.sourceUrl(), e.fetchedAt(), sections, atts);
     }
 
     public PolicyPageResult searchPoliciesByKeyword(String keyword, PolicyStatus status, int page, int size) {

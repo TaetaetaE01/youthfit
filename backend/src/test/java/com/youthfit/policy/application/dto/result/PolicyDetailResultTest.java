@@ -42,7 +42,7 @@ class PolicyDetailResultTest {
                 .build();
 
         // when
-        PolicyDetailResult result = PolicyDetailResult.from(policy, source, java.util.List.of());
+        PolicyDetailResult result = PolicyDetailResult.from(policy, source, java.util.List.of(), null);
 
         // then
         SoftAssertions.assertSoftly(softly -> {
@@ -72,7 +72,7 @@ class PolicyDetailResultTest {
                 .sourceHash("hash")
                 .build();
 
-        PolicyDetailResult result = PolicyDetailResult.from(policy, source, java.util.List.of());
+        PolicyDetailResult result = PolicyDetailResult.from(policy, source, java.util.List.of(), null);
 
         assertThat(result.sourceType()).isEqualTo(SourceType.BOKJIRO_CENTRAL);
         assertThat(result.sourceLabel()).isEqualTo("복지로");
@@ -84,7 +84,7 @@ class PolicyDetailResultTest {
     void sourceNull_allSourceFieldsNull() {
         Policy policy = createPolicyWithIdAndTitle(1L, "테스트 정책");
 
-        PolicyDetailResult result = PolicyDetailResult.from(policy, null, java.util.List.of());
+        PolicyDetailResult result = PolicyDetailResult.from(policy, null, java.util.List.of(), null);
 
         assertThat(result.sourceType()).isNull();
         assertThat(result.sourceLabel()).isNull();
