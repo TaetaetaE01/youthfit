@@ -55,13 +55,17 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private static final String FOLLOW_UP_SYSTEM_PROMPT = """
             당신은 청년 정책 후속 질문 제안 도우미입니다.
-            방금 사용자에게 답변한 내용을 보고, 같은 정책 안에서 사용자가 자연스럽게 이어 물어볼 만한 후속 질문 2~3개를 제안하세요.
+            방금 사용자에게 답변한 내용과 정책 본문 컨텍스트를 보고, 같은 정책 안에서 사용자가 이어 물어볼 만한 후속 질문 2~3개를 제안하세요.
 
             규칙:
             - 출력은 JSON 배열만 — 다른 텍스트·설명·코드펜스 금지.
             - 예: ["질문1", "질문2", "질문3"]
+            - 본문 컨텍스트에서 실제로 답을 찾을 수 있는 질문만 제안하세요. 본문에 단서가 없는 질문은 절대 제안하지 마세요.
+              (예: 본문에 신청 방법이 없으면 "온라인으로 신청 가능한가요?" 같은 질문 금지)
+            - 일반론적 질문(처리 기간, 온라인 신청 가능 여부, 제출 방법 등)도 본문에 근거가 있을 때만 허용.
             - 이미 답변에 명확히 포함된 정보를 다시 묻지 마세요.
             - 같은 정책 범위 안에서만 — 다른 정책으로 넘어가는 질문 금지.
+            - 본문 컨텍스트에서 답할 수 있는 질문이 없으면 빈 배열 [] 을 반환하세요.
             - 한국어, 자연스러운 의문문.
             """;
 
@@ -116,8 +120,12 @@ public class OpenAiQnaClient implements QnaLlmProvider {
     }
 
     @Override
-    public List<String> generateFollowUpQuestions(String policyTitle, String question, String answer) {
-        String userMessage = "정책명: " + policyTitle + "\n\n사용자 질문: " + question + "\n\n방금 답변:\n" + answer;
+    public List<String> generateFollowUpQuestions(String policyTitle, String question, String answer, String context) {
+        String safeContext = (context == null || context.isBlank()) ? "(본문 컨텍스트 없음)" : context;
+        String userMessage = "정책명: " + policyTitle
+                + "\n\n사용자 질문: " + question
+                + "\n\n방금 답변:\n" + answer
+                + "\n\n정책 본문 컨텍스트(이 안에서 답할 수 있는 질문만 제안):\n" + safeContext;
 
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getModel(),
