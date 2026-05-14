@@ -36,7 +36,8 @@ import { useJudgeEligibility } from '@/hooks/mutations/useJudgeEligibility';
 import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { useUnsubscribePolicy } from '@/hooks/mutations/usePolicySubscription';
 import { QnaChatSection } from '@/components/qna/QnaChatSection';
-import { PolicyEnrichmentSection } from '@/components/policy/PolicyEnrichmentSection';
+import { AiSourceChip } from '@/components/policy/AiSourceChip';
+import { pickWithFallback, isMeaningful } from '@/lib/policyEnrichment';
 import { getRegionName } from '@/types/policy';
 import type { PolicyDetail, EligibilityResponse, PolicySubRegion } from '@/types/policy';
 import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
@@ -109,15 +110,28 @@ function PolicyHeader({
           <Calendar className="h-4 w-4" />
           {formatPolicyPeriod(policy)}
         </span>
-        {policy.organization && (
-          <>
-            <span className="text-neutral-300">|</span>
-            <span className="flex items-center gap-1">
-              <Building2 className="h-4 w-4" />
-              {policy.organization}
-            </span>
-          </>
-        )}
+        {(() => {
+          const org = pickWithFallback(
+            policy.organization,
+            policy.enrichment?.sections?.operatingOrganization,
+          );
+          if (!org) return null;
+          return (
+            <>
+              <span className="text-neutral-300">|</span>
+              <span className="flex items-center gap-1">
+                <Building2 className="h-4 w-4" />
+                {org.value}
+                {org.fromAi && (
+                  <AiSourceChip
+                    sourceUrl={policy.enrichment?.sourceUrl ?? null}
+                    className="ml-1"
+                  />
+                )}
+              </span>
+            </>
+          );
+        })()}
       </div>
     </header>
   );
@@ -187,17 +201,35 @@ function PolicyMetaSummary({
   supportCycle,
   provideType,
   contact,
+  contactFallback,
+  enrichmentSourceUrl,
 }: {
   referenceYear: number | null;
   supportCycle: string | null;
   provideType: string | null;
   contact: string | null;
+  contactFallback?: string | null;
+  enrichmentSourceUrl?: string | null;
 }) {
-  const items: { icon: typeof Calendar; label: string; value: string }[] = [];
+  const items: {
+    icon: typeof Calendar;
+    label: string;
+    value: string;
+    fromAi?: boolean;
+  }[] = [];
   if (referenceYear) items.push({ icon: Calendar, label: '기준연도', value: `${referenceYear}년` });
   if (supportCycle) items.push({ icon: Repeat, label: '지원주기', value: supportCycle });
   if (provideType) items.push({ icon: Tag, label: '제공유형', value: provideType });
-  if (contact) items.push({ icon: Phone, label: '문의처', value: contact });
+
+  const contactPick = pickWithFallback(contact, contactFallback);
+  if (contactPick) {
+    items.push({
+      icon: Phone,
+      label: '문의처',
+      value: contactPick.value,
+      fromAi: contactPick.fromAi,
+    });
+  }
   if (items.length === 0) return null;
 
   return (
@@ -210,7 +242,10 @@ function PolicyMetaSummary({
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100">
                 <Icon className="h-4 w-4 text-brand-800" />
               </div>
-              <span className="text-xs text-neutral-500">{item.label}</span>
+              <span className="flex items-center gap-1 text-xs text-neutral-500">
+                {item.label}
+                {item.fromAi && <AiSourceChip sourceUrl={enrichmentSourceUrl} />}
+              </span>
               <span className="text-sm font-semibold text-neutral-900">{item.value}</span>
             </div>
           );
@@ -252,8 +287,20 @@ function ReferenceSiteSection({
   );
 }
 
-function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachments'] }) {
-  if (!attachments || attachments.length === 0) return null;
+function AttachmentSection({
+  attachments,
+  extraAttachments,
+  enrichmentSourceUrl,
+}: {
+  attachments: PolicyDetail['attachments'];
+  extraAttachments?: { name: string; url: string }[];
+  enrichmentSourceUrl?: string | null;
+}) {
+  const base = attachments ?? [];
+  const extras = (extraAttachments ?? []).filter(
+    (e) => !base.some((b) => b.url === e.url),
+  );
+  if (base.length === 0 && extras.length === 0) return null;
   return (
     <section
       id="attachment-section"
@@ -264,8 +311,8 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
         첨부파일
       </h2>
       <ul className="space-y-2">
-        {attachments.map((att, i) => (
-          <li key={i}>
+        {base.map((att, i) => (
+          <li key={`a-${i}`}>
             <a
               href={att.url}
               target="_blank"
@@ -274,6 +321,21 @@ function AttachmentSection({ attachments }: { attachments: PolicyDetail['attachm
             >
               <FileText className="h-4 w-4 shrink-0 text-neutral-500" />
               <span className="flex-1 truncate">{att.name}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            </a>
+          </li>
+        ))}
+        {extras.map((att, i) => (
+          <li key={`e-${i}`}>
+            <a
+              href={att.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 transition-colors hover:border-brand-800 hover:bg-brand-100/40"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+              <span className="flex-1 truncate">{att.name}</span>
+              <AiSourceChip sourceUrl={enrichmentSourceUrl} />
               <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
             </a>
           </li>
@@ -509,6 +571,8 @@ export default function PolicyDetailPage() {
             supportCycle={policy.supportCycle}
             provideType={policy.provideType}
             contact={policy.contact}
+            contactFallback={policy.enrichment?.sections?.contactPhone ?? null}
+            enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
           />
 
           {/* 공식 신청 페이지 CTA */}
@@ -545,14 +609,24 @@ export default function PolicyDetailPage() {
           )}
 
           {/* Paired: 지원대상 */}
-          <PairedSection
-            id="paired-supportTarget"
-            easyTitle="누가 받을 수 있나요"
-            easyData={guide?.target ?? null}
-            originalTitle="지원대상"
-            originalContent={policy.supportTarget}
-            originalRenderer={(c) => <FormattedPolicyText text={c} />}
-          />
+          {(() => {
+            const pick = pickWithFallback(
+              policy.supportTarget,
+              policy.enrichment?.sections?.supportTarget,
+            );
+            return (
+              <PairedSection
+                id="paired-supportTarget"
+                easyTitle="누가 받을 수 있나요"
+                easyData={guide?.target ?? null}
+                originalTitle="지원대상"
+                originalContent={pick?.value ?? null}
+                originalRenderer={(c) => <FormattedPolicyText text={c} />}
+                originalFromAi={pick?.fromAi ?? false}
+                enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+              />
+            );
+          })()}
 
           {/* 추가 자격조건 — 지원대상 카드 다음 */}
           {policy.additionalQualification && policy.additionalQualification !== '해당사항 없음' && (
@@ -571,14 +645,24 @@ export default function PolicyDetailPage() {
           )}
 
           {/* Paired: 선정기준 */}
-          <PairedSection
-            id="paired-selectionCriteria"
-            easyTitle="어떻게 뽑히나요"
-            easyData={guide?.criteria ?? null}
-            originalTitle="선정기준"
-            originalContent={policy.selectionCriteria}
-            originalRenderer={(c) => <FormattedPolicyText text={c} />}
-          />
+          {(() => {
+            const pick = pickWithFallback(
+              policy.selectionCriteria,
+              policy.enrichment?.sections?.eligibilityCriteria,
+            );
+            return (
+              <PairedSection
+                id="paired-selectionCriteria"
+                easyTitle="어떻게 뽑히나요"
+                easyData={guide?.criteria ?? null}
+                originalTitle="선정기준"
+                originalContent={pick?.value ?? null}
+                originalRenderer={(c) => <FormattedPolicyText text={c} />}
+                originalFromAi={pick?.fromAi ?? false}
+                enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+              />
+            );
+          })()}
 
           {/* 심사방법 — 선정기준 다음 */}
           {policy.screeningMethod && (
@@ -589,20 +673,65 @@ export default function PolicyDetailPage() {
           )}
 
           {/* Paired: 지원내용 */}
-          <PairedSection
-            id="paired-supportContent"
-            easyTitle="무엇을 받나요"
-            easyData={guide?.content ?? null}
-            originalTitle="지원내용"
-            originalContent={policy.supportContent}
-            originalRenderer={(c) => <FormattedPolicyText text={c} />}
-          />
+          {(() => {
+            const pick = pickWithFallback(
+              policy.supportContent,
+              policy.enrichment?.sections?.supportContent,
+            );
+            return (
+              <PairedSection
+                id="paired-supportContent"
+                easyTitle="무엇을 받나요"
+                easyData={guide?.content ?? null}
+                originalTitle="지원내용"
+                originalContent={pick?.value ?? null}
+                originalRenderer={(c) => <FormattedPolicyText text={c} />}
+                originalFromAi={pick?.fromAi ?? false}
+                enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+              />
+            );
+          })()}
 
           {/* 제출서류 — 지원내용 다음 */}
-          {policy.submissionDocuments && (
+          {(() => {
+            const pick = pickWithFallback(
+              policy.submissionDocuments,
+              policy.enrichment?.sections?.requiredDocuments,
+            );
+            if (!pick) return null;
+            return (
+              <section className="mb-6 rounded-lg border border-gray-200 p-4">
+                <h3 className="mb-2 flex items-center gap-2 font-semibold">
+                  제출서류
+                  {pick.fromAi && (
+                    <AiSourceChip sourceUrl={policy.enrichment?.sourceUrl ?? null} />
+                  )}
+                </h3>
+                <FormattedPolicyText text={pick.value} />
+              </section>
+            );
+          })()}
+
+          {/* 신청방법 — applyMethods 비어있고 enrichment에 있을 때 보조 표시 */}
+          {(!policy.applyMethods || policy.applyMethods.length === 0) &&
+            isMeaningful(policy.enrichment?.sections?.applyMethod) && (
+              <section className="mb-6 rounded-lg border border-gray-200 p-4">
+                <h3 className="mb-2 flex items-center gap-2 font-semibold">
+                  신청방법
+                  <AiSourceChip sourceUrl={policy.enrichment?.sourceUrl ?? null} />
+                </h3>
+                <FormattedPolicyText text={policy.enrichment!.sections!.applyMethod!} />
+              </section>
+            )}
+
+          {/* 마감안내 — enrichment에만 존재 */}
+          {isMeaningful(policy.enrichment?.sections?.deadlineNote) && (
             <section className="mb-6 rounded-lg border border-gray-200 p-4">
-              <h3 className="mb-2 font-semibold">제출서류</h3>
-              <FormattedPolicyText text={policy.submissionDocuments} />
+              <h3 className="mb-2 flex items-center gap-2 font-semibold">
+                마감안내
+                <AiSourceChip sourceUrl={policy.enrichment?.sourceUrl ?? null} />
+              </h3>
+              <FormattedPolicyText text={policy.enrichment!.sections!.deadlineNote!} />
             </section>
           )}
 
@@ -626,11 +755,12 @@ export default function PolicyDetailPage() {
           {/* Reference Sites */}
           <ReferenceSiteSection referenceSites={policy.referenceSites} />
 
-          {/* Attachments */}
-          <AttachmentSection attachments={policy.attachments} />
-
-          {/* Enrichment (AI 자동 수집 — YOUTH_CENTER 전용, 백엔드가 신뢰 임계값 통과 시에만 내려줌) */}
-          <PolicyEnrichmentSection enrichment={policy.enrichment ?? null} />
+          {/* Attachments (원본 + enrichment extras 통합) */}
+          <AttachmentSection
+            attachments={policy.attachments}
+            extraAttachments={policy.enrichment?.extraAttachments ?? []}
+            enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+          />
 
           {/* Official Application Link */}
           {policy.sourceUrl && (
