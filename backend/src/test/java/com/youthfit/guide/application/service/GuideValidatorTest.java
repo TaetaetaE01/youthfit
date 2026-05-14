@@ -223,10 +223,6 @@ class GuideValidatorTest {
                 List.of());
     }
 
-    private GuidePairedSection paired(String label, String item) {
-        return new GuidePairedSection(List.of(new GuideGroup(label, List.of(item))));
-    }
-
     @Test
     void 신규_4개_섹션이_있어도_기존_검증_1_2_3은_그대로() {
         GuideContent content = new GuideContent(
@@ -236,9 +232,9 @@ class GuideValidatorTest {
                         new GuideHighlight("h2", GuideSourceField.BODY, null),
                         new GuideHighlight("h3", GuideSourceField.BODY, null)
                 ),
-                paired("g1", "i1"),
-                paired("g2", "i2"),
-                paired("g3", "i3"),
+                pairedSingleGroup("g1", List.of("i1")),
+                pairedSingleGroup("g2", List.of("i2")),
+                pairedSingleGroup("g3", List.of("i3")),
                 new GuideListSection(List.of("step1"), GuideSourceField.ENRICHMENT),
                 new GuideListSection(List.of("상시"), GuideSourceField.ENRICHMENT),
                 null,

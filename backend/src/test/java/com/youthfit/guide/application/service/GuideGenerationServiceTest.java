@@ -202,7 +202,7 @@ class GuideGenerationServiceTest {
     }
 
     private Policy policyWithEnrichment(Instant fetchedAt) {
-        Policy policy = basePolicyForEnrichment();
+        Policy policy = samplePolicy();
         policy.replaceEnrichment(new PolicyEnrichment(
                 "https://example.com/policy/1",
                 fetchedAt,
@@ -216,7 +216,7 @@ class GuideGenerationServiceTest {
     }
 
     private Policy policyWithLowConfidenceEnrichment(Instant fetchedAt) {
-        Policy policy = basePolicyForEnrichment();
+        Policy policy = samplePolicy();
         policy.replaceEnrichment(new PolicyEnrichment(
                 "https://example.com/policy/1",
                 fetchedAt,
@@ -230,22 +230,6 @@ class GuideGenerationServiceTest {
     }
 
     private Policy policyWithoutEnrichment() {
-        return basePolicyForEnrichment();
-    }
-
-    private Policy basePolicyForEnrichment() {
-        Policy policy = Policy.builder()
-                .title("청년 월세 지원")
-                .summary("월세 부담 완화")
-                .body("만 19세 이상 34세 이하 …")
-                .supportTarget("만 19세 이상 34세 이하의 무주택 세대주")
-                .selectionCriteria(null)
-                .supportContent("매월 최대 20만원, 최대 12개월")
-                .category(Category.HOUSING)
-                .regionCode("11000")
-                .referenceYear(2025)
-                .build();
-        ReflectionTestUtils.setField(policy, "id", 1L);
-        return policy;
+        return samplePolicy();
     }
 }

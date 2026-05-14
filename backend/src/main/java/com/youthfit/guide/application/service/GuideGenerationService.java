@@ -186,7 +186,7 @@ public class GuideGenerationService {
         if (p.getAttachments() != null && !p.getAttachments().isEmpty()) {
             nonEmpty.add(GuideSourceField.ATTACHMENT);
         }
-        // enrichment 가 노출 가능한 경우에만 ENRICMENT 라벨 허용
+        // enrichment 가 노출 가능한 경우에만 ENRICHMENT 라벨 허용
         if (p.getEnrichment() != null && p.getEnrichment().isExposable()) {
             nonEmpty.add(GuideSourceField.ENRICHMENT);
         }
