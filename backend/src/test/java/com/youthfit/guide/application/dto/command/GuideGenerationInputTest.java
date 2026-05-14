@@ -97,6 +97,24 @@ class GuideGenerationInputTest {
     }
 
     @Test
+    void contact_및_organization이_있으면_combinedSourceText에_블록으로_직렬화() {
+        GuideGenerationInput input = new GuideGenerationInput(
+                1L, "title", 2026, "summary", "body",
+                null, null, null,
+                "02-2133-6586",
+                "서울특별시 청년정책담당관",
+                null,
+                List.of(),
+                null
+        );
+        String text = input.combinedSourceText();
+        assertThat(text).contains("[contact]");
+        assertThat(text).contains("02-2133-6586");
+        assertThat(text).contains("[organization]");
+        assertThat(text).contains("서울특별시 청년정책담당관");
+    }
+
+    @Test
     void enrichment_일부_sections이_null이면_해당_절_미포함() {
         GuideGenerationInput.EnrichmentInput enrichment = new GuideGenerationInput.EnrichmentInput(
                 null,           // supportTarget null

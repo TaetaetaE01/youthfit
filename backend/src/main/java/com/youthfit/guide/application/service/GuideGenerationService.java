@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -41,7 +42,7 @@ import java.util.stream.Collectors;
 public class GuideGenerationService {
 
     static final String PROMPT_VERSION = "v5";  // 프롬프트 / 스키마 변경 시 증분
-    static final String ANNOTATOR_VERSION = "v5";  // 환산값 후처리기 변경 시 증분
+    static final String ANNOTATOR_VERSION = "v4";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
@@ -137,8 +138,40 @@ public class GuideGenerationService {
                     .sourceHash(hash)
                     .build());
         }
-        log.info("가이드 생성 완료: policyId={}", command.policyId());
+        log.info("가이드 생성 완료: policyId={}, enrichment_used={}, new_sections_present={}, enrichment_source_count={}",
+                command.policyId(),
+                input.enrichment() != null,
+                presentSectionNames(finalResponse),
+                countEnrichmentSources(finalResponse));
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
+    }
+
+    private static List<String> presentSectionNames(GuideContent c) {
+        List<String> names = new ArrayList<>();
+        if (c.applyMethod() != null) names.add("applyMethod");
+        if (c.deadlineNote() != null) names.add("deadlineNote");
+        if (c.requiredDocuments() != null) names.add("requiredDocuments");
+        if (c.contact() != null) names.add("contact");
+        return names;
+    }
+
+    private static int countEnrichmentSources(GuideContent c) {
+        int n = 0;
+        for (GuideHighlight h : c.highlights()) {
+            if (h.sourceField() == GuideSourceField.ENRICHMENT) n++;
+        }
+        for (GuidePitfall p : c.pitfalls()) {
+            if (p.sourceField() == GuideSourceField.ENRICHMENT) n++;
+        }
+        if (isEnrichment(c.applyMethod())) n++;
+        if (isEnrichment(c.deadlineNote())) n++;
+        if (isEnrichment(c.requiredDocuments())) n++;
+        if (isEnrichment(c.contact())) n++;
+        return n;
+    }
+
+    private static boolean isEnrichment(GuideListSection s) {
+        return s != null && s.sourceField() == GuideSourceField.ENRICHMENT;
     }
 
     /**

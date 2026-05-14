@@ -106,6 +106,8 @@ public record GuideGenerationInput(
         appendSection(sb, "supportTarget", supportTarget);
         appendSection(sb, "selectionCriteria", selectionCriteria);
         appendSection(sb, "supportContent", supportContent);
+        appendSection(sb, "contact", contact);
+        appendSection(sb, "organization", organization);
 
         if (enrichment != null) {
             sb.append("[enrichment.meta]\n");
