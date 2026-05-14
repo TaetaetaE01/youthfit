@@ -50,6 +50,8 @@ credentials/
 
 ### Claude Code ###
 .claude/
+!.claude/agents/
+!.claude/commands/
 
 ### oh-my-claudecode ###
 .omc/
