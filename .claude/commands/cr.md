@@ -12,11 +12,13 @@ PR 머지 전 셀프 리뷰를 수행한다. `code-reviewer` 서브에이전트�
 
 Run:
 ```bash
-BASE="${ARG:-main}"
-git rev-parse --verify "$BASE" >/dev/null 2>&1 && echo "BASE=$BASE" || echo "ERR: base branch '$BASE' not found locally — fetch 하거나 다른 base 를 지정하세요."
+BASE="${ARGUMENTS:-main}"
+if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+  echo "ERR: base branch '$BASE' not found locally — fetch 하거나 다른 base 를 지정하세요."
+  exit 1
+fi
+echo "BASE=$BASE"
 ```
-
-`ERR` 가 출력되면 사용자에게 그 한 줄만 보여주고 중단한다.
 
 ## 2. 변경 규모 사전 진단
 
