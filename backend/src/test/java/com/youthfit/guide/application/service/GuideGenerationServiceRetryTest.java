@@ -166,6 +166,7 @@ class GuideGenerationServiceRetryTest {
     private GuideContent contentWithHighlights(int n) {
         List<GuideHighlight> hs = new ArrayList<>();
         for (int i = 0; i < n; i++) hs.add(new GuideHighlight("h" + i, GuideSourceField.BODY));
-        return new GuideContent("요약", hs, null, null, null, List.of());
+        return new GuideContent("요약", hs, null, null, null,
+                null, null, null, null, List.of());
     }
 }

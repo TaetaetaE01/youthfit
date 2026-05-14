@@ -73,7 +73,9 @@ public class IncomeBracketAnnotator {
         List<GuidePitfall> pitfalls = content.pitfalls().stream()
                 .map(p -> new GuidePitfall(annotateText(p.text(), reference, policyId), p.sourceField(), p.attachmentRef()))
                 .toList();
-        return new GuideContent(oneLine, highlights, target, criteria, contentSection, pitfalls);
+        return new GuideContent(oneLine, highlights, target, criteria, contentSection,
+                content.applyMethod(), content.deadlineNote(), content.requiredDocuments(), content.contact(),
+                pitfalls);
     }
 
     private GuidePairedSection annotatePaired(GuidePairedSection section,

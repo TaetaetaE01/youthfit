@@ -254,7 +254,8 @@ public class OpenAiChatClient implements GuideLlmProvider {
             GuidePairedSection criteria = parsePaired(node.get("criteria"));
             GuidePairedSection content = parsePaired(node.get("content"));
             List<GuidePitfall> pitfalls = parsePitfalls(node.get("pitfalls"));
-            return new GuideContent(oneLine, highlights, target, criteria, content, pitfalls);
+            return new GuideContent(oneLine, highlights, target, criteria, content,
+                    null, null, null, null, pitfalls);
         } catch (Exception e) {
             log.error("가이드 응답 JSON 파싱 실패: {}", json, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 응답 파싱 실패");

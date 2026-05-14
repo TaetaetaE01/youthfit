@@ -81,7 +81,9 @@ class GuideGenerationServiceTest {
                 "청년 월세 지원",
                 List.of(),
                 new GuidePairedSection(List.of(group)),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
     }
 
     @Test

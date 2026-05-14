@@ -14,7 +14,9 @@ class GuideTest {
                 summary,
                 List.of(),
                 new GuidePairedSection(List.of(group)),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
     }
 
     @Test

@@ -32,7 +32,9 @@ class GuideValidatorTest {
                 "월세 지원",
                 List.of(),
                 flat("월세 60만원 이하 주택 거주자"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.findMissingNumericTokens(originalText, content)).isEmpty();
     }
@@ -44,7 +46,9 @@ class GuideValidatorTest {
                 "월세 지원",
                 List.of(),
                 flat("청년 월세 지원"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         List<String> missing = validator.findMissingNumericTokens(originalText, content);
         assertThat(missing).contains("60만원", "19세");
@@ -56,7 +60,9 @@ class GuideValidatorTest {
                 "이 정책은 청년에게 도움이 돼요.",
                 List.of(),
                 flat("받을 수 있어요"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.containsFriendlyTone(content)).isTrue();
     }
@@ -67,7 +73,9 @@ class GuideValidatorTest {
                 "만 19~34세 청년 월세 지원",
                 List.of(),
                 flat("본인 명의 계약자"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.containsFriendlyTone(content)).isFalse();
     }
@@ -93,7 +101,9 @@ class GuideValidatorTest {
                         new GuideHighlight("a", GuideSourceField.BODY),
                         new GuideHighlight("b", GuideSourceField.BODY)
                 ),
-                null, null, null, List.of());
+                null, null, null,
+                null, null, null, null,
+                List.of());
 
         ValidationReport report = validator.validate(content, Set.of());
 
@@ -109,7 +119,9 @@ class GuideValidatorTest {
                         new GuideHighlight("b", GuideSourceField.BODY),
                         new GuideHighlight("c", GuideSourceField.BODY)
                 ),
-                null, null, null, List.of());
+                null, null, null,
+                null, null, null, null,
+                List.of());
 
         ValidationReport report = validator.validate(content, Set.of());
 
@@ -186,6 +198,7 @@ class GuideValidatorTest {
         return new GuideContent(
                 "summary", hi,
                 null, null, null,
+                null, null, null, null,
                 pi);
     }
 
@@ -204,6 +217,8 @@ class GuideValidatorTest {
                         new GuideHighlight("a", GuideSourceField.BODY),
                         new GuideHighlight("b", GuideSourceField.BODY),
                         new GuideHighlight("c", GuideSourceField.BODY)),
-                null, criteria, null, List.of());
+                null, criteria, null,
+                null, null, null, null,
+                List.of());
     }
 }

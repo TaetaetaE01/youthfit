@@ -156,7 +156,8 @@ public class GuideGenerationService {
                         ? new GuidePitfall(p.text(), GuideSourceField.ATTACHMENT, p.attachmentRef())
                         : p)
                 .toList();
-        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(),
+                c.applyMethod(), c.deadlineNote(), c.requiredDocuments(), c.contact(), ps);
     }
 
     private GuideContent filterInvalidSourceFields(GuideContent c, Policy p) {
@@ -176,7 +177,8 @@ public class GuideGenerationService {
         List<GuidePitfall> ps = guideValidator.filterInvalidSourceFields(
                 c.pitfalls(), nonEmpty, GuidePitfall::sourceField);
 
-        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(),
+                c.applyMethod(), c.deadlineNote(), c.requiredDocuments(), c.contact(), ps);
     }
 
     private boolean notBlank(String s) {
