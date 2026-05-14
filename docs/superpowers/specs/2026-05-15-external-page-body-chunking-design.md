@@ -4,8 +4,21 @@
 > **작성일**: 2026-05-15
 > **모듈**: `ingestion`, `rag`, `policy`, n8n `youth-center-seoul.json`
 > **선행 사이클**: `DONE_2026-05-12-youth-center-enrichment-design.md` (온통청년 enrichment 파이프라인)
-> **선행 사이클**: `DONE_2026-05-14-guide-enrichment-bokjiro-design.md` (guide 에 enrichment 1급 흡수)
+> **선행 사이클**: `2026-05-14-guide-enrichment-bokjiro-design.md` — **PR #100 머지 전제** (브랜치 `feat/guide-enrichment-bokjiro`). 머지 시점에 `DONE_` 접두사가 붙는다.
 > **D 사이클 — 가이드 후속 시리즈 中 외부 본문 청킹**
+
+---
+
+## 0. 전제 (선행 사이클 의존)
+
+본 spec 의 모든 도메인 가정은 **PR #100 (`feat/guide-enrichment-bokjiro`)** 머지가 main 에 반영된 상태를 전제로 한다. 구체적으로:
+
+- `GuideSourceField` enum 이 6개 값(`SUPPORT_TARGET / SELECTION_CRITERIA / SUPPORT_CONTENT / BODY / ATTACHMENT / ENRICHMENT`)을 가진다. ENRICHMENT 는 #100 에서 도입.
+- `PolicyEnrichment` 에 9개 sections + cleanedText 가 아닌 8000자 cap cheerio 텍스트가 n8n 내부에서 처리되고 있다. cleanedText 의 ingestion 흐름 노출은 본 사이클의 범위.
+- `GuideContent` 에 4개 신규 섹션(`applyMethod / deadlineNote / requiredDocuments / contact`) 이 추가되어 있다.
+- `OpenAiChatClient.SYSTEM_PROMPT` 가 v5 (ENRICHMENT 라벨 사용 규칙 + 변환 예시 7·8 포함).
+
+#100 이 머지되지 않은 상태에서 본 사이클을 시작하면 §3·§5·§8 의 변경이 컴파일 단계에서 깨진다. 작업 순서는 **#100 머지 → 본 사이클 시작**.
 
 ---
 
@@ -45,7 +58,7 @@
 
 - **n8n 워크플로우**: cleaned text 를 ingestion intake payload 의 `rawData.enrichment` 객체에 `cleanedText` 필드로 추가 전달.
 - **ingestion 모듈**: `IngestionPolicyRequest.rawData.enrichment.cleanedText` 수신 → `PolicyEnrichment.cleanedText` 컬럼/필드에 보관.
-- **policy 도메인**: `PolicyEnrichment` record 에 `cleanedText` 추가. DB 마이그레이션 1개 (`policy.enrichment` jsonb 안에 cleanedText 필드 추가 — jsonb 라 컬럼 변경은 불요).
+- **policy 도메인**: `PolicyEnrichment` record 에 `cleanedText` 추가. `policy.enrichment` jsonb 컬럼이라 **DDL 불요** — record 필드만 추가하면 기존 row 는 `cleanedText=null` 로 deserialize. Jackson `@JsonIgnoreProperties(ignoreUnknown=true)` 또는 record canonical constructor 기본값 처리는 기존 `PolicyEnrichment` 패턴 그대로.
 - **rag 모듈**:
   - `RagIndexingService` 가 정책 인덱싱 시 `policy.enrichment.cleanedText` 를 추가 청크 source 로 처리
   - 새 `PolicyDocumentSource` enum 값 `ENRICHMENT_BODY` 추가 (기존 `BODY` / `ATTACHMENT` 와 병렬)
@@ -104,11 +117,11 @@
 |---|---|---|
 | n8n | 小 | 워크플로우 마지막 단계에서 cleaned text 를 enrichment 객체에 부착 |
 | `ingestion` | 中 | intake DTO 확장 + IngestionService 가 cleanedText 를 PolicyEnrichment 에 매핑 |
-| `policy` | 小 | `PolicyEnrichment` 에 `cleanedText` 필드 추가 (jsonb) |
+| `policy` | 小 | `PolicyEnrichment` record 에 `cleanedText` 필드 추가 (jsonb 컬럼이라 DDL 불요) |
 | `rag` | **大** | `PolicyDocumentSource` enum 신설, `RagIndexingService` 가 ENRICHMENT_BODY 청크 생성, `PolicyDocument` 에 source 컬럼 추가 |
 | `guide` | 小 | `combinedSourceText` 의 chunk 라벨 문자열에 source 값 매핑 추가 (기존 분기 한 줄 확장) |
 | `qna` | 변경 없음 | RagSearchService 가 source 무관하게 거리 기반 검색 |
-| DB | 마이그레이션 1개 | `policy_document` 테이블에 `source` 컬럼(varchar) 추가 |
+| DB | 마이그레이션 1개 (DDL) | `policy_document` 테이블에 `source` 컬럼(varchar) 추가. **`policy.enrichment` jsonb 는 스키마 변경 없음** — record 필드 추가만 |
 
 ---
 
@@ -251,7 +264,7 @@ if (c.attachmentId() == null) {
 확장 후 `ChunkInput` 에 `source` 필드를 추가하고 라벨이 그 값을 사용:
 
 ```java
-sb.append("[chunk-").append(i).append(" source=").append(c.source().name());
+sb.append("[chunk-").append(i).append(" source=").append(c.source());
 if (c.attachmentId() != null) {
     sb.append(" attachment-id=").append(c.attachmentId());
     if (c.pageStart() != null) {
@@ -261,7 +274,14 @@ if (c.attachmentId() != null) {
 sb.append("]\n");
 ```
 
-`ChunkInput` 정의에 `PolicyDocumentSource source` 추가 (`com.youthfit.rag.domain.model.PolicyDocumentSource`).
+`ChunkInput` 정의에 **`String source`** 추가 (예: `"BODY"`, `"ATTACHMENT"`, `"ENRICHMENT_BODY"`).
+
+**결합 회피 결정**: 의도적으로 `rag.domain.model.PolicyDocumentSource` enum 을 그대로 import 하지 않고 String 으로 매핑한다. 이유:
+- `guide.application.dto.command` 가 다른 모듈의 domain enum 을 직접 참조하면 향후 rag 의 source 값이 추가/변경될 때 guide 의 ChunkInput 시그니처도 함께 바뀌어야 한다 — 모듈 간 결합도 상승.
+- `GuideGenerationInput.of(Policy, List<PolicyDocument>...)` 가 이미 `rag.domain.model.PolicyDocument` entity 를 받는 표면이 있으니, 그 변환 단계에서 `String` 으로 한 번 풀어주면 ChunkInput 이하의 표면이 깨끗해진다.
+- LLM 프롬프트의 라벨 문자열로 흘러갈 값이라 enum 타입성이 주는 이득(타입 검증)이 작다.
+
+매핑 규약: `PolicyDocument.getSource() == null → "BODY"` (기존 row 호환). 그 외 enum 값은 `.name()` 결과를 그대로 사용.
 
 ### 8.2 LLM 프롬프트 영향
 
@@ -320,8 +340,9 @@ SYSTEM_PROMPT 의 첨부 trace 규칙 (`source=ATTACHMENT` 일 때 attachmentRef
 3. **3단계 — n8n 워크플로우 머지**: cleanedText 부착 활성화. 다음 04:00 스케줄 실행 시 enrichment 가 있는 정책부터 자동 청크 생성.
 4. **4단계 — guide PROMPT_VERSION v6**: 가이드 ENRICHMENT_BODY 청크 인용 활성화. 머지 즉시 allowlist 정책 일회성 재생성.
 5. **롤백 경로**:
-   - n8n 단독 롤백: backend 는 cleanedText null 처리로 안전
-   - backend 단독 롤백: source 컬럼 default `BODY` 로 안전. ENRICHMENT_BODY row 가 이미 있어도 무해.
+   - n8n 단독 롤백: backend 는 cleanedText null 처리로 안전.
+   - backend 단독 롤백: §5.3 의 `DROP DEFAULT` 는 마이그레이션 검증 후 운영자가 별도로 수행한다. 롤백 시점에 아직 DEFAULT 가 살아 있다면 NULL 위반 없음. 이미 DEFAULT 가 제거된 상태라면 롤백 직전에 `ALTER TABLE policy_document ALTER COLUMN source SET DEFAULT 'BODY'` 를 먼저 복구해서 구버전 backend 의 INSERT 가 NOT NULL 에 안 걸리도록 한다.
+   - ENRICHMENT_BODY row 가 이미 있어도 RAG 검색 / GuideGenerationInput 조립에 영향 없음 (구 코드는 source 컬럼을 읽지 않음).
 
 ---
 
