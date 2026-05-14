@@ -12,9 +12,11 @@ import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.repository.GuideRepository;
 import com.youthfit.policy.application.port.IncomeBracketReferenceLoader;
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.EnrichmentStatus;
 import com.youthfit.policy.domain.model.HouseholdSize;
 import com.youthfit.policy.domain.model.IncomeBracketReference;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -163,5 +166,86 @@ class GuideGenerationServiceTest {
 
         assertThat(result.regenerated()).isFalse();
         verify(guideLlmProvider, never()).generateGuide(any());
+    }
+
+    @Test
+    void enrichment_fetchedAt이_다른_정책은_hash가_다르다() {
+        Policy p1 = policyWithEnrichment(Instant.parse("2026-05-12T04:00:00Z"));
+        Policy p2 = policyWithEnrichment(Instant.parse("2026-05-13T04:00:00Z"));
+
+        String h1 = GuideGenerationService.computeHashForTest(p1, List.of(), null);
+        String h2 = GuideGenerationService.computeHashForTest(p2, List.of(), null);
+
+        assertThat(h1).isNotEqualTo(h2);
+    }
+
+    @Test
+    void enrichment이_같으면_hash가_같다() {
+        Policy p1 = policyWithEnrichment(Instant.parse("2026-05-12T04:00:00Z"));
+        Policy p2 = policyWithEnrichment(Instant.parse("2026-05-12T04:00:00Z"));
+
+        String h1 = GuideGenerationService.computeHashForTest(p1, List.of(), null);
+        String h2 = GuideGenerationService.computeHashForTest(p2, List.of(), null);
+
+        assertThat(h1).isEqualTo(h2);
+    }
+
+    @Test
+    void enrichment_isExposable이_false면_hash에_enrichment_미포함() {
+        Policy p1 = policyWithLowConfidenceEnrichment(Instant.parse("2026-05-12T04:00:00Z"));
+        Policy p2 = policyWithoutEnrichment();
+
+        String h1 = GuideGenerationService.computeHashForTest(p1, List.of(), null);
+        String h2 = GuideGenerationService.computeHashForTest(p2, List.of(), null);
+
+        assertThat(h1).isEqualTo(h2);
+    }
+
+    private Policy policyWithEnrichment(Instant fetchedAt) {
+        Policy policy = basePolicyForEnrichment();
+        policy.replaceEnrichment(new PolicyEnrichment(
+                "https://example.com/policy/1",
+                fetchedAt,
+                "test-extractor",
+                0.85,
+                EnrichmentStatus.OK,
+                new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
+                List.of()
+        ));
+        return policy;
+    }
+
+    private Policy policyWithLowConfidenceEnrichment(Instant fetchedAt) {
+        Policy policy = basePolicyForEnrichment();
+        policy.replaceEnrichment(new PolicyEnrichment(
+                "https://example.com/policy/1",
+                fetchedAt,
+                "test-extractor",
+                0.4,
+                EnrichmentStatus.LOW_CONFIDENCE,
+                new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
+                List.of()
+        ));
+        return policy;
+    }
+
+    private Policy policyWithoutEnrichment() {
+        return basePolicyForEnrichment();
+    }
+
+    private Policy basePolicyForEnrichment() {
+        Policy policy = Policy.builder()
+                .title("청년 월세 지원")
+                .summary("월세 부담 완화")
+                .body("만 19세 이상 34세 이하 …")
+                .supportTarget("만 19세 이상 34세 이하의 무주택 세대주")
+                .selectionCriteria(null)
+                .supportContent("매월 최대 20만원, 최대 12개월")
+                .category(Category.HOUSING)
+                .regionCode("11000")
+                .referenceYear(2025)
+                .build();
+        ReflectionTestUtils.setField(policy, "id", 1L);
+        return policy;
     }
 }
