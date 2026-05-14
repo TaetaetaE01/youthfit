@@ -5,9 +5,10 @@ interface Props {
   title: string;
   emoji: string;
   section: GuideListSection | null;
+  enrichmentSourceUrl?: string | null;
 }
 
-export function GuideListSectionCard({ title, emoji, section }: Props) {
+export function GuideListSectionCard({ title, emoji, section, enrichmentSourceUrl }: Props) {
   if (!section) return null;
 
   const isEnrichment = section.sourceField === 'ENRICHMENT';
@@ -20,7 +21,7 @@ export function GuideListSectionCard({ title, emoji, section }: Props) {
           <span aria-hidden>{emoji}</span>
           {title}
         </h2>
-        {isEnrichment && <AiSourceChip />}
+        {isEnrichment && <AiSourceChip sourceUrl={enrichmentSourceUrl} />}
       </div>
       {isSingle ? (
         <p className="text-sm text-neutral-800">{section.items[0]}</p>

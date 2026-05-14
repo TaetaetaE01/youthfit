@@ -44,6 +44,25 @@ describe('GuideListSectionCard', () => {
     expect(screen.getByText('AI 자동 수집')).toBeInTheDocument();
   });
 
+  it('enrichmentSourceUrl 이 있으면 AI 자동 수집 배지 title 에 URL 이 포함됨', () => {
+    const section: GuideListSection = {
+      items: ['주민등록등본'],
+      sourceField: 'ENRICHMENT',
+      attachmentRef: null,
+    };
+    render(
+      <GuideListSectionCard
+        title="제출서류"
+        emoji="📂"
+        section={section}
+        enrichmentSourceUrl="https://example.gov.kr/policy/1"
+      />
+    );
+    const badge = screen.getByText('AI 자동 수집');
+    const title = badge.getAttribute('title') ?? badge.parentElement?.getAttribute('title') ?? '';
+    expect(title).toContain('example.gov.kr');
+  });
+
   it('sourceField=SUPPORT_CONTENT 면 AI 자동 수집 배지 없음', () => {
     const section: GuideListSection = {
       items: ['연락처'],
