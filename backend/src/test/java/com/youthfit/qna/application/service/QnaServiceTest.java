@@ -466,7 +466,7 @@ class QnaServiceTest {
                         consumer.accept("정상 답변");
                         return "정상 답변";
                     });
-            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString()))
+            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString(), anyString()))
                     .willReturn(List.of("후속A", "후속B"));
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 
@@ -475,9 +475,34 @@ class QnaServiceTest {
             qnaService.askQuestion(new AskQuestionCommand(10L, "신청 자격?", 1L));
             Thread.sleep(200);
 
-            verify(qnaLlmProvider).generateFollowUpQuestions(anyString(), eq("신청 자격?"), anyString());
+            verify(qnaLlmProvider).generateFollowUpQuestions(anyString(), eq("신청 자격?"), anyString(), anyString());
             verify(qnaAnswerCache).put(eq(10L), anyString(), cacheCaptor.capture());
             assertThat(cacheCaptor.getValue().followUpQuestions()).containsExactly("후속A", "후속B");
+        }
+
+        @Test
+        @DisplayName("follow-up 호출 시 답변 LLM 에 전달한 본문 컨텍스트가 동일하게 전달된다 (grounding)")
+        void followUps_receiveSameContextAsAnswerLlm() throws Exception {
+            cacheMissDefaults();
+            given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
+            given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
+                    .willReturn("정상 답변");
+            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString(), anyString()))
+                    .willReturn(List.of("후속A"));
+            given(objectMapper.writeValueAsString(any())).willReturn("[]");
+
+            qnaService.askQuestion(new AskQuestionCommand(10L, "질문?", 1L));
+            Thread.sleep(200);
+
+            ArgumentCaptor<String> answerContextCaptor = ArgumentCaptor.forClass(String.class);
+            verify(qnaLlmProvider).generateAnswer(
+                    anyString(), any(PolicyMetadata.class), answerContextCaptor.capture(), anyString(), any());
+
+            ArgumentCaptor<String> followUpContextCaptor = ArgumentCaptor.forClass(String.class);
+            verify(qnaLlmProvider).generateFollowUpQuestions(
+                    anyString(), anyString(), anyString(), followUpContextCaptor.capture());
+
+            assertThat(followUpContextCaptor.getValue()).isEqualTo(answerContextCaptor.getValue());
         }
 
         @Test
@@ -497,7 +522,7 @@ class QnaServiceTest {
             qnaService.askQuestion(new AskQuestionCommand(10L, "내가 받을 수 있나요?", 1L));
             Thread.sleep(200);
 
-            verify(qnaLlmProvider, never()).generateFollowUpQuestions(anyString(), anyString(), anyString());
+            verify(qnaLlmProvider, never()).generateFollowUpQuestions(anyString(), anyString(), anyString(), anyString());
         }
 
         @Test
@@ -511,7 +536,7 @@ class QnaServiceTest {
                         consumer.accept("정상 답변");
                         return "정상 답변";
                     });
-            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString()))
+            given(qnaLlmProvider.generateFollowUpQuestions(anyString(), anyString(), anyString(), anyString()))
                     .willReturn(List.of());
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 

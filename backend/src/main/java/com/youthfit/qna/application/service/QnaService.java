@@ -238,7 +238,7 @@ public class QnaService {
         if (!isFallback) {
             try {
                 followUps = qnaLlmProvider.generateFollowUpQuestions(
-                        policy.getTitle(), command.question(), fullAnswer);
+                        policy.getTitle(), command.question(), fullAnswer, context);
             } catch (Exception e) {
                 log.warn("follow-up 생성 실패 (정상 흐름 진행): policyId={}, error={}",
                         command.policyId(), e.toString());
