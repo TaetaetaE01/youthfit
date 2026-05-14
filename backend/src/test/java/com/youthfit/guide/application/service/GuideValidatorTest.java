@@ -5,6 +5,7 @@ import com.youthfit.guide.domain.model.AttachmentRef;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuideHighlight;
+import com.youthfit.guide.domain.model.GuideListSection;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
@@ -220,5 +221,65 @@ class GuideValidatorTest {
                 null, criteria, null,
                 null, null, null, null,
                 List.of());
+    }
+
+    private GuidePairedSection paired(String label, String item) {
+        return new GuidePairedSection(List.of(new GuideGroup(label, List.of(item))));
+    }
+
+    @Test
+    void 신규_4개_섹션이_있어도_기존_검증_1_2_3은_그대로() {
+        GuideContent content = new GuideContent(
+                "한 줄 요약",
+                List.of(
+                        new GuideHighlight("h1", GuideSourceField.BODY, null),
+                        new GuideHighlight("h2", GuideSourceField.BODY, null),
+                        new GuideHighlight("h3", GuideSourceField.BODY, null)
+                ),
+                paired("g1", "i1"),
+                paired("g2", "i2"),
+                paired("g3", "i3"),
+                new GuideListSection(List.of("step1"), GuideSourceField.ENRICHMENT),
+                new GuideListSection(List.of("상시"), GuideSourceField.ENRICHMENT),
+                null,
+                null,
+                List.of(new GuidePitfall("p1", GuideSourceField.BODY, null))
+        );
+
+        ValidationReport report = validator.validate(content, Set.of());
+
+        assertThat(report.hasRetryTrigger()).isFalse();
+        assertThat(report.violationCount()).isZero();
+    }
+
+    @Test
+    void filterInvalidSourceFields는_화이트리스트에_ENRICHMENT가_있으면_통과시킨다() {
+        List<GuideHighlight> input = List.of(
+                new GuideHighlight("h1", GuideSourceField.ENRICHMENT, null),
+                new GuideHighlight("h2", GuideSourceField.BODY, null)
+        );
+
+        Set<GuideSourceField> whitelist = Set.of(
+                GuideSourceField.BODY, GuideSourceField.ENRICHMENT);
+        List<GuideHighlight> filtered = validator.filterInvalidSourceFields(
+                input, whitelist, GuideHighlight::sourceField);
+
+        assertThat(filtered).hasSize(2);
+    }
+
+    @Test
+    void filterInvalidSourceFields는_화이트리스트_외_ENRICHMENT를_폐기한다() {
+        List<GuideHighlight> input = List.of(
+                new GuideHighlight("h1", GuideSourceField.ENRICHMENT, null),
+                new GuideHighlight("h2", GuideSourceField.BODY, null)
+        );
+
+        Set<GuideSourceField> whitelist = Set.of(GuideSourceField.BODY);
+        List<GuideHighlight> filtered = validator.filterInvalidSourceFields(
+                input, whitelist, GuideHighlight::sourceField);
+
+        assertThat(filtered)
+                .extracting(GuideHighlight::sourceField)
+                .containsExactly(GuideSourceField.BODY);
     }
 }
