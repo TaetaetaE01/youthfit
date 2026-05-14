@@ -58,7 +58,7 @@ model: opus
 
 **Base**: <BASE> … **Head**: <HEAD>
 **Scope**: <N> files, +<add> / -<del>
-**Verdict**: _(Critical > 0 이면 🔴, Major > 0 이면 🟡, 둘 다 0 이면 🟢 — 정확히 하나만 출력)_
+**Verdict**: 🟢 머지 가능 / 🟡 Major 이슈 해결 후 머지 / 🔴 Critical 차단  _(Critical > 0 이면 🔴, Major > 0 이면 🟡, 둘 다 0 이면 🟢 — 정확히 하나만 선택해 출력)_
 
 ---
 
