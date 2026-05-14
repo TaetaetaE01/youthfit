@@ -135,7 +135,8 @@ export type GuideSourceField =
   | 'SELECTION_CRITERIA'
   | 'SUPPORT_CONTENT'
   | 'BODY'
-  | 'ATTACHMENT';
+  | 'ATTACHMENT'
+  | 'ENRICHMENT';
 
 export interface AttachmentRef {
   attachmentId: number;
@@ -150,6 +151,12 @@ export interface GuideGroup {
 
 export interface GuidePairedSection {
   groups: GuideGroup[];
+}
+
+export interface GuideListSection {
+  items: string[];
+  sourceField: GuideSourceField;
+  attachmentRef: AttachmentRef | null;
 }
 
 export interface GuidePitfall {
@@ -171,6 +178,10 @@ export interface Guide {
   target: GuidePairedSection | null;
   criteria: GuidePairedSection | null;
   content: GuidePairedSection | null;
+  applyMethod: GuideListSection | null;
+  deadlineNote: GuideListSection | null;
+  requiredDocuments: GuideListSection | null;
+  contact: GuideListSection | null;
   pitfalls: GuidePitfall[];
   updatedAt: string;
 }
