@@ -17,7 +17,8 @@ if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
   echo "ERR: base branch '$BASE' not found locally — fetch 하거나 다른 base 를 지정하세요."
   exit 1
 fi
-echo "BASE=$BASE"
+HEAD=$(git rev-parse --abbrev-ref HEAD)
+echo "BASE=$BASE HEAD=$HEAD"
 ```
 
 ## 2. 변경 규모 사전 진단
