@@ -9,6 +9,7 @@ const SOURCE_LABELS: Record<NonAttachmentSource, string> = {
   SELECTION_CRITERIA: '선정기준',
   SUPPORT_CONTENT: '지원내용',
   BODY: '정책 본문',
+  ENRICHMENT: 'AI 자동 수집',
 };
 
 const SCROLL_TARGETS: Record<NonAttachmentSource, string> = {
@@ -16,6 +17,7 @@ const SCROLL_TARGETS: Record<NonAttachmentSource, string> = {
   SELECTION_CRITERIA: 'paired-selectionCriteria',
   SUPPORT_CONTENT: 'paired-supportContent',
   BODY: 'policy-summary-section',
+  ENRICHMENT: 'policy-summary-section',
 };
 
 const TONE_CLASSES = {

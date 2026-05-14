@@ -5,6 +5,7 @@ import com.youthfit.guide.domain.model.AttachmentRef;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuideHighlight;
+import com.youthfit.guide.domain.model.GuideListSection;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
@@ -32,7 +33,9 @@ class GuideValidatorTest {
                 "월세 지원",
                 List.of(),
                 flat("월세 60만원 이하 주택 거주자"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.findMissingNumericTokens(originalText, content)).isEmpty();
     }
@@ -44,7 +47,9 @@ class GuideValidatorTest {
                 "월세 지원",
                 List.of(),
                 flat("청년 월세 지원"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         List<String> missing = validator.findMissingNumericTokens(originalText, content);
         assertThat(missing).contains("60만원", "19세");
@@ -56,7 +61,9 @@ class GuideValidatorTest {
                 "이 정책은 청년에게 도움이 돼요.",
                 List.of(),
                 flat("받을 수 있어요"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.containsFriendlyTone(content)).isTrue();
     }
@@ -67,7 +74,9 @@ class GuideValidatorTest {
                 "만 19~34세 청년 월세 지원",
                 List.of(),
                 flat("본인 명의 계약자"),
-                null, null, List.of());
+                null, null,
+                null, null, null, null,
+                List.of());
 
         assertThat(validator.containsFriendlyTone(content)).isFalse();
     }
@@ -93,7 +102,9 @@ class GuideValidatorTest {
                         new GuideHighlight("a", GuideSourceField.BODY),
                         new GuideHighlight("b", GuideSourceField.BODY)
                 ),
-                null, null, null, List.of());
+                null, null, null,
+                null, null, null, null,
+                List.of());
 
         ValidationReport report = validator.validate(content, Set.of());
 
@@ -109,7 +120,9 @@ class GuideValidatorTest {
                         new GuideHighlight("b", GuideSourceField.BODY),
                         new GuideHighlight("c", GuideSourceField.BODY)
                 ),
-                null, null, null, List.of());
+                null, null, null,
+                null, null, null, null,
+                List.of());
 
         ValidationReport report = validator.validate(content, Set.of());
 
@@ -186,6 +199,7 @@ class GuideValidatorTest {
         return new GuideContent(
                 "summary", hi,
                 null, null, null,
+                null, null, null, null,
                 pi);
     }
 
@@ -204,6 +218,64 @@ class GuideValidatorTest {
                         new GuideHighlight("a", GuideSourceField.BODY),
                         new GuideHighlight("b", GuideSourceField.BODY),
                         new GuideHighlight("c", GuideSourceField.BODY)),
-                null, criteria, null, List.of());
+                null, criteria, null,
+                null, null, null, null,
+                List.of());
+    }
+
+    @Test
+    void 신규_4개_섹션이_있어도_기존_검증_1_2_3은_그대로() {
+        GuideContent content = new GuideContent(
+                "한 줄 요약",
+                List.of(
+                        new GuideHighlight("h1", GuideSourceField.BODY, null),
+                        new GuideHighlight("h2", GuideSourceField.BODY, null),
+                        new GuideHighlight("h3", GuideSourceField.BODY, null)
+                ),
+                pairedSingleGroup("g1", List.of("i1")),
+                pairedSingleGroup("g2", List.of("i2")),
+                pairedSingleGroup("g3", List.of("i3")),
+                new GuideListSection(List.of("step1"), GuideSourceField.ENRICHMENT),
+                new GuideListSection(List.of("상시"), GuideSourceField.ENRICHMENT),
+                null,
+                null,
+                List.of(new GuidePitfall("p1", GuideSourceField.BODY, null))
+        );
+
+        ValidationReport report = validator.validate(content, Set.of());
+
+        assertThat(report.hasRetryTrigger()).isFalse();
+        assertThat(report.violationCount()).isZero();
+    }
+
+    @Test
+    void filterInvalidSourceFields는_화이트리스트에_ENRICHMENT가_있으면_통과시킨다() {
+        List<GuideHighlight> input = List.of(
+                new GuideHighlight("h1", GuideSourceField.ENRICHMENT, null),
+                new GuideHighlight("h2", GuideSourceField.BODY, null)
+        );
+
+        Set<GuideSourceField> whitelist = Set.of(
+                GuideSourceField.BODY, GuideSourceField.ENRICHMENT);
+        List<GuideHighlight> filtered = validator.filterInvalidSourceFields(
+                input, whitelist, GuideHighlight::sourceField);
+
+        assertThat(filtered).hasSize(2);
+    }
+
+    @Test
+    void filterInvalidSourceFields는_화이트리스트_외_ENRICHMENT를_폐기한다() {
+        List<GuideHighlight> input = List.of(
+                new GuideHighlight("h1", GuideSourceField.ENRICHMENT, null),
+                new GuideHighlight("h2", GuideSourceField.BODY, null)
+        );
+
+        Set<GuideSourceField> whitelist = Set.of(GuideSourceField.BODY);
+        List<GuideHighlight> filtered = validator.filterInvalidSourceFields(
+                input, whitelist, GuideHighlight::sourceField);
+
+        assertThat(filtered)
+                .extracting(GuideHighlight::sourceField)
+                .containsExactly(GuideSourceField.BODY);
     }
 }
