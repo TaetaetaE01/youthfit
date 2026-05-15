@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 @DisplayName("ReciprocalRankFusion")
 class ReciprocalRankFusionTest {
@@ -90,14 +89,15 @@ class ReciprocalRankFusionTest {
     }
 
     @Test
-    @DisplayName("trigram 단독 청크는 distance 가 1.0-similarity 로 채워진다")
-    void trigramOnlyChunkUsesConvertedDistance() {
+    @DisplayName("trigram 단독 청크의 distance 는 입력 그대로 보존된다")
+    void trigramOnlyChunkPreservesDistance() {
+        // Repository 가 이미 1.0-similarity 로 변환해 distance=0.2 로 넘긴다고 가정
         SimilarChunk trigramOnly = new SimilarChunk(
-                1L, 1L, 0, "c", null, null, null, 0.8
+                1L, 1L, 0, "c", null, null, null, 0.2
         );
         List<SimilarChunk> result = rrf.merge(List.of(), List.of(trigramOnly), 60, 10);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).distance()).isCloseTo(0.2, within(1e-9));
+        assertThat(result.get(0).distance()).isEqualTo(0.2);
     }
 }

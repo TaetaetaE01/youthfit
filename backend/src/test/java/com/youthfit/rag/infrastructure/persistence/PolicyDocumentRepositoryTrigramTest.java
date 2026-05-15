@@ -112,6 +112,19 @@ class PolicyDocumentRepositoryTrigramTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    @DisplayName("반환된 SimilarChunk 의 distance 는 1.0 - similarity 로 변환된 값이다")
+    void distanceFieldIsConvertedFromSimilarity() {
+        List<SimilarChunk> result = repository.findTopByTrigram(
+                policyId, "희망저축계좌", 0.0, 10  // threshold=0 으로 모두 통과
+        );
+
+        // 정확 매칭 청크: similarity 높음 → distance 낮음 (0 에 가까움)
+        SimilarChunk topChunk = result.get(0);
+        assertThat(topChunk.distance()).isBetween(0.0, 1.0);
+        assertThat(topChunk.distance()).isLessThan(0.5);  // 정확 매칭 청크의 distance 는 0.5 미만
+    }
+
     private PolicyDocument document(int chunkIndex, String content) {
         return PolicyDocument.builder()
                 .policyId(policyId)

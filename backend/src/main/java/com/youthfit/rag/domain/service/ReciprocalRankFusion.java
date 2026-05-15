@@ -12,10 +12,11 @@ import java.util.Map;
  *
  * 점수 공식: RRF_score(chunk) = Σ 1 / (k + rank_in_each_search)
  *
- * distance 처리 규칙 (spec §6.4):
- *  - 양쪽 모두 매칭: vector 의 distance 유지
- *  - vector 단독: vector 의 distance 그대로
- *  - trigram 단독: 1.0 - similarity 로 변환
+ * distance 처리 규칙:
+ *  - vector / trigram 양쪽 모두 SimilarChunk.distance 는 도메인 계약 (0=가까움) 을 따른다.
+ *  - trigram similarity → distance 변환은 Repository 레이어 (PolicyDocumentRepositoryImpl#toTrigramChunk)
+ *    에서 수행되므로 RRF 는 distance 를 그대로 보존한다.
+ *  - 양쪽 모두 매칭되는 청크는 먼저 등록된 vector 의 SimilarChunk (distance 포함) 가 유지된다.
  */
 public class ReciprocalRankFusion {
 
@@ -27,19 +28,17 @@ public class ReciprocalRankFusion {
     ) {
         Map<Long, Double> scores = new LinkedHashMap<>();
         Map<Long, SimilarChunk> chunkById = new LinkedHashMap<>();
-        Map<Long, Boolean> inVector = new LinkedHashMap<>();
 
+        // vector 우선 — 양쪽 매칭 시 vector chunk (distance 포함) 가 유지됨
         for (int rank = 0; rank < vectorRanks.size(); rank++) {
             SimilarChunk c = vectorRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
-            inVector.put(c.id(), true);
         }
         for (int rank = 0; rank < trigramRanks.size(); rank++) {
             SimilarChunk c = trigramRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
-            inVector.putIfAbsent(c.id(), false);
         }
 
         List<Map.Entry<Long, Double>> sorted = new ArrayList<>(scores.entrySet());
@@ -47,21 +46,7 @@ public class ReciprocalRankFusion {
 
         List<SimilarChunk> result = new ArrayList<>();
         for (int i = 0; i < Math.min(topK, sorted.size()); i++) {
-            Long id = sorted.get(i).getKey();
-            SimilarChunk original = chunkById.get(id);
-            double distance = inVector.get(id)
-                    ? original.distance()
-                    : 1.0 - original.distance();
-            result.add(new SimilarChunk(
-                    original.id(),
-                    original.policyId(),
-                    original.chunkIndex(),
-                    original.content(),
-                    original.attachmentId(),
-                    original.pageStart(),
-                    original.pageEnd(),
-                    distance
-            ));
+            result.add(chunkById.get(sorted.get(i).getKey()));
         }
         return result;
     }

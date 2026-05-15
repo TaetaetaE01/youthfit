@@ -58,16 +58,17 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
 
     @Override
     public List<SimilarChunk> findTopByTrigram(Long policyId, String query, double threshold, int limit) {
+        double maxDistance = 1.0 - threshold;
         return jpaRepository.findTopByTrigram(policyId, query, limit).stream()
                 .map(this::toTrigramChunk)
-                .filter(c -> c.distance() >= threshold)
+                .filter(c -> c.distance() <= maxDistance)
                 .toList();
     }
 
     private SimilarChunk toTrigramChunk(Object[] row) {
-        // sim (0~1) 을 distance 필드에 그대로 담아 반환한다.
-        // 후속 ReciprocalRankFusion 가 trigram-only 청크의 distance 를 1.0-sim 으로 변환한다.
+        // trigram similarity (0~1) 을 distance (0=가까움) 로 변환해 도메인 계약과 일치시킨다.
         double sim = ((Number) row[7]).doubleValue();
+        double distance = 1.0 - sim;
         return new SimilarChunk(
                 ((Number) row[0]).longValue(),
                 ((Number) row[1]).longValue(),
@@ -76,7 +77,7 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
                 row[4] == null ? null : ((Number) row[4]).longValue(),
                 row[5] == null ? null : ((Number) row[5]).intValue(),
                 row[6] == null ? null : ((Number) row[6]).intValue(),
-                sim
+                distance
         );
     }
 
