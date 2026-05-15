@@ -111,7 +111,7 @@ public record IngestPolicyRequest(
                 status,
                 sections,
                 atts,
-                null
+                p.cleanedText()
         );
     }
 
@@ -197,7 +197,8 @@ public record IngestPolicyRequest(
             Double confidence,
             @NotBlank String status,
             @Valid EnrichmentSectionsPayload sections,
-            List<@Valid ExtraAttachmentPayload> extraAttachments
+            List<@Valid ExtraAttachmentPayload> extraAttachments,
+            String cleanedText                  // NEW — nullable, n8n 에서 cap 후 전달
     ) {}
 
     public record EnrichmentSectionsPayload(
