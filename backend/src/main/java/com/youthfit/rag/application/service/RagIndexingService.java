@@ -6,6 +6,7 @@ import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import com.youthfit.rag.domain.service.DocumentChunker;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,15 @@ public class RagIndexingService {
                 command.policyId(), command.content(), command.enrichment());
         generateEmbeddings(chunks);
         policyDocumentRepository.saveAll(chunks);
+
+        long bodyCount = chunks.stream()
+                .filter(c -> c.getSource() == PolicyDocumentSource.BODY).count();
+        long attachmentCount = chunks.stream()
+                .filter(c -> c.getSource() == PolicyDocumentSource.ATTACHMENT).count();
+        long enrichmentBodyCount = chunks.stream()
+                .filter(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY).count();
+        log.info("정책 인덱싱 완료: policyId={}, body_chunks_count={}, attachment_chunks_count={}, enrichment_body_chunks_count={}",
+                command.policyId(), bodyCount, attachmentCount, enrichmentBodyCount);
 
         return new IndexingResult(command.policyId(), chunks.size(), true);
     }
