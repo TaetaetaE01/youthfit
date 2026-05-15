@@ -112,6 +112,33 @@ class PolicyDocumentTest {
         }
     }
 
+    @Test
+    void builder_는_source_를_요구한다() {
+        PolicyDocument doc = PolicyDocument.builder()
+                .policyId(1L)
+                .chunkIndex(0)
+                .content("샘플 청크")
+                .sourceHash("hash")
+                .source(PolicyDocumentSource.BODY)
+                .build();
+
+        assertThat(doc.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+    }
+
+    @Test
+    void builder_는_ENRICHMENT_BODY_source_를_지원한다() {
+        PolicyDocument doc = PolicyDocument.builder()
+                .policyId(1L)
+                .chunkIndex(0)
+                .content("외부 페이지 본문 발췌")
+                .sourceHash("hash")
+                .source(PolicyDocumentSource.ENRICHMENT_BODY)
+                .build();
+
+        assertThat(doc.getSource()).isEqualTo(PolicyDocumentSource.ENRICHMENT_BODY);
+        assertThat(doc.getAttachmentId()).isNull();
+    }
+
     // ── 헬퍼 메서드 ──
 
     private PolicyDocument createDocument() {

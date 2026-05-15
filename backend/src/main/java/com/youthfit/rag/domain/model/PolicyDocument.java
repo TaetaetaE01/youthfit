@@ -51,6 +51,10 @@ public class PolicyDocument extends BaseTimeEntity {
     @Column(name = "page_end")
     private Integer pageEnd;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 32)
+    private PolicyDocumentSource source;
+
     @Builder
     private PolicyDocument(Long policyId,
                            int chunkIndex,
@@ -58,7 +62,8 @@ public class PolicyDocument extends BaseTimeEntity {
                            String sourceHash,
                            Long attachmentId,
                            Integer pageStart,
-                           Integer pageEnd) {
+                           Integer pageEnd,
+                           PolicyDocumentSource source) {
         this.policyId = policyId;
         this.chunkIndex = chunkIndex;
         this.content = content;
@@ -66,6 +71,7 @@ public class PolicyDocument extends BaseTimeEntity {
         this.attachmentId = attachmentId;
         this.pageStart = pageStart;
         this.pageEnd = pageEnd;
+        this.source = source;
     }
 
     public void updateEmbedding(float[] embedding) {

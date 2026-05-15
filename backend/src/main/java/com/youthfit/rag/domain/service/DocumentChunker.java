@@ -2,6 +2,7 @@ package com.youthfit.rag.domain.service;
 
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -75,6 +76,7 @@ public class DocumentChunker {
                         .attachmentId(seg.attachmentId())
                         .pageStart(c.pageStart())
                         .pageEnd(c.pageEnd())
+                        .source(seg.attachmentId() == null ? PolicyDocumentSource.BODY : PolicyDocumentSource.ATTACHMENT)
                         .build());
             }
         }
@@ -136,6 +138,7 @@ public class DocumentChunker {
                     .chunkIndex(globalIndex++)
                     .content(enrichedContent)
                     .sourceHash(sourceHash)
+                    .source(PolicyDocumentSource.BODY)
                     .build());
         }
 
