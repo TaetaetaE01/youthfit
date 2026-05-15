@@ -3,6 +3,7 @@ package com.youthfit.rag.domain.service;
 import com.youthfit.policy.domain.model.EnrichmentStatus;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -134,6 +135,53 @@ class DocumentChunkerTest {
                 for (String line : chunk.getContent().split("\n")) {
                     assertThat(line).matches("사업번호\\d+ 사업[A-Z] 기관[A-Z]");
                 }
+            });
+        }
+    }
+
+    @Nested
+    @DisplayName("source 매핑 - BODY/ATTACHMENT 구분")
+    class SourceMapping {
+
+        @Test
+        @DisplayName("chunk 은 attachmentId 없으면 source BODY 를 부여한다")
+        void chunk_은_attachmentId_없으면_source_BODY_를_부여한다() {
+            // given
+            String content = "=== 정책 본문 ===\n청년 정책 안내. 자격 요건은 만 19~34세.\n";
+
+            // when
+            List<PolicyDocument> chunks = chunker.chunk(1L, content);
+
+            // then
+            assertThat(chunks).isNotEmpty();
+            assertThat(chunks).allSatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+                assertThat(c.getAttachmentId()).isNull();
+            });
+        }
+
+        @Test
+        @DisplayName("chunk 은 첨부 segment 의 청크에 source ATTACHMENT 를 부여한다")
+        void chunk_은_첨부_segment_의_청크에_source_ATTACHMENT_를_부여한다() {
+            // given
+            String content = """
+                    === 정책 본문 ===
+                    본문 내용.
+                    === 첨부 attachment-id=42 name="공고문.pdf" ===
+                    첨부 내용.
+                    """;
+
+            // when
+            List<PolicyDocument> chunks = chunker.chunk(1L, content);
+
+            // then
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+                assertThat(c.getAttachmentId()).isNull();
+            });
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.ATTACHMENT);
+                assertThat(c.getAttachmentId()).isEqualTo(42L);
             });
         }
     }
