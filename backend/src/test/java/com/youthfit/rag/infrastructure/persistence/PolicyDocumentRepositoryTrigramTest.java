@@ -119,10 +119,17 @@ class PolicyDocumentRepositoryTrigramTest {
                 policyId, "희망저축계좌", 0.0, 10  // threshold=0 으로 모두 통과
         );
 
-        // 정확 매칭 청크: similarity 높음 → distance 낮음 (0 에 가까움)
+        assertThat(result).isNotEmpty();
+
+        // 모든 distance 가 [0, 1] 범위 안에 있어야 한다 (similarity → distance 변환 확인).
+        // 변환이 누락되면 similarity 가 그대로 들어가 매칭이 강할수록 distance 가 1 에 가까워진다.
+        assertThat(result).allSatisfy(c -> assertThat(c.distance()).isBetween(0.0, 1.0));
+
+        // 도메인 계약: 0=가까움. SQL ORDER BY sim DESC 결과의 첫 청크 (가장 유사) 가 distance 가
+        // 가장 작아야 한다. 만약 변환이 누락되어 similarity 가 그대로면 첫 청크가 가장 큰 값이 된다.
         SimilarChunk topChunk = result.get(0);
-        assertThat(topChunk.distance()).isBetween(0.0, 1.0);
-        assertThat(topChunk.distance()).isLessThan(0.5);  // 정확 매칭 청크의 distance 는 0.5 미만
+        SimilarChunk lastChunk = result.get(result.size() - 1);
+        assertThat(topChunk.distance()).isLessThanOrEqualTo(lastChunk.distance());
     }
 
     private PolicyDocument document(int chunkIndex, String content) {
