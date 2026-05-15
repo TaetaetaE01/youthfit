@@ -6,6 +6,7 @@ import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import com.youthfit.rag.domain.service.DocumentChunker;
 import org.junit.jupiter.api.DisplayName;
@@ -186,6 +187,7 @@ class RagIndexingServiceTest {
                 .chunkIndex(index)
                 .content(content)
                 .sourceHash(hash)
+                .source(PolicyDocumentSource.BODY)
                 .build();
     }
 }

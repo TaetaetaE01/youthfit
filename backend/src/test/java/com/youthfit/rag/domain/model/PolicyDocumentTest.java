@@ -18,6 +18,7 @@ class PolicyDocumentTest {
                 .chunkIndex(0)
                 .content("청년 취업 지원 정책입니다.")
                 .sourceHash("abc123")
+                .source(PolicyDocumentSource.BODY)
                 .build();
 
         // then
@@ -40,6 +41,7 @@ class PolicyDocumentTest {
                     .chunkIndex(2)
                     .content("청크 텍스트")
                     .sourceHash("abc")
+                    .source(PolicyDocumentSource.BODY)
                     .attachmentId(12L)
                     .pageStart(35)
                     .pageEnd(37)
@@ -60,6 +62,7 @@ class PolicyDocumentTest {
                     .chunkIndex(0)
                     .content("본문 청크")
                     .sourceHash("abc")
+                    .source(PolicyDocumentSource.BODY)
                     .build();
 
             // then
@@ -147,6 +150,7 @@ class PolicyDocumentTest {
                 .chunkIndex(0)
                 .content("테스트 콘텐츠")
                 .sourceHash("hash123")
+                .source(PolicyDocumentSource.BODY)
                 .build();
     }
 }

@@ -132,4 +132,4 @@ v0 의미 캐시 도커 검증 단계에서 사용자 테스트 결과, **의미
 ## 참고
 
 - v0 의미 캐시: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`, `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`
-- 의미 캐시 v1 (intent 기반): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`
+- 의미 캐시 v1 (intent 기반): `docs/superpowers/specs/TODO_v1-semantic-cache-intent-based.md`

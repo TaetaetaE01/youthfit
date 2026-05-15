@@ -2,6 +2,7 @@ package com.youthfit.rag.infrastructure.persistence;
 
 import com.youthfit.common.config.JpaAuditingConfig;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -149,6 +150,7 @@ class PolicyDocumentRepositoryKeywordBoostTest {
                 .chunkIndex(chunkIndex)
                 .content(content)
                 .sourceHash("test-hash")
+                .source(PolicyDocumentSource.BODY)
                 .build();
         org.springframework.test.util.ReflectionTestUtils.setField(doc, "embedding", embedding);
         jpaRepository.save(doc);
