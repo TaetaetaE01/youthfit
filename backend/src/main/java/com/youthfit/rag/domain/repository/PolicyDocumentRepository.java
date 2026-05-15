@@ -26,4 +26,11 @@ public interface PolicyDocumentRepository {
     );
 
     Optional<String> findSourceHashByPolicyId(Long policyId);
+
+    List<SimilarChunk> findTopByTrigram(
+            Long policyId,
+            String query,
+            double threshold,
+            int limit
+    );
 }
