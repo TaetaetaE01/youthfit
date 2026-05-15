@@ -99,31 +99,7 @@ public class DocumentChunker {
                                                      PolicyEnrichment enrichment) {
         List<PolicyDocument> base = chunk(policyId, content);
 
-        if (enrichment == null || !enrichment.isExposable() || enrichment.sections() == null) {
-            return base;
-        }
-
-        PolicyEnrichment.Sections sections = enrichment.sections();
-
-        // 섹션명 → 텍스트 매핑 (null 제외)
-        Map<String, String> sectionEntries = new java.util.LinkedHashMap<>();
-        if (sections.supportTarget() != null && !sections.supportTarget().isBlank()) {
-            sectionEntries.put("지원대상", sections.supportTarget());
-        }
-        if (sections.supportContent() != null && !sections.supportContent().isBlank()) {
-            sectionEntries.put("지원내용", sections.supportContent());
-        }
-        if (sections.applyMethod() != null && !sections.applyMethod().isBlank()) {
-            sectionEntries.put("신청방법", sections.applyMethod());
-        }
-        if (sections.requiredDocuments() != null && !sections.requiredDocuments().isBlank()) {
-            sectionEntries.put("제출서류", sections.requiredDocuments());
-        }
-        if (sections.deadlineNote() != null && !sections.deadlineNote().isBlank()) {
-            sectionEntries.put("마감안내", sections.deadlineNote());
-        }
-
-        if (sectionEntries.isEmpty()) {
+        if (enrichment == null || !enrichment.isExposable()) {
             return base;
         }
 
@@ -131,18 +107,57 @@ public class DocumentChunker {
         int globalIndex = base.size();
         String sourceHash = computeHash(content);
 
-        for (Map.Entry<String, String> entry : sectionEntries.entrySet()) {
-            String enrichedContent = "[자동수집-" + entry.getKey() + "] " + entry.getValue();
-            result.add(PolicyDocument.builder()
-                    .policyId(policyId)
-                    .chunkIndex(globalIndex++)
-                    .content(enrichedContent)
-                    .sourceHash(sourceHash)
-                    .source(PolicyDocumentSource.BODY)
-                    .build());
+        // 기존: enrichment.sections 청크 (BODY source)
+        if (enrichment.sections() != null) {
+            Map<String, String> sectionEntries = buildSectionEntries(enrichment.sections());
+            for (Map.Entry<String, String> entry : sectionEntries.entrySet()) {
+                String enrichedContent = "[자동수집-" + entry.getKey() + "] " + entry.getValue();
+                result.add(PolicyDocument.builder()
+                        .policyId(policyId)
+                        .chunkIndex(globalIndex++)
+                        .content(enrichedContent)
+                        .sourceHash(sourceHash)
+                        .source(PolicyDocumentSource.BODY)
+                        .build());
+            }
+        }
+
+        // 신규: cleanedText 를 BODY splitter 로 분할 후 ENRICHMENT_BODY 청크 생성
+        String cleaned = enrichment.cleanedText();
+        if (cleaned != null && !cleaned.isBlank()) {
+            List<PolicyDocument> cleanedChunks = chunk(policyId, cleaned);
+            for (PolicyDocument cc : cleanedChunks) {
+                result.add(PolicyDocument.builder()
+                        .policyId(policyId)
+                        .chunkIndex(globalIndex++)
+                        .content(cc.getContent())
+                        .sourceHash(sourceHash)
+                        .source(PolicyDocumentSource.ENRICHMENT_BODY)
+                        .build());
+            }
         }
 
         return result;
+    }
+
+    private Map<String, String> buildSectionEntries(PolicyEnrichment.Sections sections) {
+        Map<String, String> entries = new java.util.LinkedHashMap<>();
+        if (sections.supportTarget() != null && !sections.supportTarget().isBlank()) {
+            entries.put("지원대상", sections.supportTarget());
+        }
+        if (sections.supportContent() != null && !sections.supportContent().isBlank()) {
+            entries.put("지원내용", sections.supportContent());
+        }
+        if (sections.applyMethod() != null && !sections.applyMethod().isBlank()) {
+            entries.put("신청방법", sections.applyMethod());
+        }
+        if (sections.requiredDocuments() != null && !sections.requiredDocuments().isBlank()) {
+            entries.put("제출서류", sections.requiredDocuments());
+        }
+        if (sections.deadlineNote() != null && !sections.deadlineNote().isBlank()) {
+            entries.put("마감안내", sections.deadlineNote());
+        }
+        return entries;
     }
 
     public String computeHash(String content) {

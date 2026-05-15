@@ -575,6 +575,67 @@ class DocumentChunkerTest {
     }
 
     @Nested
+    @DisplayName("chunkWithEnrichment - ENRICHMENT_BODY 청크 분할")
+    class EnrichmentBodyChunking {
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 cleanedText 를 ENRICHMENT_BODY 청크로 분할한다")
+        void chunkWithEnrichment_는_cleanedText_를_ENRICHMENT_BODY_청크로_분할한다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://ext.example.com/policy/1",
+                    Instant.now(),
+                    "n8n-cheerio-v1",
+                    0.85,
+                    EnrichmentStatus.OK,
+                    null,
+                    List.of(),
+                    "외부 페이지 본문. 신청서 양식은 별도 공지로 안내. 마감일은 매월 말일."
+            );
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.ENRICHMENT_BODY);
+                assertThat(c.getAttachmentId()).isNull();
+                assertThat(c.getContent()).contains("외부 페이지 본문");
+            });
+        }
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 isExposable false 면 ENRICHMENT_BODY 청크를 만들지 않는다")
+        void chunkWithEnrichment_는_isExposable_false_면_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://ext.example.com/policy/1",
+                    Instant.now(),
+                    "n8n-cheerio-v1",
+                    0.3,  // < EXPOSURE_CONFIDENCE_THRESHOLD (0.6)
+                    EnrichmentStatus.OK,
+                    null,
+                    List.of(),
+                    "외부 페이지 본문"
+            );
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 cleanedText null 또는 blank 면 ENRICHMENT_BODY 청크를 만들지 않는다")
+        void chunkWithEnrichment_는_cleanedText_null_또는_blank_면_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), null);
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+    }
+
+    @Nested
     @DisplayName("청크 간 overlap")
     class Overlap {
 
