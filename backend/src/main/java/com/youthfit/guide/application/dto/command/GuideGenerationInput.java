@@ -41,7 +41,8 @@ public record GuideGenerationInput(
                                 d.getContent(),
                                 d.getAttachmentId(),
                                 d.getPageStart(),
-                                d.getPageEnd()))
+                                d.getPageEnd(),
+                                d.getSource() == null ? "BODY" : d.getSource().name()))
                         .collect(Collectors.toList());
 
         return new GuideGenerationInput(
@@ -73,15 +74,14 @@ public record GuideGenerationInput(
         for (int i = 0; i < chunks.size(); i++) {
             ChunkInput c = chunks.get(i);
             sb.append('[').append("chunk-").append(i);
-            if (c.attachmentId() == null) {
-                sb.append(" source=BODY]\n");
-            } else {
-                sb.append(" source=ATTACHMENT attachment-id=").append(c.attachmentId());
+            sb.append(" source=").append(c.source());
+            if (c.attachmentId() != null) {
+                sb.append(" attachment-id=").append(c.attachmentId());
                 if (c.pageStart() != null) {
                     sb.append(" pages=").append(c.pageStart()).append('-').append(c.pageEnd());
                 }
-                sb.append("]\n");
             }
+            sb.append("]\n");
             sb.append(c.content()).append("\n\n");
         }
         return sb.toString();
