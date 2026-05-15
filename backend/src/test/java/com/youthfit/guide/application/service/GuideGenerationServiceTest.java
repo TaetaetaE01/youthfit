@@ -85,6 +85,11 @@ class GuideGenerationServiceTest {
     }
 
     @Test
+    void PROMPT_VERSION_은_v5_이다() {
+        assertThat(GuideGenerationService.PROMPT_VERSION).isEqualTo("v5");
+    }
+
+    @Test
     void Policy_없으면_NOT_FOUND_결과() {
         when(policyRepository.findById(99L)).thenReturn(Optional.empty());
 
