@@ -633,6 +633,40 @@ class DocumentChunkerTest {
 
             assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
         }
+
+        @Test
+        void chunkWithEnrichment_는_sections_와_cleanedText_가_모두_있으면_chunkIndex_가_연속이다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK,
+                    new PolicyEnrichment.Sections(
+                            "지원대상 텍스트", "지원내용 텍스트", "신청방법 텍스트",
+                            null, null, null, null, null, null),
+                    List.of(),
+                    "외부 페이지 본문 발췌");
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            // chunkIndex 가 0, 1, 2, ... 연속인지
+            for (int i = 0; i < chunks.size(); i++) {
+                assertThat(chunks.get(i).getChunkIndex()).isEqualTo(i);
+            }
+            // BODY + ENRICHMENT_BODY 청크 모두 존재
+            assertThat(chunks).anyMatch(c -> c.getSource() == PolicyDocumentSource.BODY);
+            assertThat(chunks).anyMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        void chunkWithEnrichment_는_cleanedText_blank_여도_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null,
+                    List.of(), "   ");  // blank
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
     }
 
     @Nested

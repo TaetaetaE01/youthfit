@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -105,6 +106,8 @@ public class DocumentChunker {
 
         List<PolicyDocument> result = new ArrayList<>(base);
         int globalIndex = base.size();
+        // sourceHash 는 정책 본문 content 기준 단일 해시. 재인덱싱 트리거는
+        // RagIndexingService 에서 computeHash(content, enrichment) 2-인자 버전을 사용한다.
         String sourceHash = computeHash(content);
 
         // 기존: enrichment.sections 청크 (BODY source)
@@ -141,7 +144,7 @@ public class DocumentChunker {
     }
 
     private Map<String, String> buildSectionEntries(PolicyEnrichment.Sections sections) {
-        Map<String, String> entries = new java.util.LinkedHashMap<>();
+        Map<String, String> entries = new LinkedHashMap<>();
         if (sections.supportTarget() != null && !sections.supportTarget().isBlank()) {
             entries.put("지원대상", sections.supportTarget());
         }
