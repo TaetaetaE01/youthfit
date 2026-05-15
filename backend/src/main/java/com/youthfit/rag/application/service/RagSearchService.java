@@ -110,10 +110,7 @@ public class RagSearchService {
             return fallbackKeywordSearch(command);
         }
 
-        if (tri.isEmpty()) {
-            return vec.stream().map(PolicyDocumentChunkResult::from).toList();
-        }
-
+        // 한쪽 단독 케이스도 RRF 통과 — DEFAULT_TOP_K 컷이 일관되게 적용됨
         List<SimilarChunk> merged =
                 reciprocalRankFusion.merge(vec, tri, k, DEFAULT_TOP_K);
 

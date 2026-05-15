@@ -295,7 +295,7 @@ class RagSearchServiceTest {
         }
 
         @Test
-        @DisplayName("trigram 쿼리 예외 발생 시 vector 결과로 폴백한다")
+        @DisplayName("trigram 쿼리 예외 발생 시 vector 단독 결과로 RRF 를 통과한다")
         void trigramFailure_fallsBackToVector() {
             SearchChunksCommand command = new SearchChunksCommand(1L, "쿼리");
             float[] embedding = new float[]{0.1f};
@@ -310,13 +310,47 @@ class RagSearchServiceTest {
                     .willReturn(vecChunks);
             given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
                     .willThrow(new RuntimeException("trigram down"));
+            given(reciprocalRankFusion.merge(eq(vecChunks), eq(List.of()), eq(60), eq(10)))
+                    .willReturn(vecChunks);
 
             List<PolicyDocumentChunkResult> result =
                     ragSearchService.searchRelevantChunks(command, embedding);
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).id()).isEqualTo(10L);
-            verify(reciprocalRankFusion, never()).merge(any(), any(), anyInt(), anyInt());
+            verify(reciprocalRankFusion).merge(eq(vecChunks), eq(List.of()), eq(60), eq(10));
+        }
+
+        @Test
+        @DisplayName("trigram 결과 0건이어도 hybrid path 는 DEFAULT_TOP_K(10) 로 컷한다")
+        void hybridEnabled_trigramEmpty_appliesTopKLimit() {
+            SearchChunksCommand command = new SearchChunksCommand(1L, "쿼리");
+            float[] embedding = new float[]{0.1f};
+            given(hybridSearchProperties.enabled()).willReturn(true);
+            given(hybridSearchProperties.topNPerSearch()).willReturn(20);
+            given(hybridSearchProperties.rrfK()).willReturn(60);
+            given(hybridSearchProperties.trigramThreshold()).willReturn(0.1);
+            given(keywordBoostProperties.enabled()).willReturn(false);
+
+            // vector 20개 반환, trigram 0건
+            List<SimilarChunk> vec20 = new java.util.ArrayList<>();
+            for (long i = 0; i < 20; i++) {
+                vec20.add(new SimilarChunk(i, 1L, (int) i, "c" + i, null, null, null, 0.1 + i * 0.01));
+            }
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(embedding), any(), eq(20)))
+                    .willReturn(vec20);
+            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
+                    .willReturn(List.of());
+
+            // RRF mock 이 단독-call 케이스에서 DEFAULT_TOP_K=10 로 컷한 결과 반환
+            given(reciprocalRankFusion.merge(eq(vec20), eq(List.of()), eq(60), eq(10)))
+                    .willReturn(vec20.subList(0, 10));
+
+            List<PolicyDocumentChunkResult> result =
+                    ragSearchService.searchRelevantChunks(command, embedding);
+
+            assertThat(result).hasSize(10);
+            verify(reciprocalRankFusion).merge(eq(vec20), eq(List.of()), eq(60), eq(10));
         }
     }
 
