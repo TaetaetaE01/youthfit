@@ -58,8 +58,9 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
 
     @Override
     public List<SimilarChunk> findTopByTrigram(Long policyId, String query, double threshold, int limit) {
-        return jpaRepository.findTopByTrigram(policyId, query, threshold, limit).stream()
+        return jpaRepository.findTopByTrigram(policyId, query, limit).stream()
                 .map(this::toTrigramChunk)
+                .filter(c -> c.distance() >= threshold)
                 .toList();
     }
 

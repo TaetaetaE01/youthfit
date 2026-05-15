@@ -67,14 +67,12 @@ public interface PolicyDocumentJpaRepository extends JpaRepository<PolicyDocumen
                    similarity(content, :query) AS sim
               FROM policy_document
              WHERE policy_id = :policyId
-               AND similarity(content, :query) >= :threshold
-             ORDER BY sim DESC
+             ORDER BY content <-> :query
              LIMIT :limit
             """, nativeQuery = true)
     List<Object[]> findTopByTrigram(
             @Param("policyId") Long policyId,
             @Param("query") String query,
-            @Param("threshold") double threshold,
             @Param("limit") int limit
     );
 }
