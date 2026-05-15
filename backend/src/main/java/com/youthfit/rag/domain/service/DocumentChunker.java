@@ -104,11 +104,25 @@ public class DocumentChunker {
             return base;
         }
 
-        List<PolicyDocument> result = new ArrayList<>(base);
+        // RagIndexingService 의 비교 hash 와 동일한 값을 모든 청크 row 에 부여한다.
+        // 비대칭 hash 가 발생하면 enrichment 가 있는 정책이 매 인덱싱마다 전체 재임베딩된다.
+        String sourceHash = computeHash(content, enrichment);
+
+        // base 청크들의 sourceHash 를 통일된 값으로 재구성
+        List<PolicyDocument> result = new ArrayList<>(base.size());
+        for (PolicyDocument d : base) {
+            result.add(PolicyDocument.builder()
+                    .policyId(d.getPolicyId())
+                    .chunkIndex(d.getChunkIndex())
+                    .content(d.getContent())
+                    .sourceHash(sourceHash)
+                    .source(d.getSource())
+                    .attachmentId(d.getAttachmentId())
+                    .pageStart(d.getPageStart())
+                    .pageEnd(d.getPageEnd())
+                    .build());
+        }
         int globalIndex = base.size();
-        // sourceHash 는 정책 본문 content 기준 단일 해시. 재인덱싱 트리거는
-        // RagIndexingService 에서 computeHash(content, enrichment) 2-인자 버전을 사용한다.
-        String sourceHash = computeHash(content);
 
         // 기존: enrichment.sections 청크 (BODY source)
         if (enrichment.sections() != null) {

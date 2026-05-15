@@ -667,6 +667,27 @@ class DocumentChunkerTest {
 
             assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
         }
+
+        @Test
+        @DisplayName("regression(C1): isExposable enrichment 가 있으면 모든 청크 sourceHash 가 비교 hash 와 동일하다")
+        void chunkWithEnrichment_는_모든_청크에_대해_비교용_hash_와_동일한_sourceHash_를_부여한다() {
+            DocumentChunker chunker = new DocumentChunker();
+            String content = "정책 본문";
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK,
+                    new PolicyEnrichment.Sections(
+                            "지원대상", "지원내용", "신청방법",
+                            null, null, null, null, null, null),
+                    List.of(),
+                    "외부 페이지 본문 발췌");
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, content, enrichment);
+            String expected = chunker.computeHash(content, enrichment);
+
+            assertThat(chunks).isNotEmpty();
+            assertThat(chunks).allSatisfy(c ->
+                    assertThat(c.getSourceHash()).isEqualTo(expected));
+        }
     }
 
     @Nested
