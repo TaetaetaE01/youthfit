@@ -1,24 +1,25 @@
 # 외부 정책 안내 페이지 본문 청킹 — Design Spec
 
-> **버전**: v0.1
+> **버전**: v1.0
 > **작성일**: 2026-05-15
+> **최종 갱신**: 2026-05-15 (§16 검토 포인트 5건 합의 완료)
 > **모듈**: `ingestion`, `rag`, `policy`, n8n `youth-center-seoul.json`
 > **선행 사이클**: `DONE_2026-05-12-youth-center-enrichment-design.md` (온통청년 enrichment 파이프라인)
-> **선행 사이클**: `2026-05-14-guide-enrichment-bokjiro-design.md` — **PR #100 머지 전제** (브랜치 `feat/guide-enrichment-bokjiro`). 머지 시점에 `DONE_` 접두사가 붙는다.
+> **선행 사이클**: `2026-05-14-guide-enrichment-bokjiro-design.md` (PR #100 머지 완료 — 2026-05-14)
 > **D 사이클 — 가이드 후속 시리즈 中 외부 본문 청킹**
 
 ---
 
 ## 0. 전제 (선행 사이클 의존)
 
-본 spec 의 모든 도메인 가정은 **PR #100 (`feat/guide-enrichment-bokjiro`)** 머지가 main 에 반영된 상태를 전제로 한다. 구체적으로:
+본 spec 의 모든 도메인 가정은 **PR #100 (`feat/guide-enrichment-bokjiro`) 머지가 main 에 반영된 상태**를 전제로 한다 (2026-05-14 머지 완료). 구체적으로:
 
 - `GuideSourceField` enum 이 6개 값(`SUPPORT_TARGET / SELECTION_CRITERIA / SUPPORT_CONTENT / BODY / ATTACHMENT / ENRICHMENT`)을 가진다. ENRICHMENT 는 #100 에서 도입.
 - `PolicyEnrichment` 에 9개 sections + cleanedText 가 아닌 8000자 cap cheerio 텍스트가 n8n 내부에서 처리되고 있다. cleanedText 의 ingestion 흐름 노출은 본 사이클의 범위.
 - `GuideContent` 에 4개 신규 섹션(`applyMethod / deadlineNote / requiredDocuments / contact`) 이 추가되어 있다.
 - `OpenAiChatClient.SYSTEM_PROMPT` 가 v5 (ENRICHMENT 라벨 사용 규칙 + 변환 예시 7·8 포함).
 
-#100 이 머지되지 않은 상태에서 본 사이클을 시작하면 §3·§5·§8 의 변경이 컴파일 단계에서 깨진다. 작업 순서는 **#100 머지 → 본 사이클 시작**.
+본 사이클은 #100 머지 위에서 진행된다.
 
 ---
 
@@ -397,12 +398,14 @@ SYSTEM_PROMPT 의 첨부 trace 규칙 (`source=ATTACHMENT` 일 때 attachmentRef
 
 ---
 
-## 16. 검토 포인트 (브레인스토밍 생략 항목 — 머지 전 합의 필요)
+## 16. 검토 포인트 — 합의 완료 (2026-05-15)
 
-다음은 spec 초안에서 단정적으로 결정한 항목들이다. 머지 전 확정이 필요하다:
+spec 초안에서 머지 전 합의가 필요했던 5개 항목 모두 spec 본문 권장안으로 확정.
 
-1. **`PolicyDocument.source` 컬럼 위치**: 기존 jsonb 메타에 넣을지, 별도 컬럼으로 둘지. spec 은 별도 컬럼을 가정.
-2. **`isExposable() == false` 인 enrichment 의 cleanedText 처리**: spec 은 "저장하되 청크화는 안 함" 으로 가정. 운영자가 임계값 낮춰서 재인덱싱하고 싶을 때만 활용.
-3. **`GuideSourceField` 확장 여부**: spec 은 도메인 변경 최소화를 위해 ENRICHMENT 그대로 사용. 만약 사용자 UI 에서 "정책 본문 vs 외부 페이지" 시각 분리가 필요하면 별도 사이클로 처리.
-4. **`PROMPT_VERSION` v5 → v6 증분 시점**: spec 은 backend 머지 단계에서 즉시 v6. 만약 청크 라벨만으로 LLM 동작이 자연스럽다면 v5 유지 가능.
-5. **청크 splitter 튜닝**: 외부 페이지 본문은 정책 본문보다 길고 문체가 다를 수 있어 chunk size / overlap 별도 튜닝 후보. spec 은 BODY 와 동일 사용을 가정.
+| # | 항목 | 결정 | 근거 |
+|---|---|---|---|
+| 16-1 | `PolicyDocument.source` 컬럼 위치 | **별도 `source VARCHAR(32) NOT NULL` 컬럼** | 현재 PolicyDocument 의 다른 필드 8개 전부 별도 컬럼 — 패턴 일관성. 인덱스 가능. NOT NULL 강제. §5.3 마이그레이션 그대로 적용 |
+| 16-2 | `isExposable() == false` 인 cleanedText 처리 | **저장 O + 청크화 X** | 청크 미생성 → RAG·가이드 LLM 입력 자체에 미도달 (노출 위험 0). 저장 보존 → 임계값 튜닝 시 재크롤 회피. §10.4 와 일관 |
+| 16-3 | `GuideSourceField` 확장 여부 | **6개 그대로 유지** | ENRICHMENT_BODY 청크 → guide 출력의 `sourceField=ENRICHMENT` 매핑. 사용자가 "추출 섹션 vs 본문 발췌"를 구분해서 얻는 가치 불명확. BE+FE 변경 0. §1.2 비목표·§8.2 권장과 일관 |
+| 16-4 | `PROMPT_VERSION` v5 → v6 증분 시점 | **backend 머지 시 즉시 v6** | SYSTEM_PROMPT 에 "ENRICHMENT_BODY 청크 → sourceField=ENRICHMENT 매핑" 규칙 명시 필요. 미명시 시 LLM 이 `sourceField=ENRICHMENT_BODY` 출력하면 enum 파싱 실패 위험. 비용은 allowlist 정책에만 영향(통제 가능). §8.2·§10.2 와 일관 |
+| 16-5 | 청크 splitter 튜닝 | **BODY 와 동일 splitter** | 운영 데이터 없이 별도 튜닝은 premature optimization. PR #91 의 table-aware + 줄 보존 + overlap 이 외부 페이지에도 유용. 추후 검색 품질 데이터 누적 후 별도 사이클로 튜닝 가능 (§14 미래 확장) |
