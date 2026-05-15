@@ -8,6 +8,10 @@ public record GuideContent(
         GuidePairedSection target,
         GuidePairedSection criteria,
         GuidePairedSection content,
+        GuideListSection applyMethod,
+        GuideListSection deadlineNote,
+        GuideListSection requiredDocuments,
+        GuideListSection contact,
         List<GuidePitfall> pitfalls) {
 
     public GuideContent {
@@ -16,5 +20,6 @@ public record GuideContent(
         }
         highlights = highlights == null ? List.of() : List.copyOf(highlights);
         pitfalls = pitfalls == null ? List.of() : List.copyOf(pitfalls);
+        // 4개 NEW 섹션은 nullable — 정책마다 정보 부재 가능
     }
 }

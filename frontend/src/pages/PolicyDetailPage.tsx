@@ -27,6 +27,7 @@ import { OneLineSummaryCard } from '@/components/policy/OneLineSummaryCard';
 import { PairedSection } from '@/components/policy/PairedSection';
 import { PitfallsCard } from '@/components/policy/PitfallsCard';
 import { HighlightsCard } from '@/components/policy/HighlightsCard';
+import { GuideListSectionCard } from '@/components/policy/GuideListSectionCard';
 import { useAuthStore } from '@/stores/authStore';
 import { usePolicy } from '@/hooks/queries/usePolicy';
 import { useGuide } from '@/hooks/queries/useGuide';
@@ -692,8 +693,48 @@ export default function PolicyDetailPage() {
             );
           })()}
 
-          {/* 제출서류 — 지원내용 다음 */}
-          {(() => {
+          {/* 신청방법 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.applyMethod && (
+            <GuideListSectionCard
+              title="신청방법"
+              emoji="📝"
+              section={guide.applyMethod}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
+          {/* 신청기한 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.deadlineNote && (
+            <GuideListSectionCard
+              title="신청기한"
+              emoji="📅"
+              section={guide.deadlineNote}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
+          {/* 제출서류 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.requiredDocuments && (
+            <GuideListSectionCard
+              title="제출서류"
+              emoji="📂"
+              section={guide.requiredDocuments}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
+          {/* 문의처 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.contact && (
+            <GuideListSectionCard
+              title="문의처"
+              emoji="☎"
+              section={guide.contact}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
+          {/* 제출서류 — 지원내용 다음 (가이드 카드 없을 때만 fallback) */}
+          {!guide?.requiredDocuments && (() => {
             const pick = pickWithFallback(
               policy.submissionDocuments,
               policy.enrichment?.sections?.requiredDocuments,
@@ -712,8 +753,9 @@ export default function PolicyDetailPage() {
             );
           })()}
 
-          {/* 신청방법 — applyMethods 비어있고 enrichment에 있을 때 보조 표시 */}
-          {(!policy.applyMethods || policy.applyMethods.length === 0) &&
+          {/* 신청방법 — applyMethods 비어있고 enrichment에 있을 때 보조 표시 (가이드 카드 없을 때만) */}
+          {!guide?.applyMethod &&
+            (!policy.applyMethods || policy.applyMethods.length === 0) &&
             isMeaningful(policy.enrichment?.sections?.applyMethod) && (
               <section className="mb-6 rounded-lg border border-gray-200 p-4">
                 <h3 className="mb-2 flex items-center gap-2 font-semibold">
@@ -724,8 +766,8 @@ export default function PolicyDetailPage() {
               </section>
             )}
 
-          {/* 마감안내 — enrichment에만 존재 */}
-          {isMeaningful(policy.enrichment?.sections?.deadlineNote) && (
+          {/* 마감안내 — enrichment에만 존재 (가이드 카드 없을 때만) */}
+          {!guide?.deadlineNote && isMeaningful(policy.enrichment?.sections?.deadlineNote) && (
             <section className="mb-6 rounded-lg border border-gray-200 p-4">
               <h3 className="mb-2 flex items-center gap-2 font-semibold">
                 마감안내

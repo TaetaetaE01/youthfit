@@ -9,6 +9,7 @@ import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideHighlight;
+import com.youthfit.guide.domain.model.GuideListSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
 import com.youthfit.guide.domain.repository.GuideRepository;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -40,7 +42,7 @@ import java.util.stream.Collectors;
 public class GuideGenerationService {
 
     static final String PROMPT_VERSION = "v5";  // 프롬프트 / 스키마 변경 시 증분
-    static final String ANNOTATOR_VERSION = "v5";  // 환산값 후처리기 변경 시 증분
+    static final String ANNOTATOR_VERSION = "v4";  // 환산값 후처리기 변경 시 증분
 
     private static final Logger log = LoggerFactory.getLogger(GuideGenerationService.class);
 
@@ -136,8 +138,40 @@ public class GuideGenerationService {
                     .sourceHash(hash)
                     .build());
         }
-        log.info("가이드 생성 완료: policyId={}", command.policyId());
+        log.info("가이드 생성 완료: policyId={}, enrichment_used={}, new_sections_present={}, enrichment_source_count={}",
+                command.policyId(),
+                input.enrichment() != null,
+                presentSectionNames(finalResponse),
+                countEnrichmentSources(finalResponse));
         return new GuideGenerationResult(command.policyId(), true, "생성 완료");
+    }
+
+    private static List<String> presentSectionNames(GuideContent c) {
+        List<String> names = new ArrayList<>();
+        if (c.applyMethod() != null) names.add("applyMethod");
+        if (c.deadlineNote() != null) names.add("deadlineNote");
+        if (c.requiredDocuments() != null) names.add("requiredDocuments");
+        if (c.contact() != null) names.add("contact");
+        return names;
+    }
+
+    private static int countEnrichmentSources(GuideContent c) {
+        int n = 0;
+        for (GuideHighlight h : c.highlights()) {
+            if (h.sourceField() == GuideSourceField.ENRICHMENT) n++;
+        }
+        for (GuidePitfall p : c.pitfalls()) {
+            if (p.sourceField() == GuideSourceField.ENRICHMENT) n++;
+        }
+        if (isEnrichment(c.applyMethod())) n++;
+        if (isEnrichment(c.deadlineNote())) n++;
+        if (isEnrichment(c.requiredDocuments())) n++;
+        if (isEnrichment(c.contact())) n++;
+        return n;
+    }
+
+    private static boolean isEnrichment(GuideListSection s) {
+        return s != null && s.sourceField() == GuideSourceField.ENRICHMENT;
     }
 
     /**
@@ -156,7 +190,22 @@ public class GuideGenerationService {
                         ? new GuidePitfall(p.text(), GuideSourceField.ATTACHMENT, p.attachmentRef())
                         : p)
                 .toList();
-        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+        return new GuideContent(
+                c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(),
+                enforceListSectionAttachment(c.applyMethod()),
+                enforceListSectionAttachment(c.deadlineNote()),
+                enforceListSectionAttachment(c.requiredDocuments()),
+                enforceListSectionAttachment(c.contact()),
+                ps
+        );
+    }
+
+    private GuideListSection enforceListSectionAttachment(GuideListSection s) {
+        if (s == null) return null;
+        if (s.attachmentRef() != null && s.sourceField() != GuideSourceField.ATTACHMENT) {
+            return new GuideListSection(s.items(), GuideSourceField.ATTACHMENT, s.attachmentRef());
+        }
+        return s;
     }
 
     private GuideContent filterInvalidSourceFields(GuideContent c, Policy p) {
@@ -170,13 +219,29 @@ public class GuideGenerationService {
         if (p.getAttachments() != null && !p.getAttachments().isEmpty()) {
             nonEmpty.add(GuideSourceField.ATTACHMENT);
         }
+        // enrichment 가 노출 가능한 경우에만 ENRICHMENT 라벨 허용
+        if (p.getEnrichment() != null && p.getEnrichment().isExposable()) {
+            nonEmpty.add(GuideSourceField.ENRICHMENT);
+        }
 
         List<GuideHighlight> hs = guideValidator.filterInvalidSourceFields(
                 c.highlights(), nonEmpty, GuideHighlight::sourceField);
         List<GuidePitfall> ps = guideValidator.filterInvalidSourceFields(
                 c.pitfalls(), nonEmpty, GuidePitfall::sourceField);
 
-        return new GuideContent(c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(), ps);
+        return new GuideContent(
+                c.oneLineSummary(), hs, c.target(), c.criteria(), c.content(),
+                filterListSection(c.applyMethod(), nonEmpty),
+                filterListSection(c.deadlineNote(), nonEmpty),
+                filterListSection(c.requiredDocuments(), nonEmpty),
+                filterListSection(c.contact(), nonEmpty),
+                ps
+        );
+    }
+
+    private GuideListSection filterListSection(GuideListSection s, Set<GuideSourceField> nonEmpty) {
+        if (s == null) return null;
+        return nonEmpty.contains(s.sourceField()) ? s : null;
     }
 
     private boolean notBlank(String s) {
@@ -215,6 +280,15 @@ public class GuideGenerationService {
         }
         if (reference != null) {
             sb.append("|ref:").append(reference.year()).append(":").append(reference.version());
+        }
+        // confidence 는 hash 에 넣지 않는다 — 동일 enrichment 재추출에서 미세한 confidence 변동만으로
+        // 매번 재생성되는 것을 막기 위함. enrichment 재추출 시 fetchedAt 이 항상 갱신되므로
+        // 변경 감지엔 fetchedAt 만으로 충분.
+        if (policy.getEnrichment() != null && policy.getEnrichment().isExposable()) {
+            sb.append("|enrich:")
+              .append(policy.getEnrichment().fetchedAt() == null
+                      ? ""
+                      : policy.getEnrichment().fetchedAt().toString());
         }
         sb.append("|prompt:").append(PROMPT_VERSION);
         sb.append("|annotator:").append(ANNOTATOR_VERSION);

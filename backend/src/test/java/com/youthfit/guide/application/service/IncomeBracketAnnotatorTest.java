@@ -57,6 +57,7 @@ class IncomeBracketAnnotatorTest {
                 null,
                 new GuidePairedSection(List.of(new GuideGroup(null, List.of(item)))),
                 null,
+                null, null, null, null,
                 List.of()
         );
     }
@@ -360,6 +361,7 @@ class IncomeBracketAnnotatorTest {
                 new GuidePairedSection(List.of(new GuideGroup(null, List.of("중위소득 60% 이하 무주택자")))),
                 new GuidePairedSection(List.of(new GuideGroup(null, List.of("선정기준 무관")))),
                 new GuidePairedSection(List.of(new GuideGroup(null, List.of("중위소득 60% 이하만 지급")))),
+                null, null, null, null,
                 List.of(
                         new com.youthfit.guide.domain.model.GuidePitfall(
                                 "중위소득 60% 초과 시 환수",

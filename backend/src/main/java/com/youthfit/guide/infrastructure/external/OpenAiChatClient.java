@@ -7,6 +7,7 @@ import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.GuideContent;
 import com.youthfit.guide.domain.model.GuideGroup;
 import com.youthfit.guide.domain.model.GuideHighlight;
+import com.youthfit.guide.domain.model.GuideListSection;
 import com.youthfit.guide.domain.model.GuidePairedSection;
 import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
@@ -88,15 +89,108 @@ public class OpenAiChatClient implements GuideLlmProvider {
             { "text": "배우자 명의 자가 주택이 있어도 신청 제외", "sourceField": "ATTACHMENT",
               "attachmentRef": { "attachmentId": 12, "pageStart": 35, "pageEnd": 35 } }
 
+            [변환 예시 7] enrichment 흡수 (온통청년 정책, 본문 빈약):
+            입력:
+              [supportTarget]
+              (빈 값 또는 짧은 요약)
+
+              [enrichment.supportTarget]
+              서울특별시 거주 만 19~34세 청년 무주택자
+
+              [enrichment.applyMethod]
+              1) 온통청년 홈페이지 회원가입
+              2) 신청서 작성 후 첨부서류 업로드
+              3) 자치구 청년정책팀 심사 후 결과 통보
+
+              [enrichment.requiredDocuments]
+              주민등록등본, 최근 3개월 건강보험 자격득실확인서, 임대차계약서 사본
+
+              [enrichment.deadlineNote]
+              2026-03-01 ~ 2026-05-31
+
+              [enrichment.operatingOrganization]
+              서울특별시 청년정책담당관
+
+              [enrichment.contactPhone]
+              02-2133-6586
+
+            → 출력 일부:
+              "target": {
+                "groups": [
+                  { "label": null,
+                    "items": [
+                      "서울특별시 거주 중인 만 19~34세 청년",
+                      "본인 명의의 집을 소유하지 않은 무주택자"
+                    ] }
+                ]
+              },
+              "applyMethod": {
+                "items": [
+                  "온통청년 홈페이지에서 회원가입한다",
+                  "신청서를 작성하고 첨부서류를 업로드한다",
+                  "자치구 청년정책팀 심사 후 결과 통보를 받는다"
+                ],
+                "sourceField": "ENRICHMENT",
+                "attachmentRef": null
+              },
+              "deadlineNote": {
+                "items": ["2026-03-01 ~ 2026-05-31"],
+                "sourceField": "ENRICHMENT",
+                "attachmentRef": null
+              },
+              "requiredDocuments": {
+                "items": ["주민등록등본", "최근 3개월 건강보험 자격득실확인서", "임대차계약서 사본"],
+                "sourceField": "ENRICHMENT",
+                "attachmentRef": null
+              },
+              "contact": {
+                "items": ["서울특별시 청년정책담당관", "02-2133-6586"],
+                "sourceField": "ENRICHMENT",
+                "attachmentRef": null
+              }
+
+            [변환 예시 8] 본문 우선, enrichment 무시:
+            입력:
+              [contact]
+              서울특별시 청년정책담당관 02-2133-6586 youth@seoul.go.kr
+
+              [enrichment.operatingOrganization]
+              서울특별시 청년정책담당관
+
+              [enrichment.contactPhone]
+              02-2133-6586
+
+            → 출력:
+              "contact": {
+                "items": ["서울특별시 청년정책담당관 02-2133-6586", "youth@seoul.go.kr"],
+                "sourceField": "SUPPORT_CONTENT",
+                "attachmentRef": null
+              }
+            (본문에 동일 정보가 있으면 enrichment 가 아닌 본문 라벨 사용)
+
             [출력 단위 — JSON]
             - oneLineSummary: 정책 정체를 누가/무엇을/얼마나 받는지 1~2문장.
             - highlights: 사용자가 PDF를 보지 않고도 정책의 핵심 특징을 파악할 수 있는 항목 3~6개.
               혜택의 강도, 차별점, 신청 시점/방법의 특이사항, 우대조건, 중복 수혜 가능 여부 등 긍정·중립 정보.
-              각 항목 sourceField 라벨 필수 (SUPPORT_TARGET / SELECTION_CRITERIA / SUPPORT_CONTENT / BODY).
+              각 항목 sourceField 라벨 필수 (SUPPORT_TARGET / SELECTION_CRITERIA / SUPPORT_CONTENT / BODY / ATTACHMENT / ENRICHMENT).
             - target / criteria / content: 각각 supportTarget / selectionCriteria / supportContent 풀이 (groups 배열).
               입력이 비어있으면 null. groups 구조는 아래 [변환 예시] 참조.
+            - applyMethod / deadlineNote / requiredDocuments / contact: 복지로식 정형 섹션.
+              각각 신청방법 / 신청기한 / 제출서류 / 문의처. 각 항목은 { "items": [...], "sourceField": "...", "attachmentRef": null|... } 형태.
+              본문과 enrichment 양쪽에 정보가 없으면 null. items 가 비어있는 형태로 만들지 말 것.
+              contact 는 operatingOrganization + contactPhone 을 같은 items 리스트에 줄 단위로 배치.
+              deadlineNote.items 는 가능하면 "YYYY-MM-DD ~ YYYY-MM-DD" 또는 사람이 읽는 형태("상시", "예산 소진 시까지").
             - pitfalls: 부정·함정·예외·제외 조건만 (자격 미달 트리거, 중복 수혜 제한, 사후 의무, 신청기한 외).
               긍정·중립 정보는 highlights로 보낸다. 각 항목 sourceField 라벨 필수.
+
+            [ENRICHMENT 라벨 사용 규칙]
+            - [enrichment.*] 절은 외부 정책 안내 페이지에서 AI 가 자동 추출한 보조 정보다.
+            - 본문 절([body], [supportTarget], [selectionCriteria], [supportContent]) 에 같거나 유사한 정보가 있으면
+              본문의 sourceField (BODY / SUPPORT_TARGET / SELECTION_CRITERIA / SUPPORT_CONTENT) 를 **우선** 사용한다.
+            - 본문에 없고 [enrichment.*] 절에만 있는 정보만 sourceField=ENRICHMENT 로 라벨링한다.
+            - [enrichment.eligibilityCriteria] 는 본문의 [selectionCriteria] 와 동의어로 취급. criteria 섹션 입력으로 활용.
+            - [enrichment.policyOverview] 는 별도 출력 섹션을 만들지 말고, oneLineSummary / highlights 작성 시 보조 입력으로만 활용.
+            - [enrichment.meta] 는 신뢰도/출처 참고 정보다. 본문 인용에 직접 사용하지 않는다.
 
             [중요] 첨부(PDF/HWP) 본문에 다음 정보가 명시되어 있으면 반드시 highlights 또는 pitfalls 에 1개 이상 포함한다 (정책 본문에 없어도 첨부에서 끌어올 것):
             - 다른 유사 정책과의 중복 수혜 제한 / 동시 수급 불가 리스트 (예: "청년희망키움통장과 중복 신청 불가")
@@ -255,11 +349,46 @@ public class OpenAiChatClient implements GuideLlmProvider {
             GuidePairedSection target = parsePaired(node.get("target"));
             GuidePairedSection criteria = parsePaired(node.get("criteria"));
             GuidePairedSection content = parsePaired(node.get("content"));
+            GuideListSection applyMethod = parseListSection(node.get("applyMethod"));
+            GuideListSection deadlineNote = parseListSection(node.get("deadlineNote"));
+            GuideListSection requiredDocuments = parseListSection(node.get("requiredDocuments"));
+            GuideListSection contact = parseListSection(node.get("contact"));
             List<GuidePitfall> pitfalls = parsePitfalls(node.get("pitfalls"));
-            return new GuideContent(oneLine, highlights, target, criteria, content, pitfalls);
+            return new GuideContent(
+                    oneLine, highlights, target, criteria, content,
+                    applyMethod, deadlineNote, requiredDocuments, contact,
+                    pitfalls
+            );
         } catch (Exception e) {
             log.error("가이드 응답 JSON 파싱 실패: {}", json, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 응답 파싱 실패");
+        }
+    }
+
+    private GuideListSection parseListSection(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        JsonNode itemsNode = node.get("items");
+        if (itemsNode == null || !itemsNode.isArray() || itemsNode.isEmpty()) return null;
+        List<String> items = new ArrayList<>();
+        itemsNode.forEach(n -> items.add(n.asText()));
+
+        JsonNode sourceFieldNode = node.get("sourceField");
+        if (sourceFieldNode == null || sourceFieldNode.isNull()) return null;
+        GuideSourceField sourceField;
+        try {
+            sourceField = GuideSourceField.valueOf(sourceFieldNode.asText());
+        } catch (IllegalArgumentException e) {
+            log.warn("invalid sourceField in list section: {}", sourceFieldNode.asText());
+            return null;
+        }
+
+        com.youthfit.guide.domain.model.AttachmentRef ref = parseAttachmentRef(node.get("attachmentRef"));
+        try {
+            return new GuideListSection(items, sourceField, ref);
+        } catch (IllegalArgumentException e) {
+            log.warn("invalid GuideListSection from LLM: items={} sourceField={} ref={}, msg={}",
+                    items, sourceField, ref, e.getMessage());
+            return null;
         }
     }
 
@@ -419,38 +548,57 @@ public class OpenAiChatClient implements GuideLlmProvider {
                 )
         );
 
+        List<String> sourceFieldEnum = List.of(
+                "SUPPORT_TARGET", "SELECTION_CRITERIA", "SUPPORT_CONTENT",
+                "BODY", "ATTACHMENT", "ENRICHMENT"
+        );
+
         Map<String, Object> pitfallSchema = Map.of(
                 "type", "object",
                 "additionalProperties", false,
                 "required", List.of("text", "sourceField", "attachmentRef"),
                 "properties", Map.of(
                         "text", Map.of("type", "string"),
-                        "sourceField", Map.of(
-                                "type", "string",
-                                "enum", List.of(
-                                        "SUPPORT_TARGET",
-                                        "SELECTION_CRITERIA",
-                                        "SUPPORT_CONTENT",
-                                        "BODY",
-                                        "ATTACHMENT")
-                        ),
+                        "sourceField", Map.of("type", "string", "enum", sourceFieldEnum),
                         "attachmentRef", attachmentRefSchema
                 )
         );
 
-        Map<String, Object> schema = Map.of(
+        Map<String, Object> listSectionSchema = Map.of(
                 "type", "object",
                 "additionalProperties", false,
-                "required", List.of("oneLineSummary", "highlights", "target", "criteria", "content", "pitfalls"),
+                "required", List.of("items", "sourceField", "attachmentRef"),
                 "properties", Map.of(
-                        "oneLineSummary", Map.of("type", "string"),
-                        "highlights", Map.of("type", "array", "items", pitfallSchema),
-                        "target", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))),
-                        "criteria", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))),
-                        "content", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))),
-                        "pitfalls", Map.of("type", "array", "items", pitfallSchema)
+                        "items", Map.of("type", "array", "items", Map.of("type", "string"), "minItems", 1),
+                        "sourceField", Map.of("type", "string", "enum", sourceFieldEnum),
+                        "attachmentRef", attachmentRefSchema
                 )
         );
+
+        Map<String, Object> nullableListSection = Map.of(
+                "anyOf", List.of(listSectionSchema, Map.of("type", "null"))
+        );
+
+        java.util.LinkedHashMap<String, Object> properties = new java.util.LinkedHashMap<>();
+        properties.put("oneLineSummary", Map.of("type", "string"));
+        properties.put("highlights", Map.of("type", "array", "items", pitfallSchema));
+        properties.put("target", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))));
+        properties.put("criteria", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))));
+        properties.put("content", Map.of("anyOf", List.of(pairedSchema, Map.of("type", "null"))));
+        properties.put("applyMethod", nullableListSection);
+        properties.put("deadlineNote", nullableListSection);
+        properties.put("requiredDocuments", nullableListSection);
+        properties.put("contact", nullableListSection);
+        properties.put("pitfalls", Map.of("type", "array", "items", pitfallSchema));
+
+        java.util.LinkedHashMap<String, Object> schema = new java.util.LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("additionalProperties", false);
+        schema.put("required", List.of(
+                "oneLineSummary", "highlights", "target", "criteria", "content",
+                "applyMethod", "deadlineNote", "requiredDocuments", "contact", "pitfalls"
+        ));
+        schema.put("properties", properties);
 
         return Map.of(
                 "type", "json_schema",
