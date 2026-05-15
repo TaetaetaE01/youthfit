@@ -11,7 +11,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Configuration
-@EnableConfigurationProperties({OpenAiEmbeddingProperties.class, KeywordBoostProperties.class})
+@EnableConfigurationProperties({
+        OpenAiEmbeddingProperties.class,
+        KeywordBoostProperties.class,
+        HybridSearchProperties.class
+})
 public class RagConfig {
 
     @Bean
