@@ -34,7 +34,7 @@ public class RagIndexingService {
             costGuard.logSkip("indexPolicyDocument", command.policyId());
             return new IndexingResult(command.policyId(), 0, false);
         }
-        String newHash = documentChunker.computeHash(command.content());
+        String newHash = documentChunker.computeHash(command.content(), command.enrichment());
 
         List<PolicyDocument> existing = policyDocumentRepository.findByPolicyId(command.policyId());
         if (!existing.isEmpty()) {

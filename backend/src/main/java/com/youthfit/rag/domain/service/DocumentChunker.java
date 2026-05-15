@@ -156,6 +156,13 @@ public class DocumentChunker {
         }
     }
 
+    public String computeHash(String content, PolicyEnrichment enrichment) {
+        if (enrichment == null || enrichment.cleanedText() == null) {
+            return computeHash(content);
+        }
+        return computeHash(content + "" + "ENRICHMENT_BODY" + "" + enrichment.cleanedText());
+    }
+
     /**
      * mergedContent 의 BODY_HEADER / ATTACHMENT_HEADER 위치를 기준으로
      * 본문 segment + 각 첨부 segment 로 강제 분할한다. 한 segment 안의 청크는

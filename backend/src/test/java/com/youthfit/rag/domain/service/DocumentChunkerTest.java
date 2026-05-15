@@ -192,6 +192,38 @@ class DocumentChunkerTest {
 
             assertThat(chunkerHash).isNotEqualTo(rawHash);
         }
+
+        @Test
+        @DisplayName("computeHash 는 enrichment.cleanedText 가 바뀌면 달라진다")
+        void computeHash_가_enrichment_cleanedText_변경시_달라진다() {
+            // given
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment a = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), "텍스트 A");
+            PolicyEnrichment b = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), "텍스트 B");
+
+            // when
+            String hashA = chunker.computeHash("동일 본문", a);
+            String hashB = chunker.computeHash("동일 본문", b);
+
+            // then
+            assertThat(hashA).isNotEqualTo(hashB);
+        }
+
+        @Test
+        @DisplayName("computeHash 는 enrichment null 이면 content 만의 hash 와 동일")
+        void computeHash_enrichment_null이면_content만의_hash와_동일() {
+            // given
+            DocumentChunker chunker = new DocumentChunker();
+
+            // when
+            String oldHash = chunker.computeHash("본문 X");
+            String newHash = chunker.computeHash("본문 X", null);
+
+            // then
+            assertThat(oldHash).isEqualTo(newHash);
+        }
     }
 
     @Nested
