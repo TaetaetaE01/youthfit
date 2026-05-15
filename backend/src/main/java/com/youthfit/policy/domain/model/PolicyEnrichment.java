@@ -14,7 +14,8 @@ public record PolicyEnrichment(
         Double confidence,
         EnrichmentStatus status,
         Sections sections,
-        List<ExtraAttachment> extraAttachments
+        List<ExtraAttachment> extraAttachments,
+        String cleanedText
 ) {
     public static final double EXPOSURE_CONFIDENCE_THRESHOLD = 0.6;
 

@@ -110,7 +110,8 @@ public record IngestPolicyRequest(
                 p.confidence(),
                 status,
                 sections,
-                atts
+                atts,
+                null
         );
     }
 
