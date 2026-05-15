@@ -65,7 +65,8 @@ class PolicyQueryServiceEnrichmentMaskingTest {
                 confidence,
                 status,
                 new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
-                List.of(new PolicyEnrichment.ExtraAttachment("첨부", "https://att.example.com"))
+                List.of(new PolicyEnrichment.ExtraAttachment("첨부", "https://att.example.com")),
+                null
         );
     }
 
@@ -207,7 +208,8 @@ class PolicyQueryServiceEnrichmentMaskingTest {
                             "인천광역시 계양구 일자리정책과",
                             "032-450-8354"
                     ),
-                    List.of()
+                    List.of(),
+                    null
             );
             givenPolicyWithEnrichment(policy, enrichment);
 

@@ -284,7 +284,7 @@ private static boolean isFallbackAnswer(String answer) {
 - plan: `docs/superpowers/plans/DONE_2026-05-01-qna-quality-improvements.md` (Tasks 7, 8 추가 섹션)
 - PR: [#56](https://github.com/TaetaetaE01/youthfit/pull/56) (`feat(qna): Q&A 품질 개선 (출처 정합성 + 메타 질문 대응)`)
 - 선행 사이클 spec: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md` (PR #55, 의미 캐시 v0)
-- 관련 v1 후보 spec: `docs/superpowers/specs/v1-semantic-cache-intent-based.md` (의도 기반 캐시 — 메타 질문 사전 분류와 자연 통합)
+- 관련 v1 후보 spec: `docs/superpowers/specs/TODO_v1-semantic-cache-intent-based.md` (의도 기반 캐시 — 메타 질문 사전 분류와 자연 통합)
 
 ### 결정적이었던 사용자 메시지 인용
 

@@ -90,6 +90,11 @@ class GuideGenerationServiceTest {
     }
 
     @Test
+    void PROMPT_VERSION_은_v5_이다() {
+        assertThat(GuideGenerationService.PROMPT_VERSION).isEqualTo("v5");
+    }
+
+    @Test
     void Policy_없으면_NOT_FOUND_결과() {
         when(policyRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -210,7 +215,8 @@ class GuideGenerationServiceTest {
                 0.85,
                 EnrichmentStatus.OK,
                 new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
-                List.of()
+                List.of(),
+                null
         ));
         return policy;
     }
@@ -224,7 +230,8 @@ class GuideGenerationServiceTest {
                 0.4,
                 EnrichmentStatus.LOW_CONFIDENCE,
                 new PolicyEnrichment.Sections("대상", "내용", "신청 방법", "서류", "마감 비고", null, null, null, null),
-                List.of()
+                List.of(),
+                null
         ));
         return policy;
     }

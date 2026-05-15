@@ -18,6 +18,7 @@ class PolicyDocumentTest {
                 .chunkIndex(0)
                 .content("청년 취업 지원 정책입니다.")
                 .sourceHash("abc123")
+                .source(PolicyDocumentSource.BODY)
                 .build();
 
         // then
@@ -40,6 +41,7 @@ class PolicyDocumentTest {
                     .chunkIndex(2)
                     .content("청크 텍스트")
                     .sourceHash("abc")
+                    .source(PolicyDocumentSource.BODY)
                     .attachmentId(12L)
                     .pageStart(35)
                     .pageEnd(37)
@@ -60,6 +62,7 @@ class PolicyDocumentTest {
                     .chunkIndex(0)
                     .content("본문 청크")
                     .sourceHash("abc")
+                    .source(PolicyDocumentSource.BODY)
                     .build();
 
             // then
@@ -112,6 +115,33 @@ class PolicyDocumentTest {
         }
     }
 
+    @Test
+    void builder_는_source_를_요구한다() {
+        PolicyDocument doc = PolicyDocument.builder()
+                .policyId(1L)
+                .chunkIndex(0)
+                .content("샘플 청크")
+                .sourceHash("hash")
+                .source(PolicyDocumentSource.BODY)
+                .build();
+
+        assertThat(doc.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+    }
+
+    @Test
+    void builder_는_ENRICHMENT_BODY_source_를_지원한다() {
+        PolicyDocument doc = PolicyDocument.builder()
+                .policyId(1L)
+                .chunkIndex(0)
+                .content("외부 페이지 본문 발췌")
+                .sourceHash("hash")
+                .source(PolicyDocumentSource.ENRICHMENT_BODY)
+                .build();
+
+        assertThat(doc.getSource()).isEqualTo(PolicyDocumentSource.ENRICHMENT_BODY);
+        assertThat(doc.getAttachmentId()).isNull();
+    }
+
     // ── 헬퍼 메서드 ──
 
     private PolicyDocument createDocument() {
@@ -120,6 +150,7 @@ class PolicyDocumentTest {
                 .chunkIndex(0)
                 .content("테스트 콘텐츠")
                 .sourceHash("hash123")
+                .source(PolicyDocumentSource.BODY)
                 .build();
     }
 }

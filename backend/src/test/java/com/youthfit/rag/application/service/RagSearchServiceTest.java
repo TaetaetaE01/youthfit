@@ -4,6 +4,7 @@ import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import com.youthfit.rag.domain.service.KeywordExtractor;
@@ -242,6 +243,7 @@ class RagSearchServiceTest {
                 .chunkIndex(index)
                 .content(content)
                 .sourceHash("test-hash")
+                .source(PolicyDocumentSource.BODY)
                 .build();
         ReflectionTestUtils.setField(chunk, "id", id);
         return chunk;

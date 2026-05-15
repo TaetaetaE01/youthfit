@@ -958,7 +958,7 @@ grep "reindex failed" /var/log/youthfit-backend.log | tail
 - 자동화 retrieval 벤치마크 (ground-truth chunk 매핑) — v0 범위 X
 - 섹션 헤더 prepend (■ ▶ Ⅰ 등 명시적 헤더 인식) — 후속 사이클
 - Tika 가 표를 공백 다중으로 떨궈주는 PDF 추가 패턴 인식 — 운영 데이터 보고 결정
-- 의미 캐시 v1 (intent 기반) — `docs/superpowers/specs/v1-semantic-cache-intent-based.md` 참고
+- 의미 캐시 v1 (intent 기반) — `docs/superpowers/specs/TODO_v1-semantic-cache-intent-based.md` 참고
 
 ## 검증 명령 요약
 

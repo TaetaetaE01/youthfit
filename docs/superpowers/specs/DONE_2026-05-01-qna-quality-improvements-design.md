@@ -4,7 +4,7 @@
 - **작성일**: 2026-05-01
 - **대상 모듈**: `backend/qna`
 - **선행 작업**: v0 의미 캐시 출시 (`DONE_2026-05-01-semantic-qna-cache-design.md`, PR #55 머지)
-- **이관 출처**: `docs/superpowers/specs/v1-qna-quality-improvements.md` (본 spec 으로 흡수)
+- **이관 출처**: `docs/superpowers/specs/DONE_v1-qna-quality-improvements.md` (본 spec 으로 흡수)
 
 ## 1. 배경
 
@@ -213,7 +213,7 @@ qnaLlmProvider.generateAnswer(policyTitle, metadata, context, question, chunkCon
 
 - **케이스 3 처리** (관련 청크인데 LLM 이 답 못 추출 → "모른다" + sources 표시): A 옵션 결정대로 운영 데이터 누적 후 빈도 측정. 빈도가 높으면 LLM 응답 패턴 매칭(B) 또는 NO_ANSWER 토큰 합의(C) 를 추가하는 후속 사이클.
 - **정밀 인용** (LLM 답변에 실제 사용된 청크만 sources 로 좁히기): 시스템 프롬프트에 "[1][2] 형태로 인용하세요" 지시 + 답변 텍스트에서 인용 추출 후 sources 필터링. 변경 범위 큼. v1+ 후보.
-- **질문 유형 사전 분기** (메타 질문 vs 세부 질문 별도 프롬프트): 의미 캐시 v1 (intent 기반, `specs/v1-semantic-cache-intent-based.md`) 와 함께 가는 게 자연스러움. 본 사이클에선 시스템 프롬프트 우선순위 룰로 충분.
+- **질문 유형 사전 분기** (메타 질문 vs 세부 질문 별도 프롬프트): 의미 캐시 v1 (intent 기반, `specs/TODO_v1-semantic-cache-intent-based.md`) 와 함께 가는 게 자연스러움. 본 사이클에선 시스템 프롬프트 우선순위 룰로 충분.
 - **`Policy` 엔티티 신규 메타 필드 추가**: 9필드 모두 이미 존재. 변경 없음.
 
 ## 10. 위험·롤백
@@ -281,8 +281,8 @@ cd backend
 
 - v0 의미 캐시 spec: `docs/superpowers/specs/DONE_2026-05-01-semantic-qna-cache-design.md`
 - v0 의미 캐시 plan: `docs/superpowers/plans/DONE_2026-05-01-semantic-qna-cache.md`
-- v1 의미 캐시 (intent 기반): `docs/superpowers/specs/v1-semantic-cache-intent-based.md`
-- 본 spec 의 출발점 메모: `docs/superpowers/specs/v1-qna-quality-improvements.md` (이 spec 으로 흡수됨, history 보존 위해 유지)
+- v1 의미 캐시 (intent 기반): `docs/superpowers/specs/TODO_v1-semantic-cache-intent-based.md`
+- 본 spec 의 출발점 메모: `docs/superpowers/specs/DONE_v1-qna-quality-improvements.md` (이 spec 으로 흡수됨, history 보존 위해 유지)
 
 ## 14. 검증 후 발견 (Tasks 7, 8) 과 디자인 재결정
 

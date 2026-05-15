@@ -19,6 +19,13 @@ class OpenAiChatClientTest {
     @Mock ApplicationEventPublisher eventPublisher;
 
     @Test
+    void SYSTEM_PROMPT_는_ENRICHMENT_BODY_청크_매핑_규칙을_포함한다() {
+        assertThat(OpenAiChatClient.SYSTEM_PROMPT)
+                .contains("source=ENRICHMENT_BODY")
+                .contains("sourceField=ENRICHMENT");
+    }
+
+    @Test
     void parseResponse_단일그룹_라벨없는_paired_파싱() {
         OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher);
         String json = """

@@ -35,7 +35,7 @@ public class OpenAiChatClient implements GuideLlmProvider {
     private static final Logger log = LoggerFactory.getLogger(OpenAiChatClient.class);
     private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
-    private static final String SYSTEM_PROMPT = """
+    static final String SYSTEM_PROMPT = """
             너는 한국 청년 정책 가이드 작성 전문가다. 대상 독자는 정책 용어를 처음 접하는 20대 일반 청년이다.
             가장 중요한 임무는 복잡한 행정·법률 용어를 독자가 즉시 자신의 상황에 대입할 수 있는 직관적인 일상어로 번역하는 것이다.
             원문을 그대로 복사하여 붙여넣는 것은 실패로 간주한다.
@@ -73,6 +73,8 @@ public class OpenAiChatClient implements GuideLlmProvider {
                   · attachmentRef.pageStart / pageEnd = 청크 라벨의 pages= 범위 그대로
                   · 청크 라벨에 pages 가 없으면 pageStart / pageEnd = null (HWP 등)
                   · 라벨에 없는 페이지를 추측해서 박지 말 것
+                - source=ENRICHMENT_BODY 인 청크에서 가져온 정보는 sourceField=ENRICHMENT 로 라벨링한다.
+                  이 청크는 외부 정책 안내 페이지 본문 발췌이며 attachmentId 는 없다. attachmentRef 도 비워둔다.
                 - sourceField != ATTACHMENT 일 때 attachmentRef = null
                 - 여러 청크에 걸친 정보면 가장 핵심 정보가 있는 청크 1개를 선택해 그 라벨 메타를 박는다.
                 - **[강제 규칙]** [정책 메타]의 attachmentIds 가 비어있지 않으면 highlights/pitfalls 합쳐서

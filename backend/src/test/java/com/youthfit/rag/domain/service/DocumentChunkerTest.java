@@ -3,6 +3,7 @@ package com.youthfit.rag.domain.service;
 import com.youthfit.policy.domain.model.EnrichmentStatus;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -139,6 +140,53 @@ class DocumentChunkerTest {
     }
 
     @Nested
+    @DisplayName("source 매핑 - BODY/ATTACHMENT 구분")
+    class SourceMapping {
+
+        @Test
+        @DisplayName("chunk 은 attachmentId 없으면 source BODY 를 부여한다")
+        void chunk_은_attachmentId_없으면_source_BODY_를_부여한다() {
+            // given
+            String content = "=== 정책 본문 ===\n청년 정책 안내. 자격 요건은 만 19~34세.\n";
+
+            // when
+            List<PolicyDocument> chunks = chunker.chunk(1L, content);
+
+            // then
+            assertThat(chunks).isNotEmpty();
+            assertThat(chunks).allSatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+                assertThat(c.getAttachmentId()).isNull();
+            });
+        }
+
+        @Test
+        @DisplayName("chunk 은 첨부 segment 의 청크에 source ATTACHMENT 를 부여한다")
+        void chunk_은_첨부_segment_의_청크에_source_ATTACHMENT_를_부여한다() {
+            // given
+            String content = """
+                    === 정책 본문 ===
+                    본문 내용.
+                    === 첨부 attachment-id=42 name="공고문.pdf" ===
+                    첨부 내용.
+                    """;
+
+            // when
+            List<PolicyDocument> chunks = chunker.chunk(1L, content);
+
+            // then
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.BODY);
+                assertThat(c.getAttachmentId()).isNull();
+            });
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.ATTACHMENT);
+                assertThat(c.getAttachmentId()).isEqualTo(42L);
+            });
+        }
+    }
+
+    @Nested
     @DisplayName("computeHash - 해시 계산")
     class ComputeHash {
 
@@ -191,6 +239,38 @@ class DocumentChunkerTest {
             String chunkerHash = chunker.computeHash(content);
 
             assertThat(chunkerHash).isNotEqualTo(rawHash);
+        }
+
+        @Test
+        @DisplayName("computeHash 는 enrichment.cleanedText 가 바뀌면 달라진다")
+        void computeHash_가_enrichment_cleanedText_변경시_달라진다() {
+            // given
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment a = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), "텍스트 A");
+            PolicyEnrichment b = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), "텍스트 B");
+
+            // when
+            String hashA = chunker.computeHash("동일 본문", a);
+            String hashB = chunker.computeHash("동일 본문", b);
+
+            // then
+            assertThat(hashA).isNotEqualTo(hashB);
+        }
+
+        @Test
+        @DisplayName("computeHash 는 enrichment null 이면 content 만의 hash 와 동일")
+        void computeHash_enrichment_null이면_content만의_hash와_동일() {
+            // given
+            DocumentChunker chunker = new DocumentChunker();
+
+            // when
+            String oldHash = chunker.computeHash("본문 X");
+            String newHash = chunker.computeHash("본문 X", null);
+
+            // then
+            assertThat(oldHash).isEqualTo(newHash);
         }
     }
 
@@ -381,7 +461,8 @@ class DocumentChunkerTest {
                     0.9,
                     EnrichmentStatus.OK,
                     sections,
-                    List.of()
+                    List.of(),
+                    null
             );
         }
 
@@ -393,7 +474,8 @@ class DocumentChunkerTest {
                     0.5,
                     EnrichmentStatus.LOW_CONFIDENCE,
                     new PolicyEnrichment.Sections("지원대상", "지원내용", null, null, null, null, null, null, null),
-                    List.of()
+                    List.of(),
+                    null
             );
         }
 
@@ -489,6 +571,122 @@ class DocumentChunkerTest {
 
             assertThat(result).hasSize(base.size());
             assertThat(result).noneMatch(c -> c.getContent().startsWith("[자동수집-"));
+        }
+    }
+
+    @Nested
+    @DisplayName("chunkWithEnrichment - ENRICHMENT_BODY 청크 분할")
+    class EnrichmentBodyChunking {
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 cleanedText 를 ENRICHMENT_BODY 청크로 분할한다")
+        void chunkWithEnrichment_는_cleanedText_를_ENRICHMENT_BODY_청크로_분할한다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://ext.example.com/policy/1",
+                    Instant.now(),
+                    "n8n-cheerio-v1",
+                    0.85,
+                    EnrichmentStatus.OK,
+                    null,
+                    List.of(),
+                    "외부 페이지 본문. 신청서 양식은 별도 공지로 안내. 마감일은 매월 말일."
+            );
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).anySatisfy(c -> {
+                assertThat(c.getSource()).isEqualTo(PolicyDocumentSource.ENRICHMENT_BODY);
+                assertThat(c.getAttachmentId()).isNull();
+                assertThat(c.getContent()).contains("외부 페이지 본문");
+            });
+        }
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 isExposable false 면 ENRICHMENT_BODY 청크를 만들지 않는다")
+        void chunkWithEnrichment_는_isExposable_false_면_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://ext.example.com/policy/1",
+                    Instant.now(),
+                    "n8n-cheerio-v1",
+                    0.3,  // < EXPOSURE_CONFIDENCE_THRESHOLD (0.6)
+                    EnrichmentStatus.OK,
+                    null,
+                    List.of(),
+                    "외부 페이지 본문"
+            );
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        @DisplayName("chunkWithEnrichment 는 cleanedText null 또는 blank 면 ENRICHMENT_BODY 청크를 만들지 않는다")
+        void chunkWithEnrichment_는_cleanedText_null_또는_blank_면_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null, List.of(), null);
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        void chunkWithEnrichment_는_sections_와_cleanedText_가_모두_있으면_chunkIndex_가_연속이다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK,
+                    new PolicyEnrichment.Sections(
+                            "지원대상 텍스트", "지원내용 텍스트", "신청방법 텍스트",
+                            null, null, null, null, null, null),
+                    List.of(),
+                    "외부 페이지 본문 발췌");
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            // chunkIndex 가 0, 1, 2, ... 연속인지
+            for (int i = 0; i < chunks.size(); i++) {
+                assertThat(chunks.get(i).getChunkIndex()).isEqualTo(i);
+            }
+            // BODY + ENRICHMENT_BODY 청크 모두 존재
+            assertThat(chunks).anyMatch(c -> c.getSource() == PolicyDocumentSource.BODY);
+            assertThat(chunks).anyMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        void chunkWithEnrichment_는_cleanedText_blank_여도_ENRICHMENT_BODY_청크를_만들지_않는다() {
+            DocumentChunker chunker = new DocumentChunker();
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK, null,
+                    List.of(), "   ");  // blank
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, "정책 본문", enrichment);
+
+            assertThat(chunks).noneMatch(c -> c.getSource() == PolicyDocumentSource.ENRICHMENT_BODY);
+        }
+
+        @Test
+        @DisplayName("regression(C1): isExposable enrichment 가 있으면 모든 청크 sourceHash 가 비교 hash 와 동일하다")
+        void chunkWithEnrichment_는_모든_청크에_대해_비교용_hash_와_동일한_sourceHash_를_부여한다() {
+            DocumentChunker chunker = new DocumentChunker();
+            String content = "정책 본문";
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "url", Instant.now(), "ex", 0.9, EnrichmentStatus.OK,
+                    new PolicyEnrichment.Sections(
+                            "지원대상", "지원내용", "신청방법",
+                            null, null, null, null, null, null),
+                    List.of(),
+                    "외부 페이지 본문 발췌");
+
+            List<PolicyDocument> chunks = chunker.chunkWithEnrichment(1L, content, enrichment);
+            String expected = chunker.computeHash(content, enrichment);
+
+            assertThat(chunks).isNotEmpty();
+            assertThat(chunks).allSatisfy(c ->
+                    assertThat(c.getSourceHash()).isEqualTo(expected));
         }
     }
 

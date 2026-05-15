@@ -272,7 +272,12 @@ public class GuideGenerationService {
         sb.append(safe(policy.getSelectionCriteria()));
         sb.append(safe(policy.getSupportContent()));
         sb.append(policy.getReferenceYear());
-        chunks.forEach(c -> sb.append(c.getContent()));
+        for (PolicyDocument c : chunks) {
+            sb.append(c.getChunkIndex()).append('|');
+            sb.append(c.getSource() == null ? "BODY" : c.getSource().name()).append('|');
+            sb.append(c.getContent()).append('|');
+            sb.append(c.getAttachmentId() == null ? "" : c.getAttachmentId()).append('\n');
+        }
         if (reference != null) {
             sb.append("|ref:").append(reference.year()).append(":").append(reference.version());
         }

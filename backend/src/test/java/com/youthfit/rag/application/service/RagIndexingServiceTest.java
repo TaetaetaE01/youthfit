@@ -6,8 +6,12 @@ import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
+import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import com.youthfit.rag.domain.service.DocumentChunker;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -63,7 +68,7 @@ class RagIndexingServiceTest {
                     createChunk(1L, 1, "청크2", hash)
             );
 
-            given(documentChunker.computeHash("정책 내용")).willReturn(hash);
+            given(documentChunker.computeHash("정책 내용", null)).willReturn(hash);
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
             given(documentChunker.chunkWithEnrichment(1L, "정책 내용", null)).willReturn(chunks);
             given(embeddingProvider.embedBatch(List.of("청크1", "청크2")))
@@ -88,7 +93,7 @@ class RagIndexingServiceTest {
             String hash = "same-hash";
             PolicyDocument existing = createChunk(1L, 0, "기존 청크", hash);
 
-            given(documentChunker.computeHash("정책 내용")).willReturn(hash);
+            given(documentChunker.computeHash("정책 내용", null)).willReturn(hash);
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
 
             // when
@@ -114,7 +119,7 @@ class RagIndexingServiceTest {
                     createChunk(1L, 0, "새 청크", newHash)
             );
 
-            given(documentChunker.computeHash("변경된 내용")).willReturn(newHash);
+            given(documentChunker.computeHash("변경된 내용", null)).willReturn(newHash);
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
             given(documentChunker.chunkWithEnrichment(1L, "변경된 내용", null)).willReturn(newChunks);
             given(embeddingProvider.embedBatch(List.of("새 청크")))
@@ -137,7 +142,7 @@ class RagIndexingServiceTest {
             IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "변경된 내용");
             PolicyDocument existing = createChunk(1L, 0, "기존 청크", "old-hash");
 
-            given(documentChunker.computeHash("변경된 내용")).willReturn("new-hash");
+            given(documentChunker.computeHash("변경된 내용", null)).willReturn("new-hash");
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
             given(documentChunker.chunkWithEnrichment(1L, "변경된 내용", null))
                     .willReturn(List.of(createChunk(1L, 0, "새 청크", "new-hash")));
@@ -154,7 +159,7 @@ class RagIndexingServiceTest {
         void sameHash_doesNotInvalidate() {
             IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "정책 내용");
             PolicyDocument existing = createChunk(1L, 0, "기존 청크", "same-hash");
-            given(documentChunker.computeHash("정책 내용")).willReturn("same-hash");
+            given(documentChunker.computeHash("정책 내용", null)).willReturn("same-hash");
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of(existing));
 
             ragIndexingService.indexPolicyDocument(command);
@@ -166,7 +171,7 @@ class RagIndexingServiceTest {
         @DisplayName("신규 정책(기존 인덱스 없음)은 invalidate 호출 없이 그대로 인덱싱한다")
         void newDocument_doesNotInvalidate() {
             IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "정책 내용");
-            given(documentChunker.computeHash("정책 내용")).willReturn("hash");
+            given(documentChunker.computeHash("정책 내용", null)).willReturn("hash");
             given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
             given(documentChunker.chunkWithEnrichment(1L, "정책 내용", null))
                     .willReturn(List.of(createChunk(1L, 0, "청크", "hash")));
@@ -175,6 +180,42 @@ class RagIndexingServiceTest {
             ragIndexingService.indexPolicyDocument(command);
 
             verify(qnaCacheInvalidator, never()).invalidatePolicy(anyLong());
+        }
+
+        @Test
+        @DisplayName("source 별 청크 수를 로그로 남긴다")
+        void indexPolicyDocument_는_source_별_청크_수를_로그로_남긴다() {
+            Logger logger = (Logger) LoggerFactory.getLogger(RagIndexingService.class);
+            ListAppender<ILoggingEvent> appender = new ListAppender<>();
+            appender.start();
+            logger.addAppender(appender);
+
+            try {
+                // given: cost guard allows, command with content (no enrichment)
+                IndexPolicyDocumentCommand command = new IndexPolicyDocumentCommand(1L, "본문", null);
+                given(costGuard.allows(1L)).willReturn(true);
+                given(documentChunker.computeHash("본문", null)).willReturn("new-hash");
+                given(policyDocumentRepository.findByPolicyId(1L)).willReturn(List.of());
+                given(documentChunker.chunkWithEnrichment(1L, "본문", null))
+                        .willReturn(List.of(
+                                createChunkWithSource(1L, 0, "body chunk", "hash", PolicyDocumentSource.BODY),
+                                createChunkWithSource(1L, 1, "enrichment body chunk", "hash", PolicyDocumentSource.ENRICHMENT_BODY)
+                        ));
+                given(embeddingProvider.embedBatch(any())).willReturn(List.of(new float[1536], new float[1536]));
+
+                // when
+                IndexingResult result = ragIndexingService.indexPolicyDocument(command);
+
+                // then
+                assertThat(result.policyId()).isEqualTo(1L);
+                assertThat(appender.list).anyMatch(e ->
+                        e.getFormattedMessage().contains("body_chunks_count=1") &&
+                        e.getFormattedMessage().contains("enrichment_body_chunks_count=1") &&
+                        e.getFormattedMessage().contains("attachment_chunks_count=0"));
+            } finally {
+                logger.detachAppender(appender);
+                appender.stop();
+            }
         }
     }
 
@@ -186,6 +227,17 @@ class RagIndexingServiceTest {
                 .chunkIndex(index)
                 .content(content)
                 .sourceHash(hash)
+                .source(PolicyDocumentSource.BODY)
+                .build();
+    }
+
+    private PolicyDocument createChunkWithSource(Long policyId, int index, String content, String hash, PolicyDocumentSource source) {
+        return PolicyDocument.builder()
+                .policyId(policyId)
+                .chunkIndex(index)
+                .content(content)
+                .sourceHash(hash)
+                .source(source)
                 .build();
     }
 }
