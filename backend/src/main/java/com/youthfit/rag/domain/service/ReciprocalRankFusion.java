@@ -1,8 +1,7 @@
 package com.youthfit.rag.domain.service;
 
-import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
+import com.youthfit.rag.domain.model.SimilarChunk;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,24 +19,24 @@ import java.util.Map;
  */
 public class ReciprocalRankFusion {
 
-    public List<PolicyDocumentChunkResult> merge(
-            List<PolicyDocumentChunkResult> vectorRanks,
-            List<PolicyDocumentChunkResult> trigramRanks,
+    public List<SimilarChunk> merge(
+            List<SimilarChunk> vectorRanks,
+            List<SimilarChunk> trigramRanks,
             int k,
             int topK
     ) {
         Map<Long, Double> scores = new LinkedHashMap<>();
-        Map<Long, PolicyDocumentChunkResult> chunkById = new LinkedHashMap<>();
+        Map<Long, SimilarChunk> chunkById = new LinkedHashMap<>();
         Map<Long, Boolean> inVector = new LinkedHashMap<>();
 
         for (int rank = 0; rank < vectorRanks.size(); rank++) {
-            PolicyDocumentChunkResult c = vectorRanks.get(rank);
+            SimilarChunk c = vectorRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
             inVector.put(c.id(), true);
         }
         for (int rank = 0; rank < trigramRanks.size(); rank++) {
-            PolicyDocumentChunkResult c = trigramRanks.get(rank);
+            SimilarChunk c = trigramRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
             inVector.putIfAbsent(c.id(), false);
@@ -46,22 +45,22 @@ public class ReciprocalRankFusion {
         List<Map.Entry<Long, Double>> sorted = new ArrayList<>(scores.entrySet());
         sorted.sort(Map.Entry.<Long, Double>comparingByValue().reversed());
 
-        List<PolicyDocumentChunkResult> result = new ArrayList<>();
+        List<SimilarChunk> result = new ArrayList<>();
         for (int i = 0; i < Math.min(topK, sorted.size()); i++) {
             Long id = sorted.get(i).getKey();
-            PolicyDocumentChunkResult original = chunkById.get(id);
+            SimilarChunk original = chunkById.get(id);
             double distance = inVector.get(id)
                     ? original.distance()
-                    : BigDecimal.ONE.subtract(BigDecimal.valueOf(original.distance())).doubleValue();
-            result.add(new PolicyDocumentChunkResult(
+                    : 1.0 - original.distance();
+            result.add(new SimilarChunk(
                     original.id(),
                     original.policyId(),
                     original.chunkIndex(),
                     original.content(),
-                    distance,
                     original.attachmentId(),
                     original.pageStart(),
-                    original.pageEnd()
+                    original.pageEnd(),
+                    distance
             ));
         }
         return result;
