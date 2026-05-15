@@ -381,7 +381,8 @@ class DocumentChunkerTest {
                     0.9,
                     EnrichmentStatus.OK,
                     sections,
-                    List.of()
+                    List.of(),
+                    null
             );
         }
 
@@ -393,7 +394,8 @@ class DocumentChunkerTest {
                     0.5,
                     EnrichmentStatus.LOW_CONFIDENCE,
                     new PolicyEnrichment.Sections("지원대상", "지원내용", null, null, null, null, null, null, null),
-                    List.of()
+                    List.of(),
+                    null
             );
         }
 
