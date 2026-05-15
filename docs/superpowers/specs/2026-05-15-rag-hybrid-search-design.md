@@ -67,9 +67,9 @@ QnaService.processQuestion()
 
 ## 5. DB 스키마 변경
 
-### 5.1 Flyway 마이그레이션
+### 5.1 마이그레이션 SQL
 
-파일: `backend/src/main/resources/db/migration/V<다음버전>__add_policy_document_trigram_index.sql` — 마이그레이션 버전 번호는 implementation plan 단계에서 현재 `db/migration` 최대 버전 + 1 로 확정
+파일: `backend/src/main/resources/sql/2026-05-16-policy-document-trigram-index.sql` — 운영자가 수동 적용 (Flyway 미사용)
 
 ```sql
 -- Postgres 17 contrib 기본 탑재
@@ -82,7 +82,7 @@ CREATE INDEX IF NOT EXISTS policy_document_content_trgm_idx
 
 - **테이블 스키마 변경 없음**: `content` 컬럼은 이미 존재. 인덱스만 추가
 - **청크 재생성 불필요**: `CHUNKER_VERSION` / 임베딩 모델 변경 없음
-- **인덱스 빌드 시간**: 현재 데이터 규모(정책 수 × 평균 청크 수) 에서 분 단위로 추정. `CONCURRENTLY` 옵션 검토 가능 (Flyway 단일 트랜잭션 제약 확인 필요)
+- **인덱스 빌드 시간**: 현재 데이터 규모(정책 수 × 평균 청크 수) 에서 분 단위로 추정. 무중단 적용이 필요하면 `CREATE INDEX CONCURRENTLY` 로 별도 실행
 
 ### 5.2 Testcontainers Postgres 이미지
 
@@ -96,7 +96,7 @@ CREATE INDEX IF NOT EXISTS policy_document_content_trgm_idx
 
 ### 6.2 Trigram top-N 쿼리 (신규)
 
-threshold 를 GUC (`pg_trgm.similarity_threshold`) 에 의존하지 않고 쿼리 파라미터로 명시 비교한다 — 트랜잭션 사이드이펙트 없음·런타임 튜닝 가능.
+GIN trigram 인덱스 (`gin_trgm_ops`) 는 `<->`, `%`, `<%>` 같은 operator 형태에서 가속된다. 그래서 `<->` distance operator + LIMIT 형태로 KNN 조회하고, threshold 컷은 application 레이어에서 후처리한다.
 
 ```java
 @Query(value = """
@@ -105,20 +105,18 @@ threshold 를 GUC (`pg_trgm.similarity_threshold`) 에 의존하지 않고 쿼�
                similarity(content, :query) AS sim
           FROM policy_document
          WHERE policy_id = :policyId
-           AND similarity(content, :query) >= :threshold
-         ORDER BY sim DESC
-         LIMIT :topN
+         ORDER BY content <-> :query
+         LIMIT :limit
         """, nativeQuery = true)
 List<Object[]> findTopByTrigram(
         @Param("policyId") Long policyId,
         @Param("query") String query,
-        @Param("threshold") double threshold,
-        @Param("topN") int topN
+        @Param("limit") int limit
 );
 ```
 
-- GIN trigram 인덱스 (`gin_trgm_ops`) 가 `similarity()` 함수 호출에 자동 활용됨
-- threshold 미만 청크는 ORDER BY · LIMIT 평가 전에 컷
+- `<->` operator 가 GIN 인덱스 KNN 스캔을 통해 정렬되고 LIMIT 으로 컷됨
+- threshold 컷은 `PolicyDocumentRepositoryImpl` 의 stream filter 단계에서 수행
 
 ### 6.3 RRF 결합
 

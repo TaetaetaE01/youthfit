@@ -151,51 +151,52 @@ git commit -m "feat(rag): HybridSearchProperties + application.yml rag.hybrid �
 ```java
 package com.youthfit.rag.domain.service;
 
-import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
+import com.youthfit.rag.domain.model.SimilarChunk;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 @DisplayName("ReciprocalRankFusion")
 class ReciprocalRankFusionTest {
 
     private final ReciprocalRankFusion rrf = new ReciprocalRankFusion();
 
-    private PolicyDocumentChunkResult chunk(Long id, double distance) {
-        return new PolicyDocumentChunkResult(
-                id, 1L, id.intValue(), "content-" + id, distance,
-                null, null, null
+    private SimilarChunk chunk(Long id, double distance) {
+        return new SimilarChunk(
+                id, 1L, id.intValue(), "content-" + id,
+                null, null, null, distance
         );
     }
 
     @Test
     @DisplayName("양쪽 모두에 같은 청크가 있으면 두 점수가 합산되어 더 높은 순위가 된다")
     void mergesSameChunkScores() {
-        List<PolicyDocumentChunkResult> vec = List.of(chunk(1L, 0.2), chunk(2L, 0.3));
-        List<PolicyDocumentChunkResult> tri = List.of(chunk(2L, 0.0), chunk(1L, 0.0));
+        List<SimilarChunk> vec = List.of(chunk(1L, 0.2), chunk(2L, 0.3));
+        List<SimilarChunk> tri = List.of(chunk(2L, 0.0), chunk(1L, 0.0));
 
-        List<PolicyDocumentChunkResult> result = rrf.merge(vec, tri, 60, 10);
+        List<SimilarChunk> result = rrf.merge(vec, tri, 60, 10);
 
         // 청크 1: 1/(60+0) + 1/(60+1) = 0.03333 + 0.01639 = 0.04972
         // 청크 2: 1/(60+1) + 1/(60+0) = 0.01639 + 0.03333 = 0.04972
         // 동률이지만 두 청크 모두 양쪽 매칭이라 1, 2 순서대로 (입력 안정 정렬)
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(PolicyDocumentChunkResult::id).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(result).extracting(SimilarChunk::id).containsExactlyInAnyOrder(1L, 2L);
     }
 
     @Test
     @DisplayName("한쪽에만 있는 청크는 한쪽 점수만 받는다")
     void singleSideChunk() {
-        List<PolicyDocumentChunkResult> vec = List.of(chunk(1L, 0.2));
-        List<PolicyDocumentChunkResult> tri = List.of(chunk(2L, 0.0));
+        List<SimilarChunk> vec = List.of(chunk(1L, 0.2));
+        List<SimilarChunk> tri = List.of(chunk(2L, 0.0));
 
-        List<PolicyDocumentChunkResult> result = rrf.merge(vec, tri, 60, 10);
+        List<SimilarChunk> result = rrf.merge(vec, tri, 60, 10);
 
         // 두 청크 모두 1/(60+0) = 0.01667 동률
-        assertThat(result).extracting(PolicyDocumentChunkResult::id).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(result).extracting(SimilarChunk::id).containsExactlyInAnyOrder(1L, 2L);
     }
 
     @Test
@@ -204,10 +205,10 @@ class ReciprocalRankFusionTest {
         // 청크 1: vec rank 0 + tri rank 0 → 1/60 + 1/60 = 0.03333
         // 청크 2: vec rank 0 만 → 1/60 = 0.01667
         // 청크 3: tri rank 0 만 → 1/60 = 0.01667
-        List<PolicyDocumentChunkResult> vec = List.of(chunk(1L, 0.2), chunk(2L, 0.3));
-        List<PolicyDocumentChunkResult> tri = List.of(chunk(1L, 0.0), chunk(3L, 0.0));
+        List<SimilarChunk> vec = List.of(chunk(1L, 0.2), chunk(2L, 0.3));
+        List<SimilarChunk> tri = List.of(chunk(1L, 0.0), chunk(3L, 0.0));
 
-        List<PolicyDocumentChunkResult> result = rrf.merge(vec, tri, 60, 10);
+        List<SimilarChunk> result = rrf.merge(vec, tri, 60, 10);
 
         assertThat(result).hasSize(3);
         assertThat(result.get(0).id()).isEqualTo(1L);
@@ -216,12 +217,12 @@ class ReciprocalRankFusionTest {
     @Test
     @DisplayName("topK 컷으로 결과 수가 제한된다")
     void topKLimits() {
-        List<PolicyDocumentChunkResult> vec = List.of(
+        List<SimilarChunk> vec = List.of(
                 chunk(1L, 0.1), chunk(2L, 0.2), chunk(3L, 0.3), chunk(4L, 0.4), chunk(5L, 0.5)
         );
-        List<PolicyDocumentChunkResult> tri = List.of();
+        List<SimilarChunk> tri = List.of();
 
-        List<PolicyDocumentChunkResult> result = rrf.merge(vec, tri, 60, 3);
+        List<SimilarChunk> result = rrf.merge(vec, tri, 60, 3);
 
         assertThat(result).hasSize(3);
         assertThat(result.get(0).id()).isEqualTo(1L);
@@ -230,18 +231,18 @@ class ReciprocalRankFusionTest {
     @Test
     @DisplayName("양쪽 모두 비어 있으면 빈 결과를 반환한다")
     void bothEmpty() {
-        List<PolicyDocumentChunkResult> result = rrf.merge(List.of(), List.of(), 60, 10);
+        List<SimilarChunk> result = rrf.merge(List.of(), List.of(), 60, 10);
         assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("양쪽 매칭 시 vector 의 distance 가 결과 distance 로 유지된다")
     void preservesVectorDistance() {
-        List<PolicyDocumentChunkResult> vec = List.of(chunk(1L, 0.25));
+        List<SimilarChunk> vec = List.of(chunk(1L, 0.25));
         // trigram 결과는 distance 0.0 (DB 에서 의미 없음)
-        List<PolicyDocumentChunkResult> tri = List.of(chunk(1L, 0.0));
+        List<SimilarChunk> tri = List.of(chunk(1L, 0.0));
 
-        List<PolicyDocumentChunkResult> result = rrf.merge(vec, tri, 60, 10);
+        List<SimilarChunk> result = rrf.merge(vec, tri, 60, 10);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).distance()).isEqualTo(0.25);
@@ -252,14 +253,14 @@ class ReciprocalRankFusionTest {
     void trigramOnlyChunkUsesConvertedDistance() {
         // trigram 쿼리 결과의 distance 필드에는 similarity(0~1) 가 그대로 들어왔다고 가정
         // (Repository 가 그렇게 채움)
-        PolicyDocumentChunkResult trigramOnly = new PolicyDocumentChunkResult(
-                1L, 1L, 0, "c", 0.8, null, null, null
+        SimilarChunk trigramOnly = new SimilarChunk(
+                1L, 1L, 0, "c", null, null, null, 0.8
         );
-        List<PolicyDocumentChunkResult> result = rrf.merge(List.of(), List.of(trigramOnly), 60, 10);
+        List<SimilarChunk> result = rrf.merge(List.of(), List.of(trigramOnly), 60, 10);
 
         assertThat(result).hasSize(1);
-        // 1.0 - 0.8 = 0.2
-        assertThat(result.get(0).distance()).isEqualTo(0.2);
+        // 1.0 - 0.8 = 0.2 (부동소수 오차 허용)
+        assertThat(result.get(0).distance()).isCloseTo(0.2, within(1e-9));
     }
 }
 ```
@@ -271,13 +272,14 @@ Expected: FAIL — `ReciprocalRankFusion` 클래스 없음
 
 - [ ] **Step 3: ReciprocalRankFusion 구현**
 
+> 도메인 레이어이므로 `application` DTO 가 아닌 `domain.model.SimilarChunk` 를 사용한다 (의존 방향 Presentation → Application → Domain 준수). `RagSearchService` 에서 결과를 `PolicyDocumentChunkResult` 로 변환한다.
+
 ```java
 package com.youthfit.rag.domain.service;
 
-import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
+import com.youthfit.rag.domain.model.SimilarChunk;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -296,24 +298,24 @@ import java.util.Map;
  */
 public class ReciprocalRankFusion {
 
-    public List<PolicyDocumentChunkResult> merge(
-            List<PolicyDocumentChunkResult> vectorRanks,
-            List<PolicyDocumentChunkResult> trigramRanks,
+    public List<SimilarChunk> merge(
+            List<SimilarChunk> vectorRanks,
+            List<SimilarChunk> trigramRanks,
             int k,
             int topK
     ) {
         Map<Long, Double> scores = new LinkedHashMap<>();
-        Map<Long, PolicyDocumentChunkResult> chunkById = new LinkedHashMap<>();
+        Map<Long, SimilarChunk> chunkById = new LinkedHashMap<>();
         Map<Long, Boolean> inVector = new LinkedHashMap<>();
 
         for (int rank = 0; rank < vectorRanks.size(); rank++) {
-            PolicyDocumentChunkResult c = vectorRanks.get(rank);
+            SimilarChunk c = vectorRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
             inVector.put(c.id(), true);
         }
         for (int rank = 0; rank < trigramRanks.size(); rank++) {
-            PolicyDocumentChunkResult c = trigramRanks.get(rank);
+            SimilarChunk c = trigramRanks.get(rank);
             scores.merge(c.id(), 1.0 / (k + rank), Double::sum);
             chunkById.putIfAbsent(c.id(), c);
             inVector.putIfAbsent(c.id(), false);
@@ -322,22 +324,22 @@ public class ReciprocalRankFusion {
         List<Map.Entry<Long, Double>> sorted = new ArrayList<>(scores.entrySet());
         sorted.sort(Map.Entry.<Long, Double>comparingByValue().reversed());
 
-        List<PolicyDocumentChunkResult> result = new ArrayList<>();
+        List<SimilarChunk> result = new ArrayList<>();
         for (int i = 0; i < Math.min(topK, sorted.size()); i++) {
             Long id = sorted.get(i).getKey();
-            PolicyDocumentChunkResult original = chunkById.get(id);
+            SimilarChunk original = chunkById.get(id);
             double distance = inVector.get(id)
                     ? original.distance()
                     : 1.0 - original.distance();
-            result.add(new PolicyDocumentChunkResult(
+            result.add(new SimilarChunk(
                     original.id(),
                     original.policyId(),
                     original.chunkIndex(),
                     original.content(),
-                    distance,
                     original.attachmentId(),
                     original.pageStart(),
-                    original.pageEnd()
+                    original.pageEnd(),
+                    distance
             ));
         }
         return result;
@@ -514,6 +516,8 @@ List<SimilarChunk> findTopByTrigram(
 
 - [ ] **Step 4: JpaRepository 에 native 쿼리 추가**
 
+> `similarity()` 함수는 GIN trigram 인덱스 가속 대상이 아니다. KNN 형태의 `<->` distance operator + `LIMIT` 으로 인덱스를 활용한다. threshold 컷은 Java 레이어 (`PolicyDocumentRepositoryImpl`) 에서 수행.
+
 `PolicyDocumentJpaRepository.java` 의 `findSimilarByEmbedding` 메서드 다음에 추가:
 
 ```java
@@ -528,14 +532,12 @@ List<SimilarChunk> findTopByTrigram(
                similarity(content, :query) AS sim
           FROM policy_document
          WHERE policy_id = :policyId
-           AND similarity(content, :query) >= :threshold
-         ORDER BY sim DESC
+         ORDER BY content <-> :query
          LIMIT :limit
         """, nativeQuery = true)
 List<Object[]> findTopByTrigram(
         @Param("policyId") Long policyId,
         @Param("query") String query,
-        @Param("threshold") double threshold,
         @Param("limit") int limit
 );
 ```
@@ -547,8 +549,9 @@ List<Object[]> findTopByTrigram(
 ```java
 @Override
 public List<SimilarChunk> findTopByTrigram(Long policyId, String query, double threshold, int limit) {
-    return jpaRepository.findTopByTrigram(policyId, query, threshold, limit).stream()
+    return jpaRepository.findTopByTrigram(policyId, query, limit).stream()
             .map(this::toTrigramChunk)
+            .filter(c -> c.distance() >= threshold)
             .toList();
 }
 
