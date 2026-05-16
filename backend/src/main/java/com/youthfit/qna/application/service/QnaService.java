@@ -299,6 +299,9 @@ public class QnaService {
         try {
             return queryRewriter.rewrite(policyTitle, question);
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.warn("query rewriter 호출 예외, 원래 질문으로 fallback: title={}, error={}",
                     policyTitle, e.toString());
             return Optional.empty();

@@ -16,6 +16,7 @@ import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.qna.infrastructure.config.QueryRewriteProperties;
+import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.application.service.RagSearchService;
@@ -108,6 +109,11 @@ class QnaServiceQueryRewriteTest {
 
         verify(queryRewriter, never()).rewrite(anyString(), anyString());
         verify(embeddingProvider, times(1)).embed("작년 기준이야?");
+
+        ArgumentCaptor<SearchChunksCommand> searchCmdCaptor =
+                ArgumentCaptor.forClass(SearchChunksCommand.class);
+        verify(ragSearchService).searchRelevantChunks(searchCmdCaptor.capture(), any());
+        assertThat(searchCmdCaptor.getValue().query()).isEqualTo("작년 기준이야?");
     }
 
     @Test
@@ -137,6 +143,12 @@ class QnaServiceQueryRewriteTest {
         verify(qnaLlmProvider).generateAnswer(
                 anyString(), any(PolicyMetadata.class), anyString(), questionCaptor.capture(), any());
         assertThat(questionCaptor.getValue()).isEqualTo("작년 기준이야?");
+
+        ArgumentCaptor<SearchChunksCommand> searchCmdCaptor =
+                ArgumentCaptor.forClass(SearchChunksCommand.class);
+        verify(ragSearchService).searchRelevantChunks(searchCmdCaptor.capture(), eq(rewrittenEmbedding));
+        assertThat(searchCmdCaptor.getValue().query())
+                .isEqualTo("청년내일저축계좌 최근 3개월 평균 근로사업소득");
     }
 
     @Test
