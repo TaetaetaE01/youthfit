@@ -1,14 +1,25 @@
 import { promote } from './promote.mjs';
 import { readFile, readdir } from 'node:fs/promises';
+import { deepStrictEqual } from 'node:assert/strict';
 
 const CASES_DIR = new URL('./cases/', import.meta.url);
 
 function deepEqual(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
+  try {
+    deepStrictEqual(a, b);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const entries = await readdir(CASES_DIR);
 const inputs = entries.filter(e => e.endsWith('.input.json')).sort();
+
+if (inputs.length === 0) {
+  console.error(`no fixtures found in ${CASES_DIR.pathname}`);
+  process.exit(1);
+}
 
 let failed = 0;
 for (const inputFile of inputs) {

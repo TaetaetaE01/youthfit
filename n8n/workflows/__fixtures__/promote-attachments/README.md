@@ -8,6 +8,10 @@
 - `verify.mjs` — `cases/*.input.json` 을 읽어 `promote()` 를 적용하고 `cases/*.expected.json` 과 비교한다.
 - `cases/case-*.input.json` / `cases/case-*.expected.json` — 케이스별 입력/기대 출력.
 
+> Task 6 시점에 `n8n/workflows/youth-center-seoul.json` 에 `attachments 승격` 노드가 추가된다. 그 전까지 `promote.mjs` 는 픽스처 검증 전용이며 단일 출처(single source) 다.
+
+요구 런타임: Node.js 18+ (top-level await, `node:fs/promises`, `node:assert/strict` 사용).
+
 ## 실행
 
 ```bash
