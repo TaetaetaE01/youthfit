@@ -8,7 +8,7 @@
 - `verify.mjs` — `cases/*.input.json` 을 읽어 `promote()` 를 적용하고 `cases/*.expected.json` 과 비교한다.
 - `cases/case-*.input.json` / `cases/case-*.expected.json` — 케이스별 입력/기대 출력.
 
-> Task 6 시점에 `n8n/workflows/youth-center-seoul.json` 에 `attachments 승격` 노드가 추가된다. 그 전까지 `promote.mjs` 는 픽스처 검증 전용이며 단일 출처(single source) 다.
+> `promote.mjs` 와 `youth-center-seoul.json` 의 `attachments 승격` 노드 jsCode 는 동기화된 미러다. 한쪽이 권위 있는 단일 출처가 아니므로, 변경 시 두 곳을 함께 갱신해야 한다 (아래 "동기화 책임" 참조).
 
 요구 런타임: Node.js 18+ (top-level await, `node:fs/promises`, `node:assert/strict` 사용).
 
