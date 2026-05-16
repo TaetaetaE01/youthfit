@@ -11,6 +11,13 @@ const EXT_TO_MEDIA_TYPE = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 };
 
+function extractExt(url) {
+  const cleaned = url.split('#')[0].split('?')[0].toLowerCase();
+  const dotIdx = cleaned.lastIndexOf('.');
+  if (dotIdx === -1) return null;
+  return cleaned.slice(dotIdx + 1);
+}
+
 export function promote(input) {
   const enrichment = input?.rawData?.enrichment;
   const extras = enrichment?.extraAttachments;
@@ -22,9 +29,8 @@ export function promote(input) {
     : [];
   const merged = [...attachments];
   for (const ex of extras) {
-    const dotIdx = ex.url.lastIndexOf('.');
-    if (dotIdx === -1) continue;
-    const ext = ex.url.slice(dotIdx + 1);
+    const ext = extractExt(ex.url);
+    if (!ext) continue;
     const mediaType = EXT_TO_MEDIA_TYPE[ext];
     if (!mediaType) continue;
     merged.push({ name: ex.name, url: ex.url, mediaType });
