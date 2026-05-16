@@ -5,5 +5,6 @@ public enum LlmModule {
     GUIDE,
     EMBEDDING,
     INGESTION,
-    ELIGIBILITY
+    ELIGIBILITY,
+    QUERY_REWRITE
 }
