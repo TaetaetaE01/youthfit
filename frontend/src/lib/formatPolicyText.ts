@@ -22,7 +22,7 @@ function normalize(raw: string): string {
     .replace(/(\S)\s*(※)\s+/g, '$1\n$2 ')
     .replace(/([.!?)가-힣%])\s*(\*)\s+/g, '$1\n$2 ')
     .replace(/([가-힣.!?:)%])\s*-\s+(\S)/g, '$1\n- $2')
-    .replace(/([.!?])\s*(\d+[).])\s+/g, '$1\n$2 ')
+    .replace(/([.!?])\s*(\d+[).])\s+(?=[가-힣A-Za-z])/g, '$1\n$2 ')
     .replace(/([.!?:)])\s+(\([^)\n]{2,20}\))\s+(\S)/g, '$1\n$2 $3')
     .replace(/([.)])\s*(\[[^\]]+\])/g, '$1\n\n$2')
     .replace(/\n{3,}/g, '\n\n')
@@ -57,23 +57,33 @@ type LineClass =
   | { kind: 'intro'; text: string }
   | { kind: 'standalone'; text: string };
 
+function lookAheadIsListItem(lines: string[], from: number): boolean {
+  for (let j = from; j < lines.length; j++) {
+    if (NOTE_REGEX.test(lines[j])) continue;
+    const nd = bulletDepth(lines[j]);
+    if (nd >= 0) return true;
+    if (STAGE_REGEX.test(lines[j])) return true;
+    return false;
+  }
+  return false;
+}
+
 function classifyLines(lines: string[]): LineClass[] {
   return lines.map((line, i): LineClass => {
     if (NOTE_REGEX.test(line)) return { kind: 'note', text: line };
     const d = bulletDepth(line);
-    if (d >= 0) return { kind: 'bullet', text: stripBullet(line), depth: d };
+    if (d >= 0) {
+      const stripped = stripBullet(line);
+      if (/[:：]\s*$/.test(stripped) && lookAheadIsListItem(lines, i + 1)) {
+        return { kind: 'intro', text: stripped };
+      }
+      return { kind: 'bullet', text: stripped, depth: d };
+    }
     if (FIELD_REGEX.test(line)) return { kind: 'field', text: line };
     if (STAGE_REGEX.test(line)) return { kind: 'bullet', text: line, depth: 0 };
 
     const explicit = isIntro(line);
-    let nextIsListItem = false;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (NOTE_REGEX.test(lines[j])) continue;
-      const nd = bulletDepth(lines[j]);
-      if (nd >= 0) { nextIsListItem = true; break; }
-      if (STAGE_REGEX.test(lines[j])) { nextIsListItem = true; break; }
-      break;
-    }
+    const nextIsListItem = lookAheadIsListItem(lines, i + 1);
     if (explicit || nextIsListItem) return { kind: 'intro', text: line };
     return { kind: 'standalone', text: line };
   });
