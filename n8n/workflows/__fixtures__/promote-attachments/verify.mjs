@@ -1,0 +1,34 @@
+import { promote } from './promote.mjs';
+import { readFile, readdir } from 'node:fs/promises';
+
+const CASES_DIR = new URL('./cases/', import.meta.url);
+
+function deepEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+const entries = await readdir(CASES_DIR);
+const inputs = entries.filter(e => e.endsWith('.input.json')).sort();
+
+let failed = 0;
+for (const inputFile of inputs) {
+  const name = inputFile.replace('.input.json', '');
+  const expectedFile = `${name}.expected.json`;
+  const input = JSON.parse(await readFile(new URL(inputFile, CASES_DIR), 'utf8'));
+  const expected = JSON.parse(await readFile(new URL(expectedFile, CASES_DIR), 'utf8'));
+  const actual = promote(input);
+  if (deepEqual(actual, expected)) {
+    console.log(`PASS  ${name}`);
+  } else {
+    failed++;
+    console.log(`FAIL  ${name}`);
+    console.log(`  expected: ${JSON.stringify(expected)}`);
+    console.log(`  actual:   ${JSON.stringify(actual)}`);
+  }
+}
+
+if (failed > 0) {
+  console.error(`\n${failed} case(s) failed`);
+  process.exit(1);
+}
+console.log(`\nAll ${inputs.length} case(s) passed`);
