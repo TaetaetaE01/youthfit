@@ -27,13 +27,21 @@ export function promote(input) {
   const attachments = Array.isArray(input.rawData.attachments)
     ? input.rawData.attachments
     : [];
+  const existingUrls = new Set(
+    attachments
+      .map(a => (typeof a.url === 'string' ? a.url.toLowerCase() : null))
+      .filter(Boolean)
+  );
   const merged = [...attachments];
   for (const ex of extras) {
     const ext = extractExt(ex.url);
     if (!ext) continue;
     const mediaType = EXT_TO_MEDIA_TYPE[ext];
     if (!mediaType) continue;
+    const key = ex.url.toLowerCase();
+    if (existingUrls.has(key)) continue;
     merged.push({ name: ex.name, url: ex.url, mediaType });
+    existingUrls.add(key);
   }
   return { ...input, rawData: { ...input.rawData, attachments: merged } };
 }

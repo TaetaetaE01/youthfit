@@ -1,0 +1,27 @@
+{
+  "source": { "url": "https://example.com/p/5", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-16T00:00:00" },
+  "rawData": {
+    "externalId": "P-5",
+    "title": "샘플 5",
+    "summary": "s",
+    "body": "b",
+    "category": "교육",
+    "region": "서울특별시",
+    "attachments": [
+      { "name": "신청서.pdf", "url": "https://gov.example.com/file/sin.pdf", "mediaType": "application/pdf" },
+      { "name": "양식", "url": "https://gov.example.com/file/yang.hwp", "mediaType": "application/x-hwp" }
+    ],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/5",
+      "fetchedAt": "2026-05-16T00:00:00",
+      "extractor": "openai:gpt-4o-mini",
+      "confidence": 0.9,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "신청서", "url": "https://gov.example.com/file/sin.pdf" },
+        { "name": "양식", "url": "https://gov.example.com/file/yang.hwp" }
+      ]
+    }
+  }
+}
