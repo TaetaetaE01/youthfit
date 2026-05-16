@@ -34,6 +34,7 @@ export function promote(input) {
   );
   const merged = [...attachments];
   for (const ex of extras) {
+    if (!ex || typeof ex.url !== 'string') continue;
     const ext = extractExt(ex.url);
     if (!ext) continue;
     const mediaType = EXT_TO_MEDIA_TYPE[ext];

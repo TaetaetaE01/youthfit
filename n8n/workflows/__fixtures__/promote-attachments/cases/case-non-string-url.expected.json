@@ -1,0 +1,26 @@
+{
+  "source": { "url": "https://example.com/p/6", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-16T00:00:00" },
+  "rawData": {
+    "externalId": "P-6",
+    "title": "샘플 6",
+    "summary": "s",
+    "body": "b",
+    "category": "교육",
+    "region": "서울특별시",
+    "attachments": [
+      { "name": "정상", "url": "https://gov.example.com/file/ok.pdf", "mediaType": "application/pdf" }
+    ],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/6",
+      "fetchedAt": "2026-05-16T00:00:00",
+      "extractor": "openai:gpt-4o-mini",
+      "confidence": 0.9,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "깨진 항목", "url": null },
+        { "name": "정상", "url": "https://gov.example.com/file/ok.pdf" }
+      ]
+    }
+  }
+}
