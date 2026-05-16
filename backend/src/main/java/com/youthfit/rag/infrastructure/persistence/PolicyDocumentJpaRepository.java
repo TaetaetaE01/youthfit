@@ -55,4 +55,24 @@ public interface PolicyDocumentJpaRepository extends JpaRepository<PolicyDocumen
 
     @Query("SELECT DISTINCT pd.sourceHash FROM PolicyDocument pd WHERE pd.policyId = :policyId")
     List<String> findDistinctSourceHashByPolicyId(@Param("policyId") Long policyId);
+
+    @Query(value = """
+            SELECT id,
+                   policy_id     AS policyId,
+                   chunk_index   AS chunkIndex,
+                   content,
+                   attachment_id AS attachmentId,
+                   page_start    AS pageStart,
+                   page_end      AS pageEnd,
+                   similarity(content, :query) AS sim
+              FROM policy_document
+             WHERE policy_id = :policyId
+             ORDER BY content <-> :query
+             LIMIT :limit
+            """, nativeQuery = true)
+    List<Object[]> findTopByTrigram(
+            @Param("policyId") Long policyId,
+            @Param("query") String query,
+            @Param("limit") int limit
+    );
 }

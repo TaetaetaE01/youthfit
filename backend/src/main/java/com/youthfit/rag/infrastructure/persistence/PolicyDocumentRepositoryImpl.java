@@ -56,6 +56,31 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
         return jpaRepository.findDistinctSourceHashByPolicyId(policyId).stream().findFirst();
     }
 
+    @Override
+    public List<SimilarChunk> findTopByTrigram(Long policyId, String query, double threshold, int limit) {
+        double maxDistance = 1.0 - threshold;
+        return jpaRepository.findTopByTrigram(policyId, query, limit).stream()
+                .map(this::toTrigramChunk)
+                .filter(c -> c.distance() <= maxDistance)
+                .toList();
+    }
+
+    private SimilarChunk toTrigramChunk(Object[] row) {
+        // trigram similarity (0~1) 을 distance (0=가까움) 로 변환해 도메인 계약과 일치시킨다.
+        double sim = ((Number) row[7]).doubleValue();
+        double distance = 1.0 - sim;
+        return new SimilarChunk(
+                ((Number) row[0]).longValue(),
+                ((Number) row[1]).longValue(),
+                ((Number) row[2]).intValue(),
+                (String) row[3],
+                row[4] == null ? null : ((Number) row[4]).longValue(),
+                row[5] == null ? null : ((Number) row[5]).intValue(),
+                row[6] == null ? null : ((Number) row[6]).intValue(),
+                distance
+        );
+    }
+
     private SimilarChunk toSimilarChunk(Object[] row) {
         return new SimilarChunk(
                 ((Number) row[0]).longValue(),

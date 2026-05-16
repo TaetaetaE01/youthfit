@@ -2,6 +2,7 @@ package com.youthfit.rag.infrastructure.config;
 
 import com.youthfit.rag.domain.service.DocumentChunker;
 import com.youthfit.rag.domain.service.KeywordExtractor;
+import com.youthfit.rag.domain.service.ReciprocalRankFusion;
 import com.youthfit.rag.infrastructure.external.OpenAiEmbeddingProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -11,7 +12,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Configuration
-@EnableConfigurationProperties({OpenAiEmbeddingProperties.class, KeywordBoostProperties.class})
+@EnableConfigurationProperties({
+        OpenAiEmbeddingProperties.class,
+        KeywordBoostProperties.class,
+        HybridSearchProperties.class
+})
 public class RagConfig {
 
     @Bean
@@ -25,5 +30,10 @@ public class RagConfig {
                 ? Set.of()
                 : new HashSet<>(properties.stopwords());
         return new KeywordExtractor(stopwords, properties.maxKeywords());
+    }
+
+    @Bean
+    public ReciprocalRankFusion reciprocalRankFusion() {
+        return new ReciprocalRankFusion();
     }
 }

@@ -47,6 +47,13 @@ oauth:
     client-secret: ${KAKAO_CLIENT_SECRET:}
     redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5173/auth/kakao/callback}
 
+rag:
+  hybrid:
+    enabled: ${RAG_HYBRID_ENABLED:false}
+    top-n-per-search: ${RAG_HYBRID_TOP_N:20}
+    rrf-k: ${RAG_HYBRID_RRF_K:60}
+    trigram-threshold: ${RAG_HYBRID_TRIGRAM_THRESHOLD:0.1}
+
 openai:
   embedding:
     api-key: ${OPENAI_API_KEY:}
