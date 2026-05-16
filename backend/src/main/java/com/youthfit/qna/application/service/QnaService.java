@@ -14,12 +14,14 @@ import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.event.QnaCacheLookupEvent;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
+import com.youthfit.qna.application.port.QueryRewriter;
 import com.youthfit.qna.application.port.SemanticQnaCache;
 import com.youthfit.qna.application.port.dto.SemanticLookupMatch;
 import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.domain.model.QnaFailedReason;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
+import com.youthfit.qna.infrastructure.config.QueryRewriteProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
@@ -75,6 +77,8 @@ public class QnaService {
     private final QnaCacheLookupClassifier lookupClassifier;
     private final QuestionNormalizer questionNormalizer;
     private final ApplicationEventPublisher eventPublisher;
+    private final QueryRewriter queryRewriter;
+    private final QueryRewriteProperties queryRewriteProperties;
 
     private final ExecutorService executor = new DelegatingSecurityContextExecutorService(
             Executors.newVirtualThreadPerTaskExecutor());
@@ -170,9 +174,27 @@ public class QnaService {
             return;
         }
 
-        // ④ RAG (임베딩 재사용)
+        // ④ Query rewriting (옵션) → RAG 검색
+        float[] searchEmbedding = queryEmbedding;
+        String searchQuery = command.question();
+
+        if (queryRewriteProperties.enabled()) {
+            Optional<String> rewritten = safeRewrite(policy.getTitle(), command.question());
+            if (rewritten.isPresent()) {
+                searchQuery = rewritten.get();
+                try {
+                    searchEmbedding = embeddingProvider.embed(searchQuery);
+                } catch (Exception e) {
+                    log.warn("query-rewrite 재임베딩 실패, 원래 임베딩으로 fallback: policyId={}",
+                            command.policyId(), e);
+                    searchEmbedding = queryEmbedding;
+                    searchQuery = command.question();
+                }
+            }
+        }
+
         List<PolicyDocumentChunkResult> chunks = ragSearchService.searchRelevantChunks(
-                new SearchChunksCommand(command.policyId(), command.question()), queryEmbedding);
+                new SearchChunksCommand(command.policyId(), searchQuery), searchEmbedding);
 
         if (chunks.isEmpty()) {
             rejectAndComplete(emitter, historyId, NO_INDEXED_MESSAGE, QnaFailedReason.NO_INDEXED_DOCUMENT);
@@ -270,6 +292,16 @@ public class QnaService {
             historyWriter.markCompleted(historyId, fullAnswer, sourcesJson);
         } catch (Exception e) {
             log.error("Q&A 히스토리 markCompleted 실패: historyId={}", historyId, e);
+        }
+    }
+
+    private Optional<String> safeRewrite(String policyTitle, String question) {
+        try {
+            return queryRewriter.rewrite(policyTitle, question);
+        } catch (Exception e) {
+            log.warn("query rewriter 호출 예외, 원래 질문으로 fallback: title={}, error={}",
+                    policyTitle, e.toString());
+            return Optional.empty();
         }
     }
 

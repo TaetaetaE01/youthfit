@@ -12,11 +12,13 @@ import com.youthfit.qna.application.dto.result.QnaSourceResult;
 import com.youthfit.qna.application.event.QnaCacheLookupEvent;
 import com.youthfit.qna.application.port.QnaAnswerCache;
 import com.youthfit.qna.application.port.QnaLlmProvider;
+import com.youthfit.qna.application.port.QueryRewriter;
 import com.youthfit.qna.application.port.SemanticQnaCache;
 import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.domain.model.QnaFailedReason;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
+import com.youthfit.qna.infrastructure.config.QueryRewriteProperties;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.application.service.RagSearchService;
@@ -74,6 +76,8 @@ class QnaServiceTest {
     @Mock private QnaCacheLookupClassifier lookupClassifier;
     @Mock private QuestionNormalizer questionNormalizer;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private QueryRewriter queryRewriter;
+    @Mock private QueryRewriteProperties queryRewriteProperties;
 
     private Policy policy;
 
@@ -82,6 +86,7 @@ class QnaServiceTest {
         policy = mockPolicy(10L, "테스트 정책");
         given(qnaProperties.relevanceDistanceThreshold()).willReturn(0.4);
         given(qnaProperties.semanticDistanceThreshold()).willReturn(0.15);
+        given(queryRewriteProperties.enabled()).willReturn(false);
     }
 
     @Nested
