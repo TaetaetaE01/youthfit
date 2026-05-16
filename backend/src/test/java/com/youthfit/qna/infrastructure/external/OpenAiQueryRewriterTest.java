@@ -53,6 +53,30 @@ class OpenAiQueryRewriterTest {
             assertThat(result).isPresent();
             assertThat(result.get()).hasSize(200);
         }
+
+        @Test
+        @DisplayName("supplementary plane 문자 (이모지) 가 200자 경계에 걸리면 깨지지 않게 잘린다")
+        void truncatesSafelyAtSurrogateBoundary() {
+            // 199 chars of "가" + 1 emoji (U+1F600 = "😀", 2 char wide). Total length = 201 char.
+            // Naive substring(0, 200) 은 high surrogate 만 남겨 깨진 문자 발생 → fix 후엔 "가" 199개 만 반환 (length=199).
+            String input = "가".repeat(199) + "😀";
+            Optional<String> result = OpenAiQueryRewriter.parseRewritten(input);
+            assertThat(result).isPresent();
+            String text = result.get();
+            // 절단 결과는 199 (high surrogate 한 칸 앞으로 당겨짐) — 깨진 surrogate 없음
+            assertThat(text.length()).isEqualTo(199);
+            assertThat(text).isEqualTo("가".repeat(199));
+            // sanity: low/high surrogate 가 단독으로 남지 않음
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                assertThat(Character.isLowSurrogate(c)).isFalse();
+                if (Character.isHighSurrogate(c)) {
+                    assertThat(i + 1 < text.length() && Character.isLowSurrogate(text.charAt(i + 1)))
+                            .as("high surrogate at end with no low surrogate follows = broken")
+                            .isTrue();
+                }
+            }
+        }
     }
 
     @Nested

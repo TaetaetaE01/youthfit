@@ -109,16 +109,17 @@ public class OpenAiQueryRewriter implements QueryRewriter {
             Optional<String> rewritten = parseRewritten(content);
             long durationMs = (System.nanoTime() - startNanos) / 1_000_000;
             if (rewritten.isPresent()) {
-                log.info("query rewrite: original=\"{}\", rewritten=\"{}\", duration={}ms",
-                        userQuestion, rewritten.get(), durationMs);
+                log.info("query rewrite: title=\"{}\", originalLen={}, rewritten=\"{}\", duration={}ms",
+                        policyTitle, userQuestion.length(), rewritten.get(), durationMs);
+                log.debug("query rewrite original: title=\"{}\", original=\"{}\"", policyTitle, userQuestion);
             } else {
-                log.info("query rewrite fallback: reason=too-short-or-empty, original=\"{}\", duration={}ms",
-                        userQuestion, durationMs);
+                log.info("query rewrite fallback: reason=too-short-or-empty, title=\"{}\", originalLen={}, duration={}ms",
+                        policyTitle, userQuestion.length(), durationMs);
             }
             return rewritten;
         } catch (Exception e) {
-            log.warn("query rewrite fallback: reason=exception, original=\"{}\", error={}",
-                    userQuestion, e.toString());
+            log.warn("query rewrite fallback: reason=exception, title=\"{}\", originalLen={}, error={}",
+                    policyTitle, userQuestion.length(), e.toString());
             return Optional.empty();
         }
     }
@@ -127,7 +128,13 @@ public class OpenAiQueryRewriter implements QueryRewriter {
         if (content == null) return Optional.empty();
         String trimmed = content.trim();
         if (trimmed.length() < MIN_LENGTH) return Optional.empty();
-        if (trimmed.length() > MAX_LENGTH) trimmed = trimmed.substring(0, MAX_LENGTH);
+        if (trimmed.length() > MAX_LENGTH) {
+            int cut = MAX_LENGTH;
+            if (Character.isHighSurrogate(trimmed.charAt(cut - 1))) {
+                cut--;
+            }
+            trimmed = trimmed.substring(0, cut);
+        }
         return Optional.of(trimmed);
     }
 
