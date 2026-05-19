@@ -6,53 +6,53 @@ describe('DecisionMetaGrid', () => {
   it('4개 메타가 모두 있을 때 렌더', () => {
     render(
       <DecisionMetaGrid
-        applyEnd="2026-05-29"
-        supportScale={60000}
         referenceYear={2026}
         supportCycle="1년 한도"
+        provideType="현금"
+        contact="02-1234-5678"
       />,
     );
-    expect(screen.getByText('마감일')).toBeInTheDocument();
-    expect(screen.getByText('지원규모')).toBeInTheDocument();
     expect(screen.getByText('기준연도')).toBeInTheDocument();
     expect(screen.getByText('지원주기')).toBeInTheDocument();
+    expect(screen.getByText('제공유형')).toBeInTheDocument();
+    expect(screen.getByText('문의처')).toBeInTheDocument();
   });
 
-  it('지원규모는 toLocaleString으로 표시', () => {
+  it('기준연도는 N년 으로 표시', () => {
     render(
       <DecisionMetaGrid
-        applyEnd={null}
-        supportScale={60000}
-        referenceYear={null}
+        referenceYear={2026}
         supportCycle={null}
+        provideType={null}
+        contact={null}
       />,
     );
-    expect(screen.getByText('60,000명')).toBeInTheDocument();
+    expect(screen.getByText('2026년')).toBeInTheDocument();
   });
 
   it('모두 null이면 컴포넌트는 null을 반환', () => {
     const { container } = render(
       <DecisionMetaGrid
-        applyEnd={null}
-        supportScale={null}
         referenceYear={null}
         supportCycle={null}
+        provideType={null}
+        contact={null}
       />,
     );
     expect(container.firstChild).toBeNull();
   });
 
-  it('마감일에는 D-day가 함께 표시된다', () => {
-    const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
-      .toISOString().slice(0, 10);
+  it('contact 가 없을 때 contactFallback 으로 대체', () => {
     render(
       <DecisionMetaGrid
-        applyEnd={future}
-        supportScale={null}
         referenceYear={null}
         supportCycle={null}
+        provideType={null}
+        contact={null}
+        contactFallback="02-9999-0000"
+        enrichmentSourceUrl="https://example.com"
       />,
     );
-    expect(screen.getByText(/D-10|D-9|D-11/)).toBeInTheDocument();
+    expect(screen.getByText('02-9999-0000')).toBeInTheDocument();
   });
 });

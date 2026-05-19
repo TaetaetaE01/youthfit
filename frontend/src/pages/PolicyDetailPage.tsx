@@ -549,12 +549,14 @@ export default function PolicyDetailPage() {
           {/* AI 한 줄 요약 — 가이드 있을 때만 */}
           {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}
 
-          {/* Decision Meta Grid (마감일 / 지원규모 / 기준연도 / 지원주기) */}
+          {/* Decision Meta Grid (기준연도 / 지원주기 / 제공유형 / 문의처) */}
           <DecisionMetaGrid
-            applyEnd={policy.applyEnd}
-            supportScale={policy.supportScale ?? null}
             referenceYear={policy.referenceYear}
             supportCycle={policy.supportCycle}
+            provideType={policy.provideType}
+            contact={policy.contact}
+            contactFallback={policy.enrichment?.sections?.contactPhone ?? null}
+            enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
           />
 
           {/* 사업기간 / 지원규모 chip */}
