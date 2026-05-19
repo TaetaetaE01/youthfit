@@ -24,7 +24,8 @@ const PAREN_EXT_PATTERN = /[\(\[]\s*(pdf|hwpx?|docx?|xlsx?)\s*[\)\]]/i;
 const PATH_EXT_PATTERN = /(?:^|[^a-zA-Z])(pdf|hwpx?|docx?|xlsx?)(?:$|[^a-zA-Z])/i;
 // path-pattern fallback 은 다운로드 의도 키워드가 동반될 때만 활성화한다.
 // (예: /board/pdf/list 같은 카테고리 슬러그가 첨부로 잘못 승격되는 false positive 방지)
-const PATH_DOWNLOAD_KEYWORD_PATTERN = /(?:download|filedown|attach|getfile|board|atch)/i;
+// 'attach' 가 atchFile/atchFileNo 의 'attach' 변형을 사실상 커버한다.
+const PATH_DOWNLOAD_KEYWORD_PATTERN = /(?:download|filedown|attach|getfile|board)/i;
 
 function extractExtFromText(text) {
   if (typeof text !== 'string' || text.length === 0) return null;
