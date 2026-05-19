@@ -10,6 +10,9 @@
 --
 -- 영향: enrichment.sections.contactPhone 이 있고 contact 에 그 번호가 아직 안 들어가 있는 정책 행만 갱신.
 
+-- 멱등성 검사는 position() 으로 한다. LIKE 패턴을 쓰면 LLM 이 추출한
+-- contactPhone 값이 LIKE 메타문자(%, _, \)를 포함할 때 잘못된 매칭이 일어날 수 있다.
+
 BEGIN;
 
 UPDATE policy
@@ -17,7 +20,7 @@ SET contact = CASE
   WHEN enrichment->'sections'->>'contactPhone' IS NOT NULL
        AND enrichment->'sections'->>'contactPhone' != ''
        AND contact IS NOT NULL AND contact != ''
-       AND contact NOT LIKE '%' || (enrichment->'sections'->>'contactPhone') || '%'
+       AND position((enrichment->'sections'->>'contactPhone') IN contact) = 0
     THEN contact || ' / 전화: ' || (enrichment->'sections'->>'contactPhone')
   WHEN enrichment->'sections'->>'contactPhone' IS NOT NULL
        AND enrichment->'sections'->>'contactPhone' != ''
@@ -27,7 +30,7 @@ SET contact = CASE
 END
 WHERE enrichment->'sections'->>'contactPhone' IS NOT NULL
   AND enrichment->'sections'->>'contactPhone' != ''
-  AND (contact IS NULL OR contact NOT LIKE '%' || (enrichment->'sections'->>'contactPhone') || '%');
+  AND (contact IS NULL OR position((enrichment->'sections'->>'contactPhone') IN contact) = 0);
 
 COMMIT;
 

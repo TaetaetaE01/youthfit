@@ -22,6 +22,9 @@ function extractExt(url) {
 const TEXT_EXT_PATTERN = /\.(pdf|hwpx?|docx?|xlsx?)\b/i;
 const PAREN_EXT_PATTERN = /[\(\[]\s*(pdf|hwpx?|docx?|xlsx?)\s*[\)\]]/i;
 const PATH_EXT_PATTERN = /(?:^|[^a-zA-Z])(pdf|hwpx?|docx?|xlsx?)(?:$|[^a-zA-Z])/i;
+// path-pattern fallback 은 다운로드 의도 키워드가 동반될 때만 활성화한다.
+// (예: /board/pdf/list 같은 카테고리 슬러그가 첨부로 잘못 승격되는 false positive 방지)
+const PATH_DOWNLOAD_KEYWORD_PATTERN = /(?:download|filedown|attach|getfile|board|atch)/i;
 
 function extractExtFromText(text) {
   if (typeof text !== 'string' || text.length === 0) return null;
@@ -37,6 +40,7 @@ function extractExtFromPath(url) {
   const path = url.split('?')[0].split('#')[0]
     .replace(/([a-z])([A-Z])/g, '$1_$2')
     .toLowerCase();
+  if (!PATH_DOWNLOAD_KEYWORD_PATTERN.test(path)) return null;
   const m = path.match(PATH_EXT_PATTERN);
   return m ? m[1].toLowerCase() : null;
 }

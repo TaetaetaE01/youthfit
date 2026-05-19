@@ -1,0 +1,9 @@
+{
+  "cleaned": "샘플 정책 안내 이 정책은 청년에게 심리상담 바우처를 제공하는 사업입니다. 지원 대상: 만 19~34세 청년 첨부 파일 신청서 안내서 미리보기 절대경로 docx 관련없는 링크",
+  "extras": [
+    { "name": "신청서", "url": "https://example.com/file/apply.pdf" },
+    { "name": "안내서", "url": "https://example.com/file/guide.hwp" },
+    { "name": "절대경로 docx", "url": "https://other.example.com/abs/sample.docx" },
+    { "name": "attachment.pdf", "url": "https://example.com/board/fileDownload/abc" }
+  ]
+}
