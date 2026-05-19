@@ -29,7 +29,9 @@ class RetryFailedIngestionItemUseCaseTest {
     @Test
     void rawPayload_가_null_이면_PAYLOAD_EXPIRED() {
         IngestionItemFailureRepository repo = mock(IngestionItemFailureRepository.class);
-        IngestionItemFailure failure = IngestionItemFailure.of(null, "S", "ext", null, FailureReason.OTHER, "x");
+        IngestionItemFailure failure = IngestionItemFailure.of(
+                null, "S", "ext", null, FailureReason.OTHER, "x",
+                null, null, null, null);
         when(repo.findById(1L)).thenReturn(Optional.of(failure));
 
         RetryFailedIngestionItemUseCase useCase = new RetryFailedIngestionItemUseCase(

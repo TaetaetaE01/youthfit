@@ -54,6 +54,7 @@ function reducer(_: State, action: Action): State {
 }
 
 export function useAdminIngestion(searchParams: FailureSearchParams) {
+  const { page, size, reason, source } = searchParams;
   const [state, dispatch] = useReducer(reducer, { status: 'loading' });
 
   const reload = useCallback(() => {
@@ -63,23 +64,23 @@ export function useAdminIngestion(searchParams: FailureSearchParams) {
       fetchIngestionDailyStats(14),
       fetchIngestionSources(),
       fetchIngestionStaleSources(),
-      searchIngestionFailures(searchParams),
+      searchIngestionFailures({ page, size, reason, source }),
     ])
-      .then(([kpi, daily, sources, stale, page]) => {
+      .then(([kpi, daily, sources, stale, pageResult]) => {
         dispatch({
           type: 'OK',
           kpi,
           daily,
           sources,
           stale,
-          failures: page.content ?? [],
-          totalFailures: page.totalElements ?? 0,
+          failures: pageResult.content ?? [],
+          totalFailures: pageResult.totalElements ?? 0,
         });
       })
       .catch((e: unknown) =>
         dispatch({ type: 'ERR', error: e instanceof Error ? e : new Error(String(e)) }),
       );
-  }, [searchParams]);
+  }, [page, size, reason, source]);
 
   useEffect(() => {
     reload();

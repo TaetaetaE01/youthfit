@@ -322,17 +322,33 @@ public class IngestionService {
             String message = t.getMessage() == null ? t.getClass().getSimpleName()
                     : t.getClass().getSimpleName() + ": " + t.getMessage();
             if (message.length() > 4000) message = message.substring(0, 4000);
+            String stack = stackTraceOf(t);
+            IngestPolicyCommand.PipelineMeta meta = command == null ? null : command.pipelineMeta();
             ingestionItemFailureRepository.save(IngestionItemFailure.of(
                     null,                       // run_log_id 는 finally 시점에 저장돼서 모름 — null
                     sourceLabel,
                     command == null ? null : command.externalId(),
                     rawPayload,
                     reason,
-                    message
+                    message,
+                    stack,
+                    meta == null ? null : meta.n8nWorkflowName(),
+                    meta == null ? null : meta.n8nExecutionId(),
+                    meta == null ? null : meta.n8nNodeName()
             ));
         } catch (Exception inner) {
             log.warn("ingestion failure 적재 실패 (정상 흐름 진행)", inner);
         }
+    }
+
+    private static String stackTraceOf(Throwable t) {
+        if (t == null) return null;
+        java.io.StringWriter sw = new java.io.StringWriter(2048);
+        try (java.io.PrintWriter pw = new java.io.PrintWriter(sw)) {
+            t.printStackTrace(pw);
+        }
+        String s = sw.toString();
+        return s.length() > 8000 ? s.substring(0, 8000) + "\n…(truncated)" : s;
     }
 
     private String safeSerialize(IngestPolicyCommand command) {

@@ -10,8 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Date;
-import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 
@@ -60,7 +58,7 @@ public class AdminLlmCostService {
         // bucket_hour → moduleMap
         Map<Instant, Map<LlmModule, BigDecimal>> grouped = new TreeMap<>();
         for (Object[] row : rows) {
-            Instant at = ((Timestamp) row[0]).toInstant();
+            Instant at = ((LocalDateTime) row[0]).toInstant(ZoneOffset.UTC);
             LlmModule m = LlmModule.valueOf((String) row[1]);
             BigDecimal cost = (BigDecimal) row[2];
             grouped.computeIfAbsent(at, k -> new EnumMap<>(LlmModule.class)).put(m, cost);
@@ -79,7 +77,7 @@ public class AdminLlmCostService {
         List<Object[]> rows = repository.dailyByModule(r.from(), r.to());
         List<LlmCostModuleDailyResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
-            LocalDate date = ((Date) row[0]).toLocalDate();
+            LocalDate date = (LocalDate) row[0];
             LlmModule module = LlmModule.valueOf((String) row[1]);
             BigDecimal cost = (BigDecimal) row[2];
             long calls = ((Number) row[3]).longValue();
@@ -115,17 +113,15 @@ public class AdminLlmCostService {
     }
 
     private BigDecimal costSum(Instant from, Instant to) {
-        Map<String, Object> row = repository.sumBetween(from, to);
-        Object cost = row.get("cost");
-        if (cost == null) return BigDecimal.ZERO;
-        return (BigDecimal) cost;
+        List<Object[]> rows = repository.sumBetween(from, to);
+        if (rows.isEmpty() || rows.get(0)[0] == null) return BigDecimal.ZERO;
+        return (BigDecimal) rows.get(0)[0];
     }
 
     private long callsSum(Instant from, Instant to) {
-        Map<String, Object> row = repository.sumBetween(from, to);
-        Object calls = row.get("calls");
-        if (calls == null) return 0;
-        return ((Number) calls).longValue();
+        List<Object[]> rows = repository.sumBetween(from, to);
+        if (rows.isEmpty() || rows.get(0)[1] == null) return 0;
+        return ((Number) rows.get(0)[1]).longValue();
     }
 
     private Range parseRange(String range) {

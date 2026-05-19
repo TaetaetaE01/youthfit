@@ -7,11 +7,10 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 public interface IngestionRunLogRepository extends JpaRepository<IngestionRunLog, Long> {
 
-    /** KPI: 기간 합계. */
+    /** KPI: 기간 합계. 컬럼 순서: received, success, failure, duplicate. */
     @Query(value = """
             SELECT COALESCE(SUM(received_count), 0) AS received,
                    COALESCE(SUM(normalized_success_count), 0) AS success,
@@ -20,7 +19,7 @@ public interface IngestionRunLogRepository extends JpaRepository<IngestionRunLog
             FROM ingestion_run_log
             WHERE received_at >= :from AND received_at < :to
             """, nativeQuery = true)
-    Map<String, Object> sumBetween(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> sumBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     /** 일자별·source 별 stacked bar 용 집계. */
     @Query(value = """

@@ -45,11 +45,19 @@ public record IngestPolicyCommand(
         RawCodes rawCodes,
         // ── 신규 enrichment ──
         String providedSourceHash,
-        PolicyEnrichment enrichment
+        PolicyEnrichment enrichment,
+        // ── n8n 파이프라인 추적 메타 (nullable) ──
+        PipelineMeta pipelineMeta
 ) {
     public record Attachment(String name, String url, String mediaType) {}
     public record ReferenceSite(String name, String url) {}
     public record ApplyMethod(String stageName, String description) {}
+
+    public record PipelineMeta(
+            String n8nWorkflowName,
+            String n8nExecutionId,
+            String n8nNodeName
+    ) {}
 
     public record RawCodes(
             Integer ageMin,

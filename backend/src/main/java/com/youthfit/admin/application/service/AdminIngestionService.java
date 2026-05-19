@@ -13,25 +13,27 @@ import com.youthfit.ingestion.domain.model.FailureReason;
 import com.youthfit.ingestion.domain.model.IngestionItemFailure;
 import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
 import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Date;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -53,13 +55,13 @@ public class AdminIngestionService {
         Instant todayStart = nowKst.toLocalDate().atStartOfDay(KST).toInstant();
         Instant sevenDaysAgo = nowKst.toLocalDate().minusDays(7).atStartOfDay(KST).toInstant();
 
-        Map<String, Object> yesterday = runLogRepo.sumBetween(yesterdayStart, todayStart);
-        Map<String, Object> week = runLogRepo.sumBetween(sevenDaysAgo, nowKst.toInstant());
+        Object[] yesterday = firstRowOrZeros(runLogRepo.sumBetween(yesterdayStart, todayStart));
+        Object[] week = firstRowOrZeros(runLogRepo.sumBetween(sevenDaysAgo, nowKst.toInstant()));
 
-        long yReceived = ((Number) yesterday.getOrDefault("received", 0)).longValue();
-        long yFailure = ((Number) yesterday.getOrDefault("failure", 0)).longValue();
-        long wReceived = ((Number) week.getOrDefault("received", 0)).longValue();
-        long wFailure = ((Number) week.getOrDefault("failure", 0)).longValue();
+        long yReceived = ((Number) yesterday[0]).longValue();
+        long yFailure = ((Number) yesterday[2]).longValue();
+        long wReceived = ((Number) week[0]).longValue();
+        long wFailure = ((Number) week[2]).longValue();
 
         BigDecimal avg = wReceived == 0
                 ? BigDecimal.ZERO
@@ -80,7 +82,7 @@ public class AdminIngestionService {
         List<Object[]> rows = runLogRepo.dailyStats(from, now);
         List<IngestionDailyStatsResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
-            LocalDate date = ((Date) row[0]).toLocalDate();
+            LocalDate date = (LocalDate) row[0];
             String source = (String) row[1];
             long success = ((Number) row[2]).longValue();
             long failure = ((Number) row[3]).longValue();
@@ -98,7 +100,7 @@ public class AdminIngestionService {
         List<IngestionSourceSummaryResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
             String source = (String) row[0];
-            Instant lastReceived = ((Timestamp) row[1]).toInstant();
+            Instant lastReceived = ((LocalDateTime) row[1]).toInstant(ZoneOffset.UTC);
             long weekReceived = ((Number) row[2]).longValue();
             BigDecimal failureRate = (BigDecimal) row[3];
             boolean stale = lastReceived.isBefore(staleThreshold);
@@ -116,7 +118,7 @@ public class AdminIngestionService {
         List<IngestionStaleSourceResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
             String source = (String) row[0];
-            Instant lastReceived = ((Timestamp) row[1]).toInstant();
+            Instant lastReceived = ((LocalDateTime) row[1]).toInstant(ZoneOffset.UTC);
             long hours = Duration.between(lastReceived, now).toHours();
             result.add(new IngestionStaleSourceResponse(source, lastReceived, hours));
         }
@@ -127,8 +129,16 @@ public class AdminIngestionService {
     public Page<IngestionFailureSummaryResponse> searchFailures(
             String source, FailureReason reason, Instant from, Instant to,
             int page, int size) {
-        Page<IngestionItemFailure> p = failureRepo.search(
-                source, reason, from, to, PageRequest.of(page, size));
+        Specification<IngestionItemFailure> spec = (root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
+            if (source != null) preds.add(cb.equal(root.get("source"), source));
+            if (reason != null) preds.add(cb.equal(root.get("failureReason"), reason));
+            if (from != null) preds.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
+            if (to != null) preds.add(cb.lessThan(root.get("createdAt"), to));
+            return preds.isEmpty() ? cb.conjunction() : cb.and(preds.toArray(new Predicate[0]));
+        };
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<IngestionItemFailure> p = failureRepo.findAll(spec, pageable);
         return p.map(f -> new IngestionFailureSummaryResponse(
                 f.getId(), f.getSource(), f.getFailureReason(), f.getSourceItemId(),
                 excerpt(f.getErrorMessage(), 120),
@@ -142,9 +152,10 @@ public class AdminIngestionService {
                 .orElseThrow(() -> new IllegalArgumentException("실패 항목을 찾을 수 없습니다: " + id));
         return new IngestionFailureDetailResponse(
                 f.getId(), f.getSource(), f.getSourceItemId(),
-                f.getFailureReason(), f.getErrorMessage(),
+                f.getFailureReason(), f.getErrorMessage(), f.getErrorStack(),
                 f.getRawPayload(), f.getRawPayloadHash(), f.isPayloadAvailable(),
-                f.getRetryCount(), f.getLastRetriedAt(), f.getCreatedAt()
+                f.getRetryCount(), f.getLastRetriedAt(), f.getCreatedAt(),
+                f.getN8nWorkflowName(), f.getN8nExecutionId(), f.getN8nNodeName()
         );
     }
 
@@ -157,5 +168,9 @@ public class AdminIngestionService {
     private String excerpt(String text, int max) {
         if (text == null) return "";
         return text.length() <= max ? text : text.substring(0, max) + "…";
+    }
+
+    private static Object[] firstRowOrZeros(List<Object[]> rows) {
+        return rows.isEmpty() ? new Object[]{0L, 0L, 0L, 0L} : rows.get(0);
     }
 }

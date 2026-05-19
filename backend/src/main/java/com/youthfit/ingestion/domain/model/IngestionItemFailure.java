@@ -49,6 +49,18 @@ public class IngestionItemFailure {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "error_stack", columnDefinition = "TEXT")
+    private String errorStack;
+
+    @Column(name = "n8n_workflow_name", length = 120)
+    private String n8nWorkflowName;
+
+    @Column(name = "n8n_execution_id", length = 64)
+    private String n8nExecutionId;
+
+    @Column(name = "n8n_node_name", length = 120)
+    private String n8nNodeName;
+
     @Column(name = "retry_count", nullable = false)
     private int retryCount;
 
@@ -60,7 +72,9 @@ public class IngestionItemFailure {
 
     public static IngestionItemFailure of(
             Long runLogId, String source, String sourceItemId,
-            String rawPayload, FailureReason reason, String errorMessage) {
+            String rawPayload, FailureReason reason, String errorMessage,
+            String errorStack,
+            String n8nWorkflowName, String n8nExecutionId, String n8nNodeName) {
         IngestionItemFailure f = new IngestionItemFailure();
         f.runLogId = runLogId;
         f.source = source;
@@ -68,6 +82,10 @@ public class IngestionItemFailure {
         f.rawPayload = rawPayload;
         f.failureReason = reason;
         f.errorMessage = errorMessage;
+        f.errorStack = errorStack;
+        f.n8nWorkflowName = n8nWorkflowName;
+        f.n8nExecutionId = n8nExecutionId;
+        f.n8nNodeName = n8nNodeName;
         f.retryCount = 0;
         f.createdAt = Instant.now();
         return f;

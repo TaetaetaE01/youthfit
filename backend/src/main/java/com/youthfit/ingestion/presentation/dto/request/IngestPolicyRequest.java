@@ -14,7 +14,8 @@ import java.util.List;
 
 public record IngestPolicyRequest(
         @NotNull @Valid SourceInfo source,
-        @NotNull @Valid RawData rawData
+        @NotNull @Valid RawData rawData,
+        @Valid PipelineMetaPayload pipeline
 ) {
 
     public IngestPolicyCommand toCommand() {
@@ -74,7 +75,12 @@ public record IngestPolicyRequest(
                         rawData.rawCodes().zipCodes() == null ? List.of() : rawData.rawCodes().zipCodes()
                 ),
                 rawData.sourceHash(),
-                mapEnrichment(rawData.enrichment())
+                mapEnrichment(rawData.enrichment()),
+                pipeline == null ? null : new IngestPolicyCommand.PipelineMeta(
+                        pipeline.workflowName(),
+                        pipeline.executionId(),
+                        pipeline.nodeName()
+                )
         );
     }
 
@@ -216,5 +222,12 @@ public record IngestPolicyRequest(
     public record ExtraAttachmentPayload(
             @NotBlank String name,
             @NotBlank String url
+    ) {}
+
+    /** n8n 파이프라인 추적 메타 (nullable). n8n 워크플로우의 HTTP Request 노드 body 에 함께 담아 전송. */
+    public record PipelineMetaPayload(
+            String workflowName,
+            String executionId,
+            String nodeName
     ) {}
 }

@@ -117,7 +117,7 @@ class IngestPolicyRequestTest {
                     enrichmentPayload
             );
 
-            return new IngestPolicyRequest(sourceInfo, rawData);
+            return new IngestPolicyRequest(sourceInfo, rawData, null);
         }
     }
 }

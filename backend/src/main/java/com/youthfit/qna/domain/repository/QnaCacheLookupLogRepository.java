@@ -69,9 +69,9 @@ public interface QnaCacheLookupLogRepository extends JpaRepository<QnaCacheLooku
           COUNT(*) FILTER (WHERE looked_up_at >= :sevenDaysAgo)                               AS seven_total
         FROM qna_cache_lookup_log
         """, nativeQuery = true)
-    Object[] aggregateKpi(@Param("today") LocalDateTime today,
-                          @Param("yesterday") LocalDateTime yesterday,
-                          @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo);
+    List<Object[]> aggregateKpi(@Param("today") LocalDateTime today,
+                                @Param("yesterday") LocalDateTime yesterday,
+                                @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo);
 
     @Modifying
     @Query("DELETE FROM QnaCacheLookupLog l WHERE l.lookedUpAt < :threshold")

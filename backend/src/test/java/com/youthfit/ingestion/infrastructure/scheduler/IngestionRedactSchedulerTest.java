@@ -52,7 +52,9 @@ class IngestionRedactSchedulerTest {
     }
 
     private void save(String source, String payload, Instant createdAt) {
-        IngestionItemFailure f = IngestionItemFailure.of(null, source, "ext", payload, FailureReason.OTHER, "msg");
+        IngestionItemFailure f = IngestionItemFailure.of(
+                null, source, "ext", payload, FailureReason.OTHER, "msg",
+                null, null, null, null);
         ReflectionTestUtils.setField(f, "createdAt", createdAt);
         repository.save(f);
     }
