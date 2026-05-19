@@ -18,7 +18,12 @@ export function mergeFetchResults(results) {
   }
   const ok = results.filter(r => r && r.status == null);
   if (ok.length === 0) {
-    return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
+    const allTooShort = results.length > 0 && results.every(r => r && r.status === 'TOO_SHORT');
+    return {
+      cleanedText: '',
+      extraAttachments: [],
+      status: allTooShort ? 'TOO_SHORT' : 'FETCH_FAILED'
+    };
   }
   let cleanedText = ok.map(r => r.cleanedText || '').join(TEXT_SEPARATOR);
   if (cleanedText.length > MAX_CLEANED_LEN) cleanedText = cleanedText.slice(0, MAX_CLEANED_LEN);

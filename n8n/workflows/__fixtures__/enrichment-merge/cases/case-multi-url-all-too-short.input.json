@@ -1,0 +1,21 @@
+{
+  "policy": {
+    "aplyUrlAddr": "https://a.example.com/apply",
+    "refUrlAddr1": "https://b.example.com/info",
+    "refUrlAddr2": null
+  },
+  "fetchResults": [
+    {
+      "url": "https://a.example.com/apply",
+      "status": "TOO_SHORT",
+      "cleanedText": "짧음",
+      "extraAttachments": []
+    },
+    {
+      "url": "https://b.example.com/info",
+      "status": "TOO_SHORT",
+      "cleanedText": "또 짧음",
+      "extraAttachments": []
+    }
+  ]
+}
