@@ -1,0 +1,25 @@
+{
+  "source": { "url": "https://example.com/p/101", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-19T00:00:00" },
+  "rawData": {
+    "externalId": "P-101",
+    "title": "샘플",
+    "summary": "s",
+    "body": "b",
+    "category": "복지",
+    "region": "서울특별시",
+    "attachments": [
+      { "name": "(HWP) 신청 양식", "url": "https://gov.example.com/common/fileDown.do?key=42", "mediaType": "application/x-hwp" }
+    ],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/101",
+      "fetchedAt": "2026-05-19T00:00:00",
+      "extractor": "openai:gpt-4o-mini",
+      "confidence": 0.9,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "(HWP) 신청 양식", "url": "https://gov.example.com/common/fileDown.do?key=42" }
+      ]
+    }
+  }
+}
