@@ -1,0 +1,25 @@
+{
+  "source": { "url": "https://example.com/p/103", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-19T00:00:00" },
+  "rawData": {
+    "externalId": "P-103",
+    "title": "샘플",
+    "summary": "s",
+    "body": "b",
+    "category": "복지",
+    "region": "서울특별시",
+    "attachments": [
+      { "name": "다운로드", "url": "https://gov.example.com/board/downloadPdf?id=42", "mediaType": "application/pdf" }
+    ],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/103",
+      "fetchedAt": "2026-05-19T00:00:00",
+      "extractor": "openai:gpt-4o-mini",
+      "confidence": 0.9,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "다운로드", "url": "https://gov.example.com/board/downloadPdf?id=42" }
+      ]
+    }
+  }
+}
