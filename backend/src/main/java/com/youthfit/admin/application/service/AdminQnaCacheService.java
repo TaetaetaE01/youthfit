@@ -37,7 +37,8 @@ public class AdminQnaCacheService {
         LocalDateTime yesterday = today.minusDays(1);
         LocalDateTime sevenDaysAgo = today.minusDays(7);
 
-        Object[] r = repository.aggregateKpi(today, yesterday, sevenDaysAgo);
+        List<Object[]> rows = repository.aggregateKpi(today, yesterday, sevenDaysAgo);
+        Object[] r = rows.get(0);
         long todayTotal    = ((Number) r[0]).longValue();
         long todayHits     = ((Number) r[1]).longValue();
         long yestTotal     = ((Number) r[2]).longValue();

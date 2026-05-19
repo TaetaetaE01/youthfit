@@ -10,10 +10,14 @@ public record IngestionFailureDetailResponse(
         String sourceItemId,
         FailureReason failureReason,
         String errorMessage,
+        String errorStack,
         String rawPayload,
         String rawPayloadHash,
         boolean payloadAvailable,
         int retryCount,
         Instant lastRetriedAt,
-        Instant createdAt
+        Instant createdAt,
+        String n8nWorkflowName,
+        String n8nExecutionId,
+        String n8nNodeName
 ) {}

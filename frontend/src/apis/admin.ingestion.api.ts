@@ -48,12 +48,16 @@ export interface IngestionFailureDetailResponse {
   sourceItemId: string | null;
   failureReason: FailureReason;
   errorMessage: string;
+  errorStack: string | null;
   rawPayload: string | null;
   rawPayloadHash: string | null;
   payloadAvailable: boolean;
   retryCount: number;
   lastRetriedAt: string | null;
   createdAt: string;
+  n8nWorkflowName: string | null;
+  n8nExecutionId: string | null;
+  n8nNodeName: string | null;
 }
 
 export interface IngestionRetryResponse {

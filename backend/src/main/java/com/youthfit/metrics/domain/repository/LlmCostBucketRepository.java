@@ -9,9 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 public interface LlmCostBucketRepository extends JpaRepository<LlmCostBucket, Long> {
 
@@ -45,7 +43,7 @@ public interface LlmCostBucketRepository extends JpaRepository<LlmCostBucket, Lo
                 @Param("now") Instant now);
 
     /**
-     * KPI 산출 — 기간별 모듈 무관 합계.
+     * KPI 산출 — 기간별 모듈 무관 합계. 컬럼 순서: cost, calls.
      */
     @Query(value = """
             SELECT COALESCE(SUM(estimated_cost_usd), 0) AS cost,
@@ -53,7 +51,7 @@ public interface LlmCostBucketRepository extends JpaRepository<LlmCostBucket, Lo
             FROM llm_cost_bucket
             WHERE bucket_at >= :from AND bucket_at < :to
             """, nativeQuery = true)
-    Map<String, Object> sumBetween(@Param("from") Instant from, @Param("to") Instant to);
+    List<Object[]> sumBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     /**
      * 시간별 시계열 — range 윈도우 내 시간 단위 합계.
