@@ -18,6 +18,17 @@ function extractExt(url) {
   return cleaned.slice(dotIdx + 1);
 }
 
+function mapExt(ext) {
+  if (!ext) return null;
+  return EXT_TO_MEDIA_TYPE[ext.toLowerCase()] || null;
+}
+
+function inferMediaType(item) {
+  const fromUrl = mapExt(extractExt(item.url));
+  if (fromUrl) return fromUrl;
+  return null;
+}
+
 export function promote(input) {
   const enrichment = input?.rawData?.enrichment;
   const extras = enrichment?.extraAttachments;
@@ -35,9 +46,7 @@ export function promote(input) {
   const merged = [...attachments];
   for (const ex of extras) {
     if (!ex || typeof ex.url !== 'string') continue;
-    const ext = extractExt(ex.url);
-    if (!ext) continue;
-    const mediaType = EXT_TO_MEDIA_TYPE[ext];
+    const mediaType = inferMediaType(ex);
     if (!mediaType) continue;
     const key = ex.url.toLowerCase();
     if (existingUrls.has(key)) continue;
