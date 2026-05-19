@@ -42,6 +42,9 @@ import { pickWithFallback, isMeaningful } from '@/lib/policyEnrichment';
 import { getRegionName } from '@/types/policy';
 import type { PolicyDetail, EligibilityResponse, PolicySubRegion } from '@/types/policy';
 import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
+import { PolicyGroupHeader } from '@/components/policy/groups/PolicyGroupHeader';
+import { PolicyGroupDivider } from '@/components/policy/groups/PolicyGroupDivider';
+import { POLICY_GROUPS } from '@/components/policy/groups/policyGroups';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -548,15 +551,6 @@ export default function PolicyDetailPage() {
           {/* AI 한 줄 요약 — 가이드 있을 때만 */}
           {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}
 
-          {/* 이 정책의 특징 — 가이드 있고 highlights 있을 때만 */}
-          {guide && (
-            <HighlightsCard
-              highlights={guide.highlights ?? []}
-              attachments={policy.attachments ?? []}
-              policyAttachments={policy.attachments ?? []}
-            />
-          )}
-
           {/* Policy Summary (원문) */}
           <section
             id="policy-summary-section"
@@ -608,6 +602,9 @@ export default function PolicyDetailPage() {
               )}
             </div>
           )}
+
+          {/* Group 1: 받을 수 있는 사람 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[0]} />
 
           {/* Paired: 지원대상 */}
           {(() => {
@@ -673,6 +670,20 @@ export default function PolicyDetailPage() {
             </section>
           )}
 
+          <PolicyGroupDivider nextLabel="받는 혜택" />
+
+          {/* Group 2: 받는 혜택 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[1]} />
+
+          {/* 이 정책의 특징 — 가이드 있고 highlights 있을 때만 */}
+          {guide && (
+            <HighlightsCard
+              highlights={guide.highlights ?? []}
+              attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
+            />
+          )}
+
           {/* Paired: 지원내용 */}
           {(() => {
             const pick = pickWithFallback(
@@ -692,6 +703,11 @@ export default function PolicyDetailPage() {
               />
             );
           })()}
+
+          <PolicyGroupDivider nextLabel="신청하기" />
+
+          {/* Group 3: 신청하기 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[2]} />
 
           {/* 신청방법 — 가이드 기반 bokjiro-style 카드 */}
           {guide?.applyMethod && (
@@ -719,16 +735,6 @@ export default function PolicyDetailPage() {
               title="제출서류"
               emoji="📂"
               section={guide.requiredDocuments}
-              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
-            />
-          )}
-
-          {/* 문의처 — 가이드 기반 bokjiro-style 카드 */}
-          {guide?.contact && (
-            <GuideListSectionCard
-              title="문의처"
-              emoji="☎"
-              section={guide.contact}
               enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
             />
           )}
@@ -777,21 +783,27 @@ export default function PolicyDetailPage() {
             </section>
           )}
 
+          <PolicyGroupDivider nextLabel="더 알아보기" />
+
+          {/* Group 4: 더 알아보기 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[3]} />
+
+          {/* 문의처 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.contact && (
+            <GuideListSectionCard
+              title="문의처"
+              emoji="☎"
+              section={guide.contact}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
           {/* 기타사항 — 보조 톤 */}
           {policy.additionalNotes && (
             <section className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
               <h3 className="mb-2 text-sm font-semibold text-gray-600">기타사항</h3>
               <FormattedPolicyText text={policy.additionalNotes} className="italic text-gray-600" />
             </section>
-          )}
-
-          {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
-          {guide && (
-            <PitfallsCard
-              pitfalls={guide.pitfalls}
-              attachments={policy.attachments ?? []}
-              policyAttachments={policy.attachments ?? []}
-            />
           )}
 
           {/* Reference Sites */}
@@ -804,23 +816,13 @@ export default function PolicyDetailPage() {
             enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
           />
 
-          {/* Official Application Link */}
-          {policy.sourceUrl && (
-            <section className="mb-8 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-6">
-              <h2 className="mb-2 text-lg font-semibold text-neutral-900">공식 신청 채널</h2>
-              <p className="mb-4 text-sm text-neutral-600">
-                정책의 정확한 내용과 신청은 공식 채널에서 확인해주세요.
-              </p>
-              <a
-                href={policy.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
-              >
-                공식 신청 페이지로 이동
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </section>
+          {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
+          {guide && (
+            <PitfallsCard
+              pitfalls={guide.pitfalls}
+              attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
+            />
           )}
 
           {/* Q&A */}
