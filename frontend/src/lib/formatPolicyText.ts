@@ -109,7 +109,16 @@ function convertToItems(lines: string[]): ListItem[] {
 
   for (const c of classifyLines(lines)) {
     if (c.kind === 'note') {
-      if (lastItem) (lastItem.note ??= []).push(c.text);
+      if (lastItem) {
+        (lastItem.note ??= []).push(c.text);
+      } else {
+        // lastItem 없을 때(맨 앞부터 '*' 로 시작하는 경우 등) standalone list item 으로 보존
+        while (stack.length > 1) stack.pop();
+        const stripped = c.text.replace(/^(?:※|\*)\s+/, '');
+        const it: ListItem = { text: stripped };
+        stack[0].arr.push(it);
+        lastItem = it;
+      }
       continue;
     }
 

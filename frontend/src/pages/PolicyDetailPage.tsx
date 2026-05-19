@@ -247,7 +247,7 @@ function PolicyMetaSummary({
                 {item.label}
                 {item.fromAi && <AiSourceChip sourceUrl={enrichmentSourceUrl} />}
               </span>
-              <span className="text-sm font-semibold text-neutral-900">{item.value}</span>
+              <span className="whitespace-pre-line text-sm font-semibold text-neutral-900">{item.value}</span>
             </div>
           );
         })}

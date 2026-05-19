@@ -30,3 +30,15 @@ WHERE enrichment->'sections'->>'contactPhone' IS NOT NULL
   AND (contact IS NULL OR contact NOT LIKE '%' || (enrichment->'sections'->>'contactPhone') || '%');
 
 COMMIT;
+
+-- 이어서: contact value 가 한 줄에 들어가지 않아 UI 정렬이 깨지는 문제를 위해
+-- 담당과 전화 사이 구분자를 ' / ' 에서 줄바꿈으로 정정한다 (PolicyMetaSummary 가
+-- whitespace-pre-line 으로 두 줄 노출).
+
+BEGIN;
+
+UPDATE policy
+SET contact = replace(contact, ' / 전화: ', E'\n전화: ')
+WHERE contact LIKE '%담당:%' AND contact LIKE '% / 전화: %';
+
+COMMIT;
