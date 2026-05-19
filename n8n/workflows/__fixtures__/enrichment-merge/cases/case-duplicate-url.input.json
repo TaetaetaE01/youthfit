@@ -1,0 +1,21 @@
+{
+  "policy": {
+    "aplyUrlAddr": "https://www.Example.com/apply/",
+    "refUrlAddr1": "https://www.example.com/apply",
+    "refUrlAddr2": "https://other.example.com/info"
+  },
+  "fetchResults": [
+    {
+      "url": "https://www.Example.com/apply/",
+      "status": null,
+      "cleanedText": "본문 충분히 길게 들어가 있다. 정책 안내가 자세하다. 신청 자격은 청년 19~34세.",
+      "extraAttachments": []
+    },
+    {
+      "url": "https://other.example.com/info",
+      "status": null,
+      "cleanedText": "참고 사이트 본문. 안내 내용 풍부. 절차와 서류 안내.",
+      "extraAttachments": []
+    }
+  ]
+}

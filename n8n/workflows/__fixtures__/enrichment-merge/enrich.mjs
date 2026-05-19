@@ -5,11 +5,24 @@ const MAX_URLS = 3;
 const MAX_CLEANED_LEN = 16000;
 const TEXT_SEPARATOR = '\n\n---\n\n';
 
+function normalizeUrlKey(u) {
+  return u.toLowerCase().replace(/\/+$/, '');
+}
+
 export function selectUrls(policy) {
   const candidates = [policy?.aplyUrlAddr, policy?.refUrlAddr1, policy?.refUrlAddr2]
     .map(s => (typeof s === 'string' ? s.trim() : ''))
     .filter(Boolean);
-  return candidates.slice(0, MAX_URLS);
+  const seen = new Set();
+  const out = [];
+  for (const u of candidates) {
+    const key = normalizeUrlKey(u);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(u);
+    if (out.length >= MAX_URLS) break;
+  }
+  return out;
 }
 
 export function mergeFetchResults(results) {
