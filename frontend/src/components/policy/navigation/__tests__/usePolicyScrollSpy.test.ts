@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { usePolicyScrollSpy } from '../usePolicyScrollSpy';
 
@@ -38,9 +38,11 @@ describe('usePolicyScrollSpy', () => {
   it('intersection 변경 시 active 변경', () => {
     const { result } = renderHook(() => usePolicyScrollSpy(['eligibility', 'benefits', 'apply', 'more']));
     const observer = MockIntersectionObserver.instances[0];
-    observer.trigger([
-      { target: document.getElementById('benefits')!, isIntersecting: true, intersectionRatio: 0.5 },
-    ]);
+    act(() => {
+      observer.trigger([
+        { target: document.getElementById('benefits')!, isIntersecting: true, intersectionRatio: 0.5 },
+      ]);
+    });
     expect(result.current.activeId).toBe('benefits');
   });
 });
