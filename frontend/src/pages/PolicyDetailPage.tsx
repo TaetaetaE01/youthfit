@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Bookmark,
@@ -9,11 +9,8 @@ import {
   AlertCircle,
   ExternalLink,
   Building2,
-  Phone,
   FileText,
   Paperclip,
-  Repeat,
-  Tag,
   Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -42,6 +39,15 @@ import { pickWithFallback, isMeaningful } from '@/lib/policyEnrichment';
 import { getRegionName } from '@/types/policy';
 import type { PolicyDetail, EligibilityResponse, PolicySubRegion } from '@/types/policy';
 import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
+import { PolicyGroupHeader } from '@/components/policy/groups/PolicyGroupHeader';
+import { PolicyGroupDivider } from '@/components/policy/groups/PolicyGroupDivider';
+import { POLICY_GROUPS } from '@/components/policy/groups/policyGroups';
+import { SubRegionInline } from '@/components/policy/decision/SubRegionInline';
+import { DecisionMetaGrid } from '@/components/policy/decision/DecisionMetaGrid';
+import { PolicyToc } from '@/components/policy/navigation/PolicyToc';
+import { PolicyMobileNav } from '@/components/policy/navigation/PolicyMobileNav';
+import { PolicyMobileBottomBar } from '@/components/policy/navigation/PolicyMobileBottomBar';
+import { usePolicyScrollSpy } from '@/components/policy/navigation/usePolicyScrollSpy';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -105,6 +111,12 @@ function PolicyHeader({
         <span className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
           {getRegionName(policy.regionCode, policy.sourceType)}
+          {policy.subRegions && policy.subRegions.length > 0 && (
+            <>
+              <span className="mx-1 text-neutral-300">·</span>
+              <SubRegionInline subRegions={policy.subRegions} />
+            </>
+          )}
         </span>
         <span className="text-neutral-300">|</span>
         <span className="flex items-center gap-1">
@@ -194,65 +206,6 @@ function PolicyTagList({ policy }: { policy: PolicyDetail }) {
         </span>
       ))}
     </div>
-  );
-}
-
-function PolicyMetaSummary({
-  referenceYear,
-  supportCycle,
-  provideType,
-  contact,
-  contactFallback,
-  enrichmentSourceUrl,
-}: {
-  referenceYear: number | null;
-  supportCycle: string | null;
-  provideType: string | null;
-  contact: string | null;
-  contactFallback?: string | null;
-  enrichmentSourceUrl?: string | null;
-}) {
-  const items: {
-    icon: typeof Calendar;
-    label: string;
-    value: string;
-    fromAi?: boolean;
-  }[] = [];
-  if (referenceYear) items.push({ icon: Calendar, label: '기준연도', value: `${referenceYear}년` });
-  if (supportCycle) items.push({ icon: Repeat, label: '지원주기', value: supportCycle });
-  if (provideType) items.push({ icon: Tag, label: '제공유형', value: provideType });
-
-  const contactPick = pickWithFallback(contact, contactFallback);
-  if (contactPick) {
-    items.push({
-      icon: Phone,
-      label: '문의처',
-      value: contactPick.value,
-      fromAi: contactPick.fromAi,
-    });
-  }
-  if (items.length === 0) return null;
-
-  return (
-    <section className="mb-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-      <div className="grid grid-cols-2 divide-x divide-y divide-neutral-200 sm:grid-cols-4 sm:divide-y-0">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div key={item.label} className="flex flex-col items-center gap-1.5 px-4 py-5 text-center">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100">
-                <Icon className="h-4 w-4 text-brand-800" />
-              </div>
-              <span className="flex items-center gap-1 text-xs text-neutral-500">
-                {item.label}
-                {item.fromAi && <AiSourceChip sourceUrl={enrichmentSourceUrl} />}
-              </span>
-              <span className="block whitespace-pre-line text-sm font-semibold text-neutral-900">{item.value}</span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
@@ -408,6 +361,52 @@ export default function PolicyDetailPage() {
   const { data: policy, isLoading: policyLoading, isError: policyError } = usePolicy(policyId);
   const { data: guide } = useGuide(policyId);
 
+  // --- Scroll spy (TOC active group tracking) ---
+  const { activeId } = usePolicyScrollSpy(['eligibility', 'benefits', 'apply', 'more']);
+
+  // --- Decision zone sentinel (mobile nav visibility) ---
+  const decisionEndRef = useRef<HTMLDivElement | null>(null);
+  const [mobileNavVisible, setMobileNavVisible] = useState(false);
+
+  useEffect(() => {
+    const el = decisionEndRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setMobileNavVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [policy]);
+
+  // --- QnA sentinel (mobile bottom bar auto-hide) ---
+  const qnaRef = useRef<HTMLDivElement | null>(null);
+  const [bottomBarVisible, setBottomBarVisible] = useState(true);
+
+  useEffect(() => {
+    const el = qnaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setBottomBarVisible(!entry.isIntersecting),
+      { threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [policy]);
+
+  // --- URL hash deep linking (/policies/:id#eligibility|benefits|apply|more) ---
+  useEffect(() => {
+    if (!policy) return;
+    const hash = window.location.hash.replace('#', '');
+    const valid = ['eligibility', 'benefits', 'apply', 'more'];
+    if (!hash || !valid.includes(hash)) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [policy]);
+
   // --- Bookmark state ---
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkId, setBookmarkId] = useState<number | null>(null);
@@ -532,6 +531,8 @@ export default function PolicyDetailPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
       <Breadcrumb title={policy.title} />
 
+      <PolicyMobileNav activeId={activeId} visible={mobileNavVisible} />
+
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Column */}
         <main className="lg:col-span-8">
@@ -541,33 +542,15 @@ export default function PolicyDetailPage() {
             onBookmarkToggle={handleBookmarkToggle}
           />
 
-          {policy.subRegions && policy.subRegions.length >= 2 && (
+          {policy.subRegions && policy.subRegions.length >= 6 && (
             <SubRegionSection subRegions={policy.subRegions} />
           )}
 
           {/* AI 한 줄 요약 — 가이드 있을 때만 */}
           {guide && <OneLineSummaryCard oneLineSummary={guide.oneLineSummary} />}
 
-          {/* 이 정책의 특징 — 가이드 있고 highlights 있을 때만 */}
-          {guide && (
-            <HighlightsCard
-              highlights={guide.highlights ?? []}
-              attachments={policy.attachments ?? []}
-              policyAttachments={policy.attachments ?? []}
-            />
-          )}
-
-          {/* Policy Summary (원문) */}
-          <section
-            id="policy-summary-section"
-            className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6"
-          >
-            <h2 className="mb-3 text-lg font-semibold text-neutral-900">정책 요약</h2>
-            <FormattedPolicyText text={policy.summary} />
-          </section>
-
-          {/* Policy Meta Summary (기준연도 / 지원주기 / 제공유형 / 문의처) */}
-          <PolicyMetaSummary
+          {/* Decision Meta Grid (기준연도 / 지원주기 / 제공유형 / 문의처) */}
+          <DecisionMetaGrid
             referenceYear={policy.referenceYear}
             supportCycle={policy.supportCycle}
             provideType={policy.provideType}
@@ -575,21 +558,6 @@ export default function PolicyDetailPage() {
             contactFallback={policy.enrichment?.sections?.contactPhone ?? null}
             enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
           />
-
-          {/* 공식 신청 페이지 CTA */}
-          {policy.applyUrl && (
-            <div className="mb-6">
-              <a
-                href={policy.applyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-6 py-3 text-white font-semibold hover:bg-blue-600 transition-colors"
-              >
-                공식 신청 페이지로 이동
-                <span aria-hidden>→</span>
-              </a>
-            </div>
-          )}
 
           {/* 사업기간 / 지원규모 chip */}
           {(policy.businessPeriodStart || policy.businessPeriodNote || policy.supportScale != null) && (
@@ -608,6 +576,19 @@ export default function PolicyDetailPage() {
               )}
             </div>
           )}
+
+          {/* Group 1: 받을 수 있는 사람 */}
+          <div ref={decisionEndRef} />
+          <PolicyGroupHeader group={POLICY_GROUPS[0]} />
+
+          {/* Policy Summary (원문) — 그룹 1 시작 */}
+          <section
+            id="policy-summary-section"
+            className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6"
+          >
+            <h3 className="mb-3 text-base font-semibold text-neutral-900">정책 요약</h3>
+            <FormattedPolicyText text={policy.summary} />
+          </section>
 
           {/* Paired: 지원대상 */}
           {(() => {
@@ -673,6 +654,20 @@ export default function PolicyDetailPage() {
             </section>
           )}
 
+          <PolicyGroupDivider nextLabel="받는 혜택" />
+
+          {/* Group 2: 받는 혜택 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[1]} />
+
+          {/* 이 정책의 특징 — 가이드 있고 highlights 있을 때만 */}
+          {guide && (
+            <HighlightsCard
+              highlights={guide.highlights ?? []}
+              attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
+            />
+          )}
+
           {/* Paired: 지원내용 */}
           {(() => {
             const pick = pickWithFallback(
@@ -692,6 +687,11 @@ export default function PolicyDetailPage() {
               />
             );
           })()}
+
+          <PolicyGroupDivider nextLabel="신청하기" />
+
+          {/* Group 3: 신청하기 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[2]} />
 
           {/* 신청방법 — 가이드 기반 bokjiro-style 카드 */}
           {guide?.applyMethod && (
@@ -719,16 +719,6 @@ export default function PolicyDetailPage() {
               title="제출서류"
               emoji="📂"
               section={guide.requiredDocuments}
-              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
-            />
-          )}
-
-          {/* 문의처 — 가이드 기반 bokjiro-style 카드 */}
-          {guide?.contact && (
-            <GuideListSectionCard
-              title="문의처"
-              emoji="☎"
-              section={guide.contact}
               enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
             />
           )}
@@ -777,21 +767,27 @@ export default function PolicyDetailPage() {
             </section>
           )}
 
+          <PolicyGroupDivider nextLabel="더 알아보기" />
+
+          {/* Group 4: 더 알아보기 */}
+          <PolicyGroupHeader group={POLICY_GROUPS[3]} />
+
+          {/* 문의처 — 가이드 기반 bokjiro-style 카드 */}
+          {guide?.contact && (
+            <GuideListSectionCard
+              title="문의처"
+              emoji="☎"
+              section={guide.contact}
+              enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
+            />
+          )}
+
           {/* 기타사항 — 보조 톤 */}
           {policy.additionalNotes && (
             <section className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-4">
               <h3 className="mb-2 text-sm font-semibold text-gray-600">기타사항</h3>
               <FormattedPolicyText text={policy.additionalNotes} className="italic text-gray-600" />
             </section>
-          )}
-
-          {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
-          {guide && (
-            <PitfallsCard
-              pitfalls={guide.pitfalls}
-              attachments={policy.attachments ?? []}
-              policyAttachments={policy.attachments ?? []}
-            />
           )}
 
           {/* Reference Sites */}
@@ -804,36 +800,29 @@ export default function PolicyDetailPage() {
             enrichmentSourceUrl={policy.enrichment?.sourceUrl ?? null}
           />
 
-          {/* Official Application Link */}
-          {policy.sourceUrl && (
-            <section className="mb-8 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-6">
-              <h2 className="mb-2 text-lg font-semibold text-neutral-900">공식 신청 채널</h2>
-              <p className="mb-4 text-sm text-neutral-600">
-                정책의 정확한 내용과 신청은 공식 채널에서 확인해주세요.
-              </p>
-              <a
-                href={policy.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
-              >
-                공식 신청 페이지로 이동
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </section>
+          {/* 놓치기 쉬운 점 — 가이드 있고 함정 있을 때만 */}
+          {guide && (
+            <PitfallsCard
+              pitfalls={guide.pitfalls}
+              attachments={policy.attachments ?? []}
+              policyAttachments={policy.attachments ?? []}
+            />
           )}
 
           {/* Q&A */}
-          <QnaChatSection
-            isAuthenticated={isAuthenticated}
-            policyId={policyId}
-            onLoginPrompt={() => openLoginPrompt('로그인하면 정책에 대해 질문할 수 있어요')}
-          />
+          <div ref={qnaRef}>
+            <QnaChatSection
+              isAuthenticated={isAuthenticated}
+              policyId={policyId}
+              onLoginPrompt={() => openLoginPrompt('로그인하면 정책에 대해 질문할 수 있어요')}
+            />
+          </div>
         </main>
 
         {/* Right Sidebar (Desktop) */}
         <aside className="hidden lg:col-span-4 lg:block">
           <div className="sticky top-24 space-y-6">
+            <PolicyToc activeId={activeId} />
             <EligibilityCard
               isAuthenticated={isAuthenticated}
               eligibility={eligibility}
@@ -898,6 +887,15 @@ export default function PolicyDetailPage() {
           {notificationToast}
         </div>
       )}
+
+      {/* Mobile fixed bottom bar (알림 토글 + 공식 신청 페이지) */}
+      <PolicyMobileBottomBar
+        applyUrl={policy.applyUrl}
+        sourceUrl={policy.sourceUrl}
+        isSubscribed={isSubscribed}
+        visible={bottomBarVisible}
+        onNotificationClick={isSubscribed ? handleUnsubscribeClick : handleSubscribeClick}
+      />
     </div>
   );
 }
