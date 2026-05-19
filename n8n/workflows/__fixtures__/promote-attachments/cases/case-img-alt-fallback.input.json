@@ -1,0 +1,23 @@
+{
+  "source": { "url": "https://example.com/p/102", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-19T00:00:00" },
+  "rawData": {
+    "externalId": "P-102",
+    "title": "샘플",
+    "summary": "s",
+    "body": "b",
+    "category": "복지",
+    "region": "서울특별시",
+    "attachments": [],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/102",
+      "fetchedAt": "2026-05-19T00:00:00",
+      "extractor": "openai:gpt-4o-mini",
+      "confidence": 0.9,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "attachment.pdf", "url": "https://www.k-startup.go.kr/afile/fileDownload/abc" }
+      ]
+    }
+  }
+}
