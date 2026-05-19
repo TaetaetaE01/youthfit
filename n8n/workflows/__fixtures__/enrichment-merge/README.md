@@ -22,6 +22,8 @@ node n8n/workflows/__fixtures__/enrichment-merge/verify.mjs
 
 전체 케이스 PASS 면 exit 0, 한 건이라도 FAIL 이면 exit 1.
 
+> 비고: 정책에 reference URL 이 하나도 없는 케이스의 `NO_LINK` 상태는 mega-node 의 `urls.length === 0` 분기에서 직접 세팅되며, `mergeFetchResults` 를 거치지 않는다. 이 픽스처 디렉토리는 helper 단위 검증만 다룬다.
+
 ## 동기화 책임
 
 **⚠ `enrich.mjs` 와 `youth-center-seoul.json` 의 `링크 fetch + 머지` 노드 jsCode 는 항상 동일 로직이어야 한다.** 한쪽을 수정하면 다른쪽도 같은 변경을 반영해야 한다. 노드 jsCode 가 변경됐는데 픽스처 검증이 깨지면, 의도된 변경이라면 픽스처를 갱신하고, 아니면 노드 jsCode 를 되돌려라.

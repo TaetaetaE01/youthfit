@@ -12,6 +12,7 @@ const EXT_TO_MEDIA_TYPE = {
 };
 
 function extractExt(url) {
+  if (typeof url !== 'string') return null;
   const cleaned = url.split('#')[0].split('?')[0].toLowerCase();
   const dotIdx = cleaned.lastIndexOf('.');
   if (dotIdx === -1) return null;
