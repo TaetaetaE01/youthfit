@@ -6,9 +6,22 @@ const MAX_CLEANED_LEN = 16000;
 const TEXT_SEPARATOR = '\n\n---\n\n';
 
 export function selectUrls(p) {
-  return [];
+  const candidates = [p?.aplyUrlAddr, p?.refUrlAddr1, p?.refUrlAddr2]
+    .map(s => (typeof s === 'string' ? s.trim() : ''))
+    .filter(Boolean);
+  return candidates.slice(0, MAX_URLS);
 }
 
 export function mergeFetchResults(results) {
-  return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
+  if (!Array.isArray(results) || results.length === 0) {
+    return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
+  }
+  const ok = results.filter(r => r && !r.status);
+  if (ok.length === 0) {
+    return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
+  }
+  let cleanedText = ok.map(r => r.cleanedText || '').join(TEXT_SEPARATOR);
+  if (cleanedText.length > MAX_CLEANED_LEN) cleanedText = cleanedText.slice(0, MAX_CLEANED_LEN);
+  const extraAttachments = ok.flatMap(r => Array.isArray(r.extraAttachments) ? r.extraAttachments : []);
+  return { cleanedText, extraAttachments, status: null };
 }
