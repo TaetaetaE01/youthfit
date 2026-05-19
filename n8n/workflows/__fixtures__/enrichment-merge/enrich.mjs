@@ -5,8 +5,8 @@ const MAX_URLS = 3;
 const MAX_CLEANED_LEN = 16000;
 const TEXT_SEPARATOR = '\n\n---\n\n';
 
-export function selectUrls(p) {
-  const candidates = [p?.aplyUrlAddr, p?.refUrlAddr1, p?.refUrlAddr2]
+export function selectUrls(policy) {
+  const candidates = [policy?.aplyUrlAddr, policy?.refUrlAddr1, policy?.refUrlAddr2]
     .map(s => (typeof s === 'string' ? s.trim() : ''))
     .filter(Boolean);
   return candidates.slice(0, MAX_URLS);
@@ -16,7 +16,7 @@ export function mergeFetchResults(results) {
   if (!Array.isArray(results) || results.length === 0) {
     return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
   }
-  const ok = results.filter(r => r && !r.status);
+  const ok = results.filter(r => r && r.status == null);
   if (ok.length === 0) {
     return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };
   }
