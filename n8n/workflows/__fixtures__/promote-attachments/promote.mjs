@@ -18,6 +18,18 @@ function extractExt(url) {
   return cleaned.slice(dotIdx + 1);
 }
 
+const TEXT_EXT_PATTERN = /\.(pdf|hwpx?|docx?|xlsx?)\b/i;
+const PAREN_EXT_PATTERN = /[\(\[]\s*(pdf|hwpx?|docx?|xlsx?)\s*[\)\]]/i;
+
+function extractExtFromText(text) {
+  if (typeof text !== 'string' || text.length === 0) return null;
+  const m1 = text.match(TEXT_EXT_PATTERN);
+  if (m1) return m1[1].toLowerCase();
+  const m2 = text.match(PAREN_EXT_PATTERN);
+  if (m2) return m2[1].toLowerCase();
+  return null;
+}
+
 function mapExt(ext) {
   if (!ext) return null;
   return EXT_TO_MEDIA_TYPE[ext.toLowerCase()] || null;
@@ -26,6 +38,8 @@ function mapExt(ext) {
 function inferMediaType(item) {
   const fromUrl = mapExt(extractExt(item.url));
   if (fromUrl) return fromUrl;
+  const fromName = mapExt(extractExtFromText(item.name));
+  if (fromName) return fromName;
   return null;
 }
 
