@@ -45,6 +45,7 @@ import EligibilityCard from '@/components/policy/eligibility/EligibilityCard';
 import { PolicyGroupHeader } from '@/components/policy/groups/PolicyGroupHeader';
 import { PolicyGroupDivider } from '@/components/policy/groups/PolicyGroupDivider';
 import { POLICY_GROUPS } from '@/components/policy/groups/policyGroups';
+import { SubRegionInline } from '@/components/policy/decision/SubRegionInline';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -108,6 +109,12 @@ function PolicyHeader({
         <span className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
           {getRegionName(policy.regionCode, policy.sourceType)}
+          {policy.subRegions && policy.subRegions.length > 0 && (
+            <>
+              <span className="mx-1 text-neutral-300">·</span>
+              <SubRegionInline subRegions={policy.subRegions} />
+            </>
+          )}
         </span>
         <span className="text-neutral-300">|</span>
         <span className="flex items-center gap-1">
@@ -544,7 +551,7 @@ export default function PolicyDetailPage() {
             onBookmarkToggle={handleBookmarkToggle}
           />
 
-          {policy.subRegions && policy.subRegions.length >= 2 && (
+          {policy.subRegions && policy.subRegions.length >= 6 && (
             <SubRegionSection subRegions={policy.subRegions} />
           )}
 
