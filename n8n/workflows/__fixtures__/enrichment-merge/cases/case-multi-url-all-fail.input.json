@@ -1,0 +1,21 @@
+{
+  "policy": {
+    "aplyUrlAddr": "https://a.example.com/apply",
+    "refUrlAddr1": "https://b.example.com/info",
+    "refUrlAddr2": null
+  },
+  "fetchResults": [
+    {
+      "url": "https://a.example.com/apply",
+      "status": "FETCH_FAILED",
+      "cleanedText": "",
+      "extraAttachments": []
+    },
+    {
+      "url": "https://b.example.com/info",
+      "status": "FETCH_FAILED",
+      "cleanedText": "",
+      "extraAttachments": []
+    }
+  ]
+}
