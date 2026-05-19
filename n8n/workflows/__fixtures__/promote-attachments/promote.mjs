@@ -1,0 +1,48 @@
+// 동기화 책임: 이 파일과 youth-center-seoul.json 의 "attachments 승격" 노드 jsCode 는
+// 동일 알고리즘이어야 한다. README.md 참고.
+
+const EXT_TO_MEDIA_TYPE = {
+  pdf: 'application/pdf',
+  hwp: 'application/x-hwp',
+  hwpx: 'application/x-hwp',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+
+function extractExt(url) {
+  const cleaned = url.split('#')[0].split('?')[0].toLowerCase();
+  const dotIdx = cleaned.lastIndexOf('.');
+  if (dotIdx === -1) return null;
+  return cleaned.slice(dotIdx + 1);
+}
+
+export function promote(input) {
+  const enrichment = input?.rawData?.enrichment;
+  const extras = enrichment?.extraAttachments;
+  if (!Array.isArray(extras) || extras.length === 0) {
+    return input;
+  }
+  const attachments = Array.isArray(input.rawData.attachments)
+    ? input.rawData.attachments
+    : [];
+  const existingUrls = new Set(
+    attachments
+      .map(a => (typeof a.url === 'string' ? a.url.toLowerCase() : null))
+      .filter(Boolean)
+  );
+  const merged = [...attachments];
+  for (const ex of extras) {
+    if (!ex || typeof ex.url !== 'string') continue;
+    const ext = extractExt(ex.url);
+    if (!ext) continue;
+    const mediaType = EXT_TO_MEDIA_TYPE[ext];
+    if (!mediaType) continue;
+    const key = ex.url.toLowerCase();
+    if (existingUrls.has(key)) continue;
+    merged.push({ name: ex.name, url: ex.url, mediaType });
+    existingUrls.add(key);
+  }
+  return { ...input, rawData: { ...input.rawData, attachments: merged } };
+}
