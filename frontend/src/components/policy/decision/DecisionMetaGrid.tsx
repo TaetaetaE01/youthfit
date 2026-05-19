@@ -53,7 +53,7 @@ export function DecisionMetaGrid({
               {label}
               {fromAi && <AiSourceChip sourceUrl={enrichmentSourceUrl} />}
             </span>
-            <span className="text-sm font-semibold text-neutral-900">{value}</span>
+            <span className="block whitespace-pre-line text-sm font-semibold text-neutral-900">{value}</span>
           </div>
         ))}
       </div>

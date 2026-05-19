@@ -1,0 +1,10 @@
+{
+  "selectedUrls": ["https://www.example.com/apply"],
+  "merged": {
+    "cleanedText": "정책 안내 페이지 본문. 신청 자격 및 절차는 다음과 같다. 만 19~34세 청년이 대상이며 소득 기준은 중위 100% 이하다. 자세한 내용은 본 페이지를 참고하라.",
+    "extraAttachments": [
+      { "name": "신청서.pdf", "url": "https://www.example.com/file/apply.pdf" }
+    ],
+    "status": null
+  }
+}

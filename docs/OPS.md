@@ -142,3 +142,22 @@ DELIVERED/BOUNCED/COMPLAINED 추적은 SES Configuration Set + SNS Topic + 백�
 - `/admin/email` — 일자별 차트 + KPI + 건별 테이블 + 필터 (기간/상태/타입/수신자)
 - `/admin/email/:attemptId` — 메타 + 입력 데이터 + 본문 미리보기 (lazy) + 재발송 (FAILED 만)
 - 어드민 권한 (`ROLE_ADMIN`) 필요 — Spec 1 의 `RequireAdmin` 가드 + `hasRole("ADMIN")` 적용
+
+## n8n / 정책 텍스트 백필 (2026-05-19)
+
+`youth-center-seoul.json` 의 transform 노드가 갱신됐다 (line-wrap 해제 + contact 에 enrichment 전화번호 합치기). 새로 ingest 되는 정책은 자동 적용되지만, **기존 적재 정책 행에는 일회성 backfill SQL 두 건을 실행해야 한다.**
+
+```bash
+# 1) line-wrap 해제 (모든 정책 텍스트 컬럼)
+docker compose exec -T postgres psql -U youthfit -d youthfit \
+  < backend/src/main/resources/sql/2026-05-19-policy-text-unwrap.sql
+
+# 2) contact 에 enrichment.sections.contactPhone 합치기
+docker compose exec -T postgres psql -U youthfit -d youthfit \
+  < backend/src/main/resources/sql/2026-05-19-policy-contact-merge-phone.sql
+```
+
+(호스트에서 psql 이 가능하면 `psql -h localhost -U youthfit -d youthfit -f backend/src/main/resources/sql/2026-05-19-*.sql` 로 직접 적용도 가능.)
+
+두 SQL 모두 idempotent (이미 정리된 행은 skip). 적용 순서는 정해져 있지 않으나 위 순서를 권장한다.
+운영 환경에서는 워크플로우 재배포(`docker compose restart n8n` + 워크플로우 import) 직후 같은 시점에 적용한다.

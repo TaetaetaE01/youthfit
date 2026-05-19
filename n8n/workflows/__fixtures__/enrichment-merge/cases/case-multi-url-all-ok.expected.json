@@ -1,0 +1,11 @@
+{
+  "selectedUrls": ["https://a.example.com/apply", "https://b.example.com/info"],
+  "merged": {
+    "cleanedText": "신청 페이지: 자격은 만 19~34세 청년.\n\n---\n\n정책 안내: 지원 내용은 월 30만원, 12개월간 지급.",
+    "extraAttachments": [
+      { "name": "신청서.pdf", "url": "https://a.example.com/file/sin.pdf" },
+      { "name": "안내문.hwp", "url": "https://b.example.com/file/info.hwp" }
+    ],
+    "status": null
+  }
+}

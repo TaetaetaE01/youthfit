@@ -1,0 +1,11 @@
+{
+  "selectedUrls": ["https://a.example.com/apply", "https://b.example.com/info"],
+  "merged": {
+    "cleanedText": "본문 A 충분히 길게.\n\n---\n\n본문 B 충분히 길게.",
+    "extraAttachments": [
+      { "name": "공통 안내.pdf", "url": "https://cdn.example.com/file/common.pdf" },
+      { "name": "추가 양식.hwp", "url": "https://cdn.example.com/file/extra.hwp" }
+    ],
+    "status": null
+  }
+}

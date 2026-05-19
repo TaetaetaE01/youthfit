@@ -109,7 +109,21 @@ function convertToItems(lines: string[]): ListItem[] {
 
   for (const c of classifyLines(lines)) {
     if (c.kind === 'note') {
-      if (lastItem) (lastItem.note ??= []).push(c.text);
+      // 정상 흐름: 직전 list item 의 부가 정보(note)로 흡수.
+      if (lastItem) {
+        (lastItem.note ??= []).push(c.text);
+      } else {
+        // Fallback: lastItem 이 없는 시점에서 note 만 등장하는 경우(예: 본문 첫 줄부터
+        // '*' 로 시작하는 list, '참여 제한 대상' 같은 영역). 그대로 버리면 화면에서 사라지므로
+        // marker 를 제거해 standalone list item 으로 보존하고 lastItem 으로 설정해 둔다.
+        // 후속 note 가 연달아 오면 정상 흐름과 똑같이 이 standalone item 의 note 로 흡수된다
+        // (즉, 첫 note 는 list item, 그 다음 note 들은 그 item 의 부가 정보).
+        while (stack.length > 1) stack.pop();
+        const stripped = c.text.replace(/^(?:※|\*)\s+/, '');
+        const it: ListItem = { text: stripped };
+        stack[0].arr.push(it);
+        lastItem = it;
+      }
       continue;
     }
 

@@ -1,0 +1,10 @@
+{
+  "selectedUrls": ["https://a.example.com/apply", "https://b.example.com/info"],
+  "merged": {
+    "cleanedText": "정책 안내: 지원 내용은 월 30만원, 12개월간 지급. 신청은 온라인.",
+    "extraAttachments": [
+      { "name": "안내문.hwp", "url": "https://b.example.com/file/info.hwp" }
+    ],
+    "status": null
+  }
+}

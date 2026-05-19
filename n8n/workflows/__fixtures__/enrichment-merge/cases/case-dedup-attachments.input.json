@@ -1,0 +1,26 @@
+{
+  "policy": {
+    "aplyUrlAddr": "https://a.example.com/apply",
+    "refUrlAddr1": "https://b.example.com/info",
+    "refUrlAddr2": null
+  },
+  "fetchResults": [
+    {
+      "url": "https://a.example.com/apply",
+      "status": null,
+      "cleanedText": "본문 A 충분히 길게.",
+      "extraAttachments": [
+        { "name": "공통 안내.pdf", "url": "https://cdn.example.com/file/common.pdf" }
+      ]
+    },
+    {
+      "url": "https://b.example.com/info",
+      "status": null,
+      "cleanedText": "본문 B 충분히 길게.",
+      "extraAttachments": [
+        { "name": "공통 안내.PDF", "url": "https://cdn.example.com/file/COMMON.pdf" },
+        { "name": "추가 양식.hwp", "url": "https://cdn.example.com/file/extra.hwp" }
+      ]
+    }
+  ]
+}

@@ -151,7 +151,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === 코드 사전 (data.go.kr 공식 엑셀 출처) — body 합성 전용 ===\nconst CODE = {\n  mrgSttsCd: { '0055001':'기혼', '0055002':'미혼', '0055003':'제한없음' },\n  earnCndSeCd: { '0043001':'무관', '0043002':'연소득', '0043003':'기타' },\n  jobCd: { '0013001':'재직자','0013002':'자영업자','0013003':'미취업자','0013004':'프리랜서','0013005':'일용근로자','0013006':'(예비)창업자','0013007':'단기근로자','0013008':'영농종사자','0013009':'기타','0013010':'제한없음' },\n  schoolCd: { '0049001':'고졸 미만','0049002':'고교 재학','0049003':'고졸 예정','0049004':'고교 졸업','0049005':'대학 재학','0049006':'대졸 예정','0049007':'대학 졸업','0049008':'석·박사','0049009':'기타','0049010':'제한없음' },\n  plcyMajorCd: { '0011001':'인문계열','0011002':'사회계열','0011003':'상경계열','0011004':'이학계열','0011005':'공학계열','0011006':'예체능계열','0011007':'농산업계열','0011008':'기타','0011009':'제한없음' },\n  sbizCd: { '0014001':'중소기업','0014002':'여성','0014003':'기초생활수급자','0014004':'한부모가정','0014005':'장애인','0014006':'농업인','0014007':'군인','0014008':'지역인재','0014009':'기타','0014010':'제한없음' },\n  plcyPvsnMthdCd: { '0042001':'인프라 구축','0042002':'프로그램','0042003':'직접대출','0042004':'공공기관','0042005':'계약(위탁운영)','0042006':'보조금','0042007':'대출보증','0042008':'공적보험','0042009':'조세지출','0042010':'바우처','0042011':'정보제공','0042012':'경제적 규제','0042013':'기타' },\n  bizPrdSeCd: { '0056001':'특정기간','0056002':'기타' },\n  aplyPrdSeCd: { '0057001':'특정기간','0057002':'상시','0057003':'마감' }\n};\n\nconst GU = { '11110':'종로구','11140':'중구','11170':'용산구','11200':'성동구','11215':'광진구','11230':'동대문구','11260':'중랑구','11290':'성북구','11305':'강북구','11320':'도봉구','11350':'노원구','11380':'은평구','11410':'서대문구','11440':'마포구','11470':'양천구','11500':'강서구','11530':'구로구','11545':'금천구','11560':'영등포구','11590':'동작구','11620':'관악구','11650':'서초구','11680':'강남구','11710':'송파구','11740':'강동구' };\nconst SEOUL_CODES = new Set(Object.keys(GU).concat(['11000']));\n\nfunction clean(s) {\n  if (s == null) return '';\n  return String(s)\n    .replace(/ᬼ/g, '·')\n    .replace(/[ \\t\\u00A0]+/g, ' ')\n    .replace(/\\n\\s*\\n+/g, '\\n')\n    .trim();\n}\nfunction inline(s) {\n  return clean(s).replace(/\\s+/g, ' ').trim();\n}\nfunction splitTokens(s, sep) {\n  if (!s) return [];\n  return inline(s).split(sep || /[,・･·]/).map(x => x.trim()).filter(Boolean);\n}\nfunction parseIntOrNull(s) {\n  if (s == null || String(s).trim() === '') return null;\n  const n = parseInt(String(s).trim(), 10);\n  if (isNaN(n) || n === 0) return null;\n  return n;\n}\nfunction parseYmd(s) {\n  if (!s) return null;\n  const c = String(s).trim();\n  if (c.length !== 8) return null;\n  return `${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`;\n}\n\nfunction mapCategory(lclsf) {\n  const tokens = splitTokens(lclsf);\n  const order = [\n    [['일자리'], '일자리'],\n    [['주거'], '주거'],\n    [['교육','직업훈련'], '교육'],\n    [['금융'], '금융'],\n    [['문화','여가'], '문화'],\n    [['복지','복지문화'], '복지'],\n    [['참여','권리','참여권리'], '참여']\n  ];\n  for (const [keys, label] of order) {\n    for (const t of tokens) {\n      if (keys.some(k => t.includes(k))) return label;\n    }\n  }\n  return '복지';\n}\n\nfunction parseApplyPeriod(aplyYmd) {\n  if (!aplyYmd) return { start: null, end: null };\n  const m = String(aplyYmd).match(/(\\d{8})\\s*~\\s*(\\d{8})/);\n  if (!m) return { start: null, end: null };\n  function fmt(s) { return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`; }\n  return { start: fmt(m[1]), end: fmt(m[2]) };\n}\n\nfunction regionLabel(zipCd) {\n  const codes = splitTokens(zipCd, ',');\n  const distinctSido = new Set(codes.map(c => c.slice(0, 2)).filter(Boolean)).size;\n  if (distinctSido >= 10 || codes.length >= 100) return '전국';\n  const seoul = codes.filter(c => SEOUL_CODES.has(c));\n  const guCount = seoul.filter(c => c !== '11000').length;\n  if (guCount >= 25) return '서울특별시';\n  if (guCount === 1) {\n    const guCode = seoul.find(c => c !== '11000');\n    return `서울특별시 ${GU[guCode] || ''}`.trim();\n  }\n  return '서울특별시';\n}\n\nfunction buildBody(p) {\n  const lines = [];\n  if (clean(p.plcyExplnCn)) lines.push('[개요]', clean(p.plcyExplnCn), '');\n\n  const tgt = [];\n  const minA = parseInt(p.sprtTrgtMinAge || '0', 10);\n  const maxA = parseInt(p.sprtTrgtMaxAge || '0', 10);\n  if (p.sprtTrgtAgeLmtYn === 'N') tgt.push('- 연령: 제한없음');\n  else if (minA || maxA) tgt.push(`- 연령: ${minA}~${maxA}세`);\n  if (CODE.mrgSttsCd[p.mrgSttsCd]) tgt.push(`- 결혼상태: ${CODE.mrgSttsCd[p.mrgSttsCd]}`);\n  if (CODE.earnCndSeCd[p.earnCndSeCd]) {\n    let earn = `- 소득조건: ${CODE.earnCndSeCd[p.earnCndSeCd]}`;\n    const eMin = parseInt(p.earnMinAmt || '0', 10);\n    const eMax = parseInt(p.earnMaxAmt || '0', 10);\n    if (eMin || eMax) earn += ` (${eMin.toLocaleString()}~${eMax.toLocaleString()}원)`;\n    if (clean(p.earnEtcCn) && clean(p.earnEtcCn) !== '-') earn += ` ${clean(p.earnEtcCn)}`;\n    tgt.push(earn);\n  }\n  if (CODE.jobCd[p.jobCd]) tgt.push(`- 취업상태: ${CODE.jobCd[p.jobCd]}`);\n  if (CODE.schoolCd[p.schoolCd]) tgt.push(`- 학력: ${CODE.schoolCd[p.schoolCd]}`);\n  if (CODE.plcyMajorCd[p.plcyMajorCd]) tgt.push(`- 전공: ${CODE.plcyMajorCd[p.plcyMajorCd]}`);\n  if (CODE.sbizCd[p.sbizCd]) tgt.push(`- 특화요건: ${CODE.sbizCd[p.sbizCd]}`);\n  if (clean(p.ptcpPrpTrgtCn)) tgt.push(`- 참여 제한 대상: ${clean(p.ptcpPrpTrgtCn)}`);\n  if (tgt.length) { lines.push('[지원대상]'); lines.push(...tgt); lines.push(''); }\n\n  const sel = [];\n  if (clean(p.srngMthdCn)) sel.push(clean(p.srngMthdCn));\n  if (clean(p.addAplyQlfcCndCn) && clean(p.addAplyQlfcCndCn) !== '해당사항 없음') sel.push(`추가 자격: ${clean(p.addAplyQlfcCndCn)}`);\n  if (sel.length) { lines.push('[선정기준]'); lines.push(...sel); lines.push(''); }\n  else { lines.push('[선정기준]', '별도 문의', ''); }\n\n  const sup = [];\n  if (clean(p.plcySprtCn)) sup.push(clean(p.plcySprtCn));\n  if (CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd]) sup.push(`제공방식: ${CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd]}`);\n  const sclCnt = parseInt(p.sprtSclCnt || '0', 10);\n  if (sclCnt) {\n    const arvl = p.sprtArvlSeqYn === 'Y' ? ' (선착순)' : '';\n    sup.push(`지원규모: ${sclCnt.toLocaleString()}명${arvl}`);\n  }\n  if (sup.length) { lines.push('[지원내용]'); lines.push(...sup); lines.push(''); }\n\n  if (clean(p.sbmsnDcmntCn)) lines.push('[제출서류]', clean(p.sbmsnDcmntCn), '');\n\n  const bizStart = clean(p.bizPrdBgngYmd);\n  const bizEnd = clean(p.bizPrdEndYmd);\n  if (bizStart && bizEnd) {\n    function fmt(s) { return s.length === 8 ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : s; }\n    let line = `${fmt(bizStart)} ~ ${fmt(bizEnd)}`;\n    if (CODE.bizPrdSeCd[p.bizPrdSeCd]) line += ` (${CODE.bizPrdSeCd[p.bizPrdSeCd]})`;\n    lines.push('[사업기간]', line);\n    if (clean(p.bizPrdEtcCn)) lines.push(clean(p.bizPrdEtcCn));\n    lines.push('');\n  }\n\n  if (clean(p.etcMttrCn)) lines.push('[기타]', clean(p.etcMttrCn));\n\n  return lines.join('\\n').trim();\n}\n\nconst p = $input.first().json;\nif (p._empty) return [{ json: { _empty: true } }];\n\nconst { start, end } = parseApplyPeriod(p.aplyYmd);\nconst category = mapCategory(p.lclsfNm);\nconst region = regionLabel(p.zipCd);\n\nconst themeTags = Array.from(new Set([\n  ...splitTokens(p.lclsfNm),\n  ...splitTokens(p.mclsfNm),\n  ...splitTokens(p.plcyKywdNm)\n].map(clean).filter(Boolean)));\n\nconst targetTags = [];\nconst sbiz = CODE.sbizCd[p.sbizCd];\nif (sbiz && sbiz !== '제한없음' && sbiz !== '기타') targetTags.push(sbiz);\n\nconst orgParts = [];\nif (clean(p.sprvsnInstCdNm)) orgParts.push(clean(p.sprvsnInstCdNm));\nif (clean(p.operInstCdNm) && clean(p.operInstCdNm) !== clean(p.sprvsnInstCdNm)) orgParts.push(clean(p.operInstCdNm));\nlet organization = orgParts.join(' / ');\nif (organization.length > 200) organization = organization.slice(0, 200);\n\nconst contact = clean(p.sprvsnInstPicNm) ? `담당: ${clean(p.sprvsnInstPicNm)}` : '';\n\nconst referenceSites = [];\nif (clean(p.refUrlAddr1)) referenceSites.push({ name: '참고 사이트', url: clean(p.refUrlAddr1) });\nif (clean(p.refUrlAddr2)) referenceSites.push({ name: '참고 사이트', url: clean(p.refUrlAddr2) });\n\nconst applyMethods = [];\nif (clean(p.plcyAplyMthdCn)) applyMethods.push({ stageName: '신청 절차', description: clean(p.plcyAplyMthdCn) });\n\nconst referenceYear = (p.frstRegDt && p.frstRegDt.length >= 4) ? parseInt(p.frstRegDt.slice(0, 4), 10) : null;\n\nconst result = {\n  source: {\n    url: `https://www.youthcenter.go.kr/youngPlcyUnif/youngPlcyUnifDtl.do?plcyNo=${p.plcyNo}`,\n    type: 'YOUTH_CENTER',\n    fetchedAt: new Date().toISOString().replace('Z', '')\n  },\n  rawData: {\n    externalId: p.plcyNo,\n    title: clean(p.plcyNm) || `(정책 ${p.plcyNo})`,\n    summary: clean(p.plcyExplnCn) || clean(p.plcyNm),\n    body: buildBody(p),\n    category,\n    region,\n    applyStart: start,\n    applyEnd: end,\n    referenceYear,\n    supportCycle: null,\n    provideType: CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd] || null,\n    organization,\n    contact,\n    lifeTags: ['청년'],\n    themeTags,\n    targetTags,\n    attachments: [],\n    referenceSites,\n    applyMethods,\n    screeningMethod: clean(p.srngMthdCn) || null,\n    submissionDocuments: clean(p.sbmsnDcmntCn) || null,\n    additionalQualification: clean(p.addAplyQlfcCndCn) || null,\n    participationRestriction: clean(p.ptcpPrpTrgtCn) || null,\n    additionalNotes: clean(p.etcMttrCn) || null,\n    businessPeriodStart: parseYmd(p.bizPrdBgngYmd),\n    businessPeriodEnd: parseYmd(p.bizPrdEndYmd),\n    businessPeriodNote: clean(p.bizPrdEtcCn) || null,\n    supportScale: parseIntOrNull(p.sprtSclCnt),\n    firstComeFirstServed: p.sprtArvlSeqYn === 'Y',\n    applyUrl: clean(p.aplyUrlAddr) || null,\n    rawCodes: {\n      ageMin: parseIntOrNull(p.sprtTrgtMinAge),\n      ageMax: parseIntOrNull(p.sprtTrgtMaxAge),\n      ageLimitYn: p.sprtTrgtAgeLmtYn || null,\n      maritalStatusCd: p.mrgSttsCd || null,\n      earnConditionCd: p.earnCndSeCd || null,\n      earnMin: parseIntOrNull(p.earnMinAmt),\n      earnMax: parseIntOrNull(p.earnMaxAmt),\n      earnEtcCn: clean(p.earnEtcCn) || null,\n      employmentKindCd: p.jobCd || null,\n      educationCd: p.schoolCd || null,\n      majorFieldCd: p.plcyMajorCd || null,\n      specializationCd: p.sbizCd || null,\n      zipCodes: splitTokens(p.zipCd, ',')\n    },\n    sourceHash: $json._sourceHash,\n    enrichment: $json._enrichment || null\n  }\n};\nreturn [{ json: result }];\n"
+        "jsCode": "// === 코드 사전 (data.go.kr 공식 엑셀 출처) — body 합성 전용 ===\nconst CODE = {\n  mrgSttsCd: { '0055001':'기혼', '0055002':'미혼', '0055003':'제한없음' },\n  earnCndSeCd: { '0043001':'무관', '0043002':'연소득', '0043003':'기타' },\n  jobCd: { '0013001':'재직자','0013002':'자영업자','0013003':'미취업자','0013004':'프리랜서','0013005':'일용근로자','0013006':'(예비)창업자','0013007':'단기근로자','0013008':'영농종사자','0013009':'기타','0013010':'제한없음' },\n  schoolCd: { '0049001':'고졸 미만','0049002':'고교 재학','0049003':'고졸 예정','0049004':'고교 졸업','0049005':'대학 재학','0049006':'대졸 예정','0049007':'대학 졸업','0049008':'석·박사','0049009':'기타','0049010':'제한없음' },\n  plcyMajorCd: { '0011001':'인문계열','0011002':'사회계열','0011003':'상경계열','0011004':'이학계열','0011005':'공학계열','0011006':'예체능계열','0011007':'농산업계열','0011008':'기타','0011009':'제한없음' },\n  sbizCd: { '0014001':'중소기업','0014002':'여성','0014003':'기초생활수급자','0014004':'한부모가정','0014005':'장애인','0014006':'농업인','0014007':'군인','0014008':'지역인재','0014009':'기타','0014010':'제한없음' },\n  plcyPvsnMthdCd: { '0042001':'인프라 구축','0042002':'프로그램','0042003':'직접대출','0042004':'공공기관','0042005':'계약(위탁운영)','0042006':'보조금','0042007':'대출보증','0042008':'공적보험','0042009':'조세지출','0042010':'바우처','0042011':'정보제공','0042012':'경제적 규제','0042013':'기타' },\n  bizPrdSeCd: { '0056001':'특정기간','0056002':'기타' },\n  aplyPrdSeCd: { '0057001':'특정기간','0057002':'상시','0057003':'마감' }\n};\n\nconst GU = { '11110':'종로구','11140':'중구','11170':'용산구','11200':'성동구','11215':'광진구','11230':'동대문구','11260':'중랑구','11290':'성북구','11305':'강북구','11320':'도봉구','11350':'노원구','11380':'은평구','11410':'서대문구','11440':'마포구','11470':'양천구','11500':'강서구','11530':'구로구','11545':'금천구','11560':'영등포구','11590':'동작구','11620':'관악구','11650':'서초구','11680':'강남구','11710':'송파구','11740':'강동구' };\nconst SEOUL_CODES = new Set(Object.keys(GU).concat(['11000']));\n\nfunction clean(s) {\n  if (s == null) return '';\n  return String(s)\n    .replace(/ᬼ/g, '·')\n    .replace(/\\n[ \\t]+/g, ' ')\n    .replace(/[ \\t\\u00A0]+/g, ' ')\n    .replace(/\\n\\s*\\n+/g, '\\n')\n    .trim();\n}\nfunction inline(s) {\n  return clean(s).replace(/\\s+/g, ' ').trim();\n}\nfunction splitTokens(s, sep) {\n  if (!s) return [];\n  return inline(s).split(sep || /[,・･·]/).map(x => x.trim()).filter(Boolean);\n}\nfunction parseIntOrNull(s) {\n  if (s == null || String(s).trim() === '') return null;\n  const n = parseInt(String(s).trim(), 10);\n  if (isNaN(n) || n === 0) return null;\n  return n;\n}\nfunction parseYmd(s) {\n  if (!s) return null;\n  const c = String(s).trim();\n  if (c.length !== 8) return null;\n  return `${c.slice(0,4)}-${c.slice(4,6)}-${c.slice(6,8)}`;\n}\n\nfunction mapCategory(lclsf) {\n  const tokens = splitTokens(lclsf);\n  const order = [\n    [['일자리'], '일자리'],\n    [['주거'], '주거'],\n    [['교육','직업훈련'], '교육'],\n    [['금융'], '금융'],\n    [['문화','여가'], '문화'],\n    [['복지','복지문화'], '복지'],\n    [['참여','권리','참여권리'], '참여']\n  ];\n  for (const [keys, label] of order) {\n    for (const t of tokens) {\n      if (keys.some(k => t.includes(k))) return label;\n    }\n  }\n  return '복지';\n}\n\nfunction parseApplyPeriod(aplyYmd) {\n  if (!aplyYmd) return { start: null, end: null };\n  const m = String(aplyYmd).match(/(\\d{8})\\s*~\\s*(\\d{8})/);\n  if (!m) return { start: null, end: null };\n  function fmt(s) { return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`; }\n  return { start: fmt(m[1]), end: fmt(m[2]) };\n}\n\nfunction regionLabel(zipCd) {\n  const codes = splitTokens(zipCd, ',');\n  const distinctSido = new Set(codes.map(c => c.slice(0, 2)).filter(Boolean)).size;\n  if (distinctSido >= 10 || codes.length >= 100) return '전국';\n  const seoul = codes.filter(c => SEOUL_CODES.has(c));\n  const guCount = seoul.filter(c => c !== '11000').length;\n  if (guCount >= 25) return '서울특별시';\n  if (guCount === 1) {\n    const guCode = seoul.find(c => c !== '11000');\n    return `서울특별시 ${GU[guCode] || ''}`.trim();\n  }\n  return '서울특별시';\n}\n\nfunction buildBody(p) {\n  const lines = [];\n  if (clean(p.plcyExplnCn)) lines.push('[개요]', clean(p.plcyExplnCn), '');\n\n  const tgt = [];\n  const minA = parseInt(p.sprtTrgtMinAge || '0', 10);\n  const maxA = parseInt(p.sprtTrgtMaxAge || '0', 10);\n  if (p.sprtTrgtAgeLmtYn === 'N') tgt.push('- 연령: 제한없음');\n  else if (minA || maxA) tgt.push(`- 연령: ${minA}~${maxA}세`);\n  if (CODE.mrgSttsCd[p.mrgSttsCd]) tgt.push(`- 결혼상태: ${CODE.mrgSttsCd[p.mrgSttsCd]}`);\n  if (CODE.earnCndSeCd[p.earnCndSeCd]) {\n    let earn = `- 소득조건: ${CODE.earnCndSeCd[p.earnCndSeCd]}`;\n    const eMin = parseInt(p.earnMinAmt || '0', 10);\n    const eMax = parseInt(p.earnMaxAmt || '0', 10);\n    if (eMin || eMax) earn += ` (${eMin.toLocaleString()}~${eMax.toLocaleString()}원)`;\n    if (clean(p.earnEtcCn) && clean(p.earnEtcCn) !== '-') earn += ` ${clean(p.earnEtcCn)}`;\n    tgt.push(earn);\n  }\n  if (CODE.jobCd[p.jobCd]) tgt.push(`- 취업상태: ${CODE.jobCd[p.jobCd]}`);\n  if (CODE.schoolCd[p.schoolCd]) tgt.push(`- 학력: ${CODE.schoolCd[p.schoolCd]}`);\n  if (CODE.plcyMajorCd[p.plcyMajorCd]) tgt.push(`- 전공: ${CODE.plcyMajorCd[p.plcyMajorCd]}`);\n  if (CODE.sbizCd[p.sbizCd]) tgt.push(`- 특화요건: ${CODE.sbizCd[p.sbizCd]}`);\n  if (clean(p.ptcpPrpTrgtCn)) tgt.push(`- 참여 제한 대상: ${clean(p.ptcpPrpTrgtCn)}`);\n  if (tgt.length) { lines.push('[지원대상]'); lines.push(...tgt); lines.push(''); }\n\n  const sel = [];\n  if (clean(p.srngMthdCn)) sel.push(clean(p.srngMthdCn));\n  if (clean(p.addAplyQlfcCndCn) && clean(p.addAplyQlfcCndCn) !== '해당사항 없음') sel.push(`추가 자격: ${clean(p.addAplyQlfcCndCn)}`);\n  if (sel.length) { lines.push('[선정기준]'); lines.push(...sel); lines.push(''); }\n  else { lines.push('[선정기준]', '별도 문의', ''); }\n\n  const sup = [];\n  if (clean(p.plcySprtCn)) sup.push(clean(p.plcySprtCn));\n  if (CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd]) sup.push(`제공방식: ${CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd]}`);\n  const sclCnt = parseInt(p.sprtSclCnt || '0', 10);\n  if (sclCnt) {\n    const arvl = p.sprtArvlSeqYn === 'Y' ? ' (선착순)' : '';\n    sup.push(`지원규모: ${sclCnt.toLocaleString()}명${arvl}`);\n  }\n  if (sup.length) { lines.push('[지원내용]'); lines.push(...sup); lines.push(''); }\n\n  if (clean(p.sbmsnDcmntCn)) lines.push('[제출서류]', clean(p.sbmsnDcmntCn), '');\n\n  const bizStart = clean(p.bizPrdBgngYmd);\n  const bizEnd = clean(p.bizPrdEndYmd);\n  if (bizStart && bizEnd) {\n    function fmt(s) { return s.length === 8 ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : s; }\n    let line = `${fmt(bizStart)} ~ ${fmt(bizEnd)}`;\n    if (CODE.bizPrdSeCd[p.bizPrdSeCd]) line += ` (${CODE.bizPrdSeCd[p.bizPrdSeCd]})`;\n    lines.push('[사업기간]', line);\n    if (clean(p.bizPrdEtcCn)) lines.push(clean(p.bizPrdEtcCn));\n    lines.push('');\n  }\n\n  if (clean(p.etcMttrCn)) lines.push('[기타]', clean(p.etcMttrCn));\n\n  return lines.join('\\n').trim();\n}\n\nconst p = $input.first().json;\nif (p._empty) return [{ json: { _empty: true } }];\n\nconst { start, end } = parseApplyPeriod(p.aplyYmd);\nconst category = mapCategory(p.lclsfNm);\nconst region = regionLabel(p.zipCd);\n\nconst themeTags = Array.from(new Set([\n  ...splitTokens(p.lclsfNm),\n  ...splitTokens(p.mclsfNm),\n  ...splitTokens(p.plcyKywdNm)\n].map(clean).filter(Boolean)));\n\nconst targetTags = [];\nconst sbiz = CODE.sbizCd[p.sbizCd];\nif (sbiz && sbiz !== '제한없음' && sbiz !== '기타') targetTags.push(sbiz);\n\nconst orgParts = [];\nif (clean(p.sprvsnInstCdNm)) orgParts.push(clean(p.sprvsnInstCdNm));\nif (clean(p.operInstCdNm) && clean(p.operInstCdNm) !== clean(p.sprvsnInstCdNm)) orgParts.push(clean(p.operInstCdNm));\nlet organization = orgParts.join(' / ');\nif (organization.length > 200) organization = organization.slice(0, 200);\n\nconst picName = clean(p.sprvsnInstPicNm);\nconst enrPhone = ($json._enrichment && $json._enrichment.sections && $json._enrichment.sections.contactPhone) || '';\nlet contact;\nif (picName && enrPhone) contact = `담당: ${picName}\\n전화: ${enrPhone}`;\nelse if (picName) contact = `담당: ${picName}`;\nelse if (enrPhone) contact = `전화: ${enrPhone}`;\nelse contact = '';\n\nconst referenceSites = [];\nif (clean(p.refUrlAddr1)) referenceSites.push({ name: '참고 사이트', url: clean(p.refUrlAddr1) });\nif (clean(p.refUrlAddr2)) referenceSites.push({ name: '참고 사이트', url: clean(p.refUrlAddr2) });\n\nconst applyMethods = [];\nif (clean(p.plcyAplyMthdCn)) applyMethods.push({ stageName: '신청 절차', description: clean(p.plcyAplyMthdCn) });\n\nconst referenceYear = (p.frstRegDt && p.frstRegDt.length >= 4) ? parseInt(p.frstRegDt.slice(0, 4), 10) : null;\n\nconst result = {\n  source: {\n    url: `https://www.youthcenter.go.kr/youngPlcyUnif/youngPlcyUnifDtl.do?plcyNo=${p.plcyNo}`,\n    type: 'YOUTH_CENTER',\n    fetchedAt: new Date().toISOString().replace('Z', '')\n  },\n  rawData: {\n    externalId: p.plcyNo,\n    title: clean(p.plcyNm) || `(정책 ${p.plcyNo})`,\n    summary: clean(p.plcyExplnCn) || clean(p.plcyNm),\n    body: buildBody(p),\n    category,\n    region,\n    applyStart: start,\n    applyEnd: end,\n    referenceYear,\n    supportCycle: null,\n    provideType: CODE.plcyPvsnMthdCd[p.plcyPvsnMthdCd] || null,\n    organization,\n    contact,\n    lifeTags: ['청년'],\n    themeTags,\n    targetTags,\n    attachments: [],\n    referenceSites,\n    applyMethods,\n    screeningMethod: clean(p.srngMthdCn) || null,\n    submissionDocuments: clean(p.sbmsnDcmntCn) || null,\n    additionalQualification: clean(p.addAplyQlfcCndCn) || null,\n    participationRestriction: clean(p.ptcpPrpTrgtCn) || null,\n    additionalNotes: clean(p.etcMttrCn) || null,\n    businessPeriodStart: parseYmd(p.bizPrdBgngYmd),\n    businessPeriodEnd: parseYmd(p.bizPrdEndYmd),\n    businessPeriodNote: clean(p.bizPrdEtcCn) || null,\n    supportScale: parseIntOrNull(p.sprtSclCnt),\n    firstComeFirstServed: p.sprtArvlSeqYn === 'Y',\n    applyUrl: clean(p.aplyUrlAddr) || null,\n    rawCodes: {\n      ageMin: parseIntOrNull(p.sprtTrgtMinAge),\n      ageMax: parseIntOrNull(p.sprtTrgtMaxAge),\n      ageLimitYn: p.sprtTrgtAgeLmtYn || null,\n      maritalStatusCd: p.mrgSttsCd || null,\n      earnConditionCd: p.earnCndSeCd || null,\n      earnMin: parseIntOrNull(p.earnMinAmt),\n      earnMax: parseIntOrNull(p.earnMaxAmt),\n      earnEtcCn: clean(p.earnEtcCn) || null,\n      employmentKindCd: p.jobCd || null,\n      educationCd: p.schoolCd || null,\n      majorFieldCd: p.plcyMajorCd || null,\n      specializationCd: p.sbizCd || null,\n      zipCodes: splitTokens(p.zipCd, ',')\n    },\n    sourceHash: $json._sourceHash,\n    enrichment: $json._enrichment || null\n  }\n};\nreturn [{ json: result }];\n"
       },
       "id": "transform",
       "name": "정책 → IngestPolicyRequest 변환",
@@ -164,7 +164,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 동기화 책임: n8n/workflows/__fixtures__/promote-attachments/promote.mjs 와\n// 동일 알고리즘이어야 한다. 한 곳을 수정하면 다른 곳도 같은 변경을 반영해야 한다.\nconst EXT_TO_MEDIA_TYPE = {\n  pdf: 'application/pdf',\n  hwp: 'application/x-hwp',\n  hwpx: 'application/x-hwp',\n  doc: 'application/msword',\n  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n  xls: 'application/vnd.ms-excel',\n  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'\n};\n\nfunction extractExt(url) {\n  const cleaned = url.split('#')[0].split('?')[0].toLowerCase();\n  const dotIdx = cleaned.lastIndexOf('.');\n  if (dotIdx === -1) return null;\n  return cleaned.slice(dotIdx + 1);\n}\n\nconst input = $input.first().json;\nconst enrichment = input?.rawData?.enrichment;\nconst extras = enrichment?.extraAttachments;\nif (!Array.isArray(extras) || extras.length === 0) {\n  return [{ json: input }];\n}\nconst attachments = Array.isArray(input.rawData.attachments) ? input.rawData.attachments : [];\nconst existingUrls = new Set(\n  attachments\n    .map(a => (typeof a.url === 'string' ? a.url.toLowerCase() : null))\n    .filter(Boolean)\n);\nconst merged = [...attachments];\nfor (const ex of extras) {\n  if (!ex || typeof ex.url !== 'string') continue;\n  const ext = extractExt(ex.url);\n  if (!ext) continue;\n  const mediaType = EXT_TO_MEDIA_TYPE[ext];\n  if (!mediaType) continue;\n  const key = ex.url.toLowerCase();\n  if (existingUrls.has(key)) continue;\n  merged.push({ name: ex.name, url: ex.url, mediaType });\n  existingUrls.add(key);\n}\nreturn [{ json: { ...input, rawData: { ...input.rawData, attachments: merged } } }];\n"
+        "jsCode": "// 동기화 책임: n8n/workflows/__fixtures__/promote-attachments/promote.mjs 와\n// 동일 알고리즘이어야 한다. 한 곳을 수정하면 다른 곳도 같은 변경을 반영해야 한다.\nconst EXT_TO_MEDIA_TYPE = {\n  pdf: 'application/pdf',\n  hwp: 'application/x-hwp',\n  hwpx: 'application/x-hwp',\n  doc: 'application/msword',\n  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n  xls: 'application/vnd.ms-excel',\n  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'\n};\n\nconst TEXT_EXT_PATTERN = /\\.(pdf|hwpx?|docx?|xlsx?)\\b/i;\nconst PAREN_EXT_PATTERN = /[\\(\\[]\\s*(pdf|hwpx?|docx?|xlsx?)\\s*[\\)\\]]/i;\nconst PATH_EXT_PATTERN = /(?:^|[^a-zA-Z])(pdf|hwpx?|docx?|xlsx?)(?:$|[^a-zA-Z])/i;\n// path-pattern fallback 은 다운로드 의도 키워드가 동반될 때만 활성화한다.\nconst PATH_DOWNLOAD_KEYWORD_PATTERN = /(?:download|filedown|attach|getfile|board)/i;\n\nfunction extractExt(url) {\n  if (typeof url !== 'string') return null;\n  const cleaned = url.split('#')[0].split('?')[0].toLowerCase();\n  const dotIdx = cleaned.lastIndexOf('.');\n  if (dotIdx === -1) return null;\n  return cleaned.slice(dotIdx + 1);\n}\n\nfunction mapExt(ext) {\n  if (!ext) return null;\n  return EXT_TO_MEDIA_TYPE[ext.toLowerCase()] || null;\n}\n\nfunction extractExtFromText(text) {\n  if (typeof text !== 'string' || text.length === 0) return null;\n  const m1 = text.match(TEXT_EXT_PATTERN);\n  if (m1) return m1[1].toLowerCase();\n  const m2 = text.match(PAREN_EXT_PATTERN);\n  if (m2) return m2[1].toLowerCase();\n  return null;\n}\n\nfunction extractExtFromPath(url) {\n  if (typeof url !== 'string') return null;\n  const path = url.split('?')[0].split('#')[0]\n    .replace(/([a-z])([A-Z])/g, '$1_$2')\n    .toLowerCase();\n  if (!PATH_DOWNLOAD_KEYWORD_PATTERN.test(path)) return null;\n  const m = path.match(PATH_EXT_PATTERN);\n  return m ? m[1].toLowerCase() : null;\n}\n\nfunction inferMediaType(item) {\n  const fromUrl = mapExt(extractExt(item.url));\n  if (fromUrl) return fromUrl;\n  const fromName = mapExt(extractExtFromText(item.name));\n  if (fromName) return fromName;\n  const fromPath = mapExt(extractExtFromPath(item.url));\n  if (fromPath) return fromPath;\n  return null;\n}\n\nconst input = $input.first().json;\nconst enrichment = input?.rawData?.enrichment;\nconst extras = enrichment?.extraAttachments;\nif (!Array.isArray(extras) || extras.length === 0) {\n  return [{ json: input }];\n}\nconst attachments = Array.isArray(input.rawData.attachments) ? input.rawData.attachments : [];\nconst existingUrls = new Set(\n  attachments\n    .map(a => (typeof a.url === 'string' ? a.url.toLowerCase() : null))\n    .filter(Boolean)\n);\nconst merged = [...attachments];\nfor (const ex of extras) {\n  if (!ex || typeof ex.url !== 'string') continue;\n  const mediaType = inferMediaType(ex);\n  if (!mediaType) continue;\n  const key = ex.url.toLowerCase();\n  if (existingUrls.has(key)) continue;\n  merged.push({ name: ex.name, url: ex.url, mediaType });\n  existingUrls.add(key);\n}\nreturn [{ json: { ...input, rawData: { ...input.rawData, attachments: merged } } }];"
       },
       "id": "promote-attachments",
       "name": "attachments 승격",
@@ -371,116 +371,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const p = $input.first().json;\nconst url = (p.aplyUrlAddr && p.aplyUrlAddr.trim()) ||\n            (p.refUrlAddr1 && p.refUrlAddr1.trim()) ||\n            (p.refUrlAddr2 && p.refUrlAddr2.trim()) || null;\nreturn [{ json: { ...p, _enrichUrl: url } }];"
+        "jsCode": "// 동기화 책임: n8n/workflows/__fixtures__/enrichment-merge/enrich.mjs 와\n// 동일 알고리즘이어야 한다. 한 곳을 수정하면 다른 곳도 같은 변경을 반영해야 한다.\nconst cheerio = require('cheerio');\nconst https = require('https');\nconst http = require('http');\n\nconst MAX_URLS = 3;\nconst MAX_CLEANED_LEN = 16000;\nconst TEXT_SEPARATOR = '\\n\\n---\\n\\n';\nconst FETCH_TIMEOUT_MS = 10000;\nconst MAX_RESPONSE_BYTES = 2000000;\nconst PER_PAGE_CAP = 8000;\n\nfunction normalizeUrlKey(u) {\n  return u.toLowerCase().replace(/\\/+$/, '');\n}\n\nfunction selectUrls(policy) {\n  const candidates = [policy?.aplyUrlAddr, policy?.refUrlAddr1, policy?.refUrlAddr2]\n    .map(s => (typeof s === 'string' ? s.trim() : ''))\n    .filter(Boolean);\n  const seen = new Set();\n  const out = [];\n  for (const u of candidates) {\n    const key = normalizeUrlKey(u);\n    if (seen.has(key)) continue;\n    seen.add(key);\n    out.push(u);\n    if (out.length >= MAX_URLS) break;\n  }\n  return out;\n}\n\nfunction mergeFetchResults(results) {\n  if (!Array.isArray(results) || results.length === 0) {\n    return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };\n  }\n  const ok = results.filter(r => r && r.status == null);\n  if (ok.length === 0) {\n    const allTooShort = results.length > 0 && results.every(r => r && r.status === 'TOO_SHORT');\n    return {\n      cleanedText: '',\n      extraAttachments: [],\n      status: allTooShort ? 'TOO_SHORT' : 'FETCH_FAILED'\n    };\n  }\n  let cleanedText = ok.map(r => r.cleanedText || '').join(TEXT_SEPARATOR);\n  if (cleanedText.length > MAX_CLEANED_LEN) cleanedText = cleanedText.slice(0, MAX_CLEANED_LEN);\n  const seenAttachments = new Set();\n  const extraAttachments = [];\n  for (const r of ok) {\n    const items = Array.isArray(r.extraAttachments) ? r.extraAttachments : [];\n    for (const a of items) {\n      if (!a || typeof a.url !== 'string') continue;\n      const key = a.url.toLowerCase();\n      if (seenAttachments.has(key)) continue;\n      seenAttachments.add(key);\n      extraAttachments.push(a);\n    }\n  }\n  return { cleanedText, extraAttachments, status: null };\n}\n\nfunction absUrl(href, pageUrl) {\n  if (!href) return href;\n  if (/^https?:\\/\\//i.test(href)) return href;\n  const m = pageUrl.match(/^(https?:\\/\\/[^/]+)/);\n  const origin = m ? m[1] : '';\n  if (href.startsWith('//')) {\n    const proto = (pageUrl.match(/^(https?:)/) || ['', 'https:'])[1];\n    return proto + href;\n  }\n  if (href.startsWith('/')) return origin + href;\n  return origin + '/' + href.replace(/^\\.?\\//, '');\n}\n\nfunction extractCleanedAndAttachments(rawHtml, pageUrl) {\n  const $ = cheerio.load(rawHtml);\n  $('script, style, nav, footer, aside, header, noscript').remove();\n  const root = $('main').first().length ? $('main').first()\n            : $('article').first().length ? $('article').first()\n            : $('[role=\"main\"]').first().length ? $('[role=\"main\"]').first()\n            : $('#content').first().length ? $('#content').first()\n            : $('body').first();\n  let cleaned = root.text().replace(/\\s+/g, ' ').trim();\n  if (cleaned.length > PER_PAGE_CAP) cleaned = cleaned.slice(0, PER_PAGE_CAP);\n\n  const seen = new Set();\n  const extras = [];\n  $('a[href]').each((_, el) => {\n    const $a = $(el);\n    const href = $a.attr('href') || '';\n    const text = $a.text().trim();\n    const imgAlt = $a.find('img').first().attr('alt') || '';\n    const lowerHref = href.toLowerCase();\n    const extPattern = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)(\\?|$|#)/i;\n    const hasExt = extPattern.test(href);\n    const textHasExt = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(text);\n    const imgIsFile = /^(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(imgAlt);\n    const hrefHasDownloadKw = /(download|filedown|attach)/i.test(lowerHref);\n    const looksLikeFile = hasExt || textHasExt || imgIsFile || (hrefHasDownloadKw && text.length > 0 && text.length < 200);\n    if (!looksLikeFile) return;\n    const url = absUrl(href, pageUrl);\n    if (seen.has(url)) return;\n    seen.add(url);\n    let name = text;\n    if (!name || name.length < 2) {\n      name = imgAlt ? `attachment.${imgAlt}` : url.split('/').pop().slice(0, 200);\n    }\n    name = name.replace(/\\s*미리보기\\s*$/, '').trim().slice(0, 200);\n    extras.push({ name, url });\n  });\n  return { cleaned, extras };\n}\n\nfunction httpGetText(url, hops) {\n  hops = hops || 0;\n  if (hops >= 5) return Promise.resolve({ ok: false });\n  return new Promise((resolve) => {\n    let lib;\n    try { lib = url.startsWith('https://') ? https : http; }\n    catch (e) { return resolve({ ok: false }); }\n    const req = lib.request(url, {\n      method: 'GET',\n      headers: {\n        'User-Agent': 'YouthFit-Bot/1.0 (+https://youthfit.kr/bot)',\n        'Accept': 'text/html,application/xhtml+xml',\n        'Accept-Encoding': 'identity'\n      },\n      timeout: FETCH_TIMEOUT_MS\n    }, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return httpGetText(absUrl(res.headers.location, url), hops + 1).then(resolve);\n      }\n      if (res.statusCode < 200 || res.statusCode >= 300) {\n        res.resume();\n        return resolve({ ok: false });\n      }\n      const chunks = [];\n      let total = 0;\n      res.on('data', c => {\n        total += c.length;\n        if (total > MAX_RESPONSE_BYTES) {\n          req.destroy();\n          resolve({ ok: false });\n          return;\n        }\n        chunks.push(c);\n      });\n      res.on('end', () => resolve({ ok: true, body: Buffer.concat(chunks).toString('utf8') }));\n    });\n    req.on('error', () => resolve({ ok: false }));\n    req.on('timeout', () => { req.destroy(); resolve({ ok: false }); });\n    req.end();\n  });\n}\n\nasync function fetchAndExtract(url) {\n  const res = await httpGetText(url);\n  if (!res.ok || !res.body) {\n    return { url, status: 'FETCH_FAILED', cleanedText: '', extraAttachments: [] };\n  }\n  try {\n    const { cleaned, extras } = extractCleanedAndAttachments(res.body, url);\n    return {\n      url,\n      status: cleaned.length < 200 ? 'TOO_SHORT' : null,\n      cleanedText: cleaned,\n      extraAttachments: extras\n    };\n  } catch (e) {\n    return { url, status: 'FETCH_FAILED', cleanedText: '', extraAttachments: [] };\n  }\n}\n\nconst p = $input.first().json;\nconst urls = selectUrls(p);\n\nif (urls.length === 0) {\n  return [{\n    json: {\n      ...p,\n      _enrichUrl: null,\n      _enrichUrls: [],\n      _cleanedText: '',\n      _extraAttachments: [],\n      _enrichmentStatus: 'NO_LINK'\n    }\n  }];\n}\n\nconst results = await Promise.all(urls.map(u => fetchAndExtract(u)));\nconst merged = mergeFetchResults(results);\n\nreturn [{\n  json: {\n    ...p,\n    _enrichUrl: urls[0],\n    _enrichUrls: urls,\n    _cleanedText: merged.cleanedText,\n    _extraAttachments: merged.extraAttachments,\n    _enrichmentStatus: merged.status\n  }\n}];"
       },
       "id": "pick-link",
-      "name": "링크 선택",
+      "name": "링크 fetch + 머지",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1540,
         0
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "has-link",
-              "leftValue": "={{ $json._enrichUrl }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "if-link",
-      "name": "링크 존재",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1760,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const p = $input.first().json;\nconst e = {\n  sourceUrl: null,\n  fetchedAt: new Date().toISOString(),\n  extractor: 'openai:gpt-4o-mini',\n  confidence: null,\n  status: 'NO_LINK',\n  sections: null,\n  extraAttachments: []\n};\nreturn [{ json: { ...p, _enrichment: e } }];"
-      },
-      "id": "skip-no-link",
-      "name": "enrichment skip: NO_LINK",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1980,
-        150
-      ]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $json._enrichUrl }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "User-Agent",
-              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
-            },
-            {
-              "name": "Accept",
-              "value": "text/html,application/xhtml+xml"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": false,
-              "responseFormat": "text"
-            }
-          },
-          "redirect": {
-            "redirect": {
-              "followRedirects": true,
-              "maxRedirects": 5
-            }
-          },
-          "timeout": 10000
-        }
-      },
-      "id": "fetch-external-page",
-      "name": "외부 페이지 fetch",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        1980,
-        -100
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const cheerio = require('cheerio');\nconst item = $input.first();\nconst upstream = item.json || {};\nconst rawHtml = typeof item.json === 'string' ? item.json\n              : (typeof upstream.data === 'string' ? upstream.data\n              : (typeof upstream.body === 'string' ? upstream.body\n              : (typeof upstream.text === 'string' ? upstream.text : '')));\n\nlet status = null;\nlet cleaned = '';\nlet extraAttachments = [];\n\n// 페이지 origin 기준으로 href 를 절대 URL 로 변환\nconst pageUrl = ($('링크 선택').first()?.json?._enrichUrl) || upstream._enrichUrl || 'https://example.com';\nfunction abs(href) {\n  if (!href) return href;\n  if (/^https?:\\/\\//i.test(href)) return href;\n  const m = pageUrl.match(/^(https?:\\/\\/[^/]+)/);\n  const origin = m ? m[1] : '';\n  if (href.startsWith('//')) {\n    const proto = (pageUrl.match(/^(https?:)/) || ['','https:'])[1];\n    return proto + href;\n  }\n  if (href.startsWith('/')) return origin + href;\n  return origin + '/' + href.replace(/^\\.?\\//, '');\n}\n\nif (!rawHtml) {\n  status = 'FETCH_FAILED';\n} else {\n  try {\n    const $ = cheerio.load(rawHtml);\n    $('script, style, nav, footer, aside, header, noscript').remove();\n    const root = $('main').first().length ? $('main').first()\n              : $('article').first().length ? $('article').first()\n              : $('[role=\"main\"]').first().length ? $('[role=\"main\"]').first()\n              : $('#content').first().length ? $('#content').first()\n              : $('body').first();\n    cleaned = root.text().replace(/\\s+/g, ' ').trim();\n    if (cleaned.length > 8000) cleaned = cleaned.slice(0, 8000);\n\n    const seen = new Set();\n    $('a[href]').each((_, el) => {\n      const $a = $(el);\n      const href = $a.attr('href') || '';\n      const text = $a.text().trim();\n      const imgAlt = $a.find('img').first().attr('alt') || '';\n      const lowerHref = href.toLowerCase();\n\n      const extPattern = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)(\\?|$|#)/i;\n      const hasExt = extPattern.test(href);\n      const textHasExt = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(text);\n      const imgIsFile = /^(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(imgAlt);\n      const hrefHasDownloadKw = /(download|filedown|attach)/i.test(lowerHref);\n      const looksLikeFile = hasExt || textHasExt || imgIsFile || (hrefHasDownloadKw && text.length > 0 && text.length < 200);\n      if (!looksLikeFile) return;\n\n      const url = abs(href);\n      if (seen.has(url)) return;\n      seen.add(url);\n\n      let name = text;\n      if (!name || name.length < 2) {\n        name = imgAlt ? `attachment.${imgAlt}` : url.split('/').pop().slice(0, 200);\n      }\n      // strip \"미리보기\" sibling text artifacts\n      name = name.replace(/\\s*미리보기\\s*$/, '').trim().slice(0, 200);\n      extraAttachments.push({ name, url });\n    });\n\n    if (cleaned.length < 200) status = 'TOO_SHORT';\n  } catch (e) {\n    status = 'FETCH_FAILED';\n  }\n}\n\n// 정책 메타데이터 (링크 선택 단계까지의 결과) 를 다시 머지\nconst meta = $('링크 선택').first()?.json || {};\nreturn [{\n  json: {\n    ...meta,\n    _cleanedText: cleaned,\n    _extraAttachments: extraAttachments,\n    _enrichmentStatus: status\n  }\n}];"
-      },
-      "id": "cheerio-clean",
-      "name": "boilerplate 제거 + 첨부 후보",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2200,
-        -100
       ]
     },
     {
@@ -544,7 +443,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const upstream = $('boilerplate 제거 + 첨부 후보').first()?.json || $input.first().json;\nconst llmItem = $input.first().json;\n\nlet parsed = null;\nlet status = null;\nlet confidence = null;\nlet sections = null;\n\nconst llmError = llmItem._llmError;\nconst llmResponse = llmItem._llmResponse;\n\nif (llmError) {\n  status = 'LLM_FAILED';\n} else if (!llmResponse) {\n  status = 'PARSE_FAILED';\n} else {\n  const content = llmResponse?.choices?.[0]?.message?.content;\n  if (!content) {\n    status = 'PARSE_FAILED';\n  } else {\n    try {\n      parsed = typeof content === 'string' ? JSON.parse(content) : content;\n    } catch (e) {\n      parsed = null;\n    }\n    if (!parsed || typeof parsed.confidence !== 'number') {\n      status = 'PARSE_FAILED';\n    } else {\n      confidence = parsed.confidence;\n      sections = {\n        supportTarget:         parsed.supportTarget || null,\n        supportContent:        parsed.supportContent || null,\n        applyMethod:           parsed.applyMethod || null,\n        requiredDocuments:     parsed.requiredDocuments || null,\n        deadlineNote:          parsed.deadlineNote || null,\n        policyOverview:        parsed.policyOverview || null,\n        eligibilityCriteria:   parsed.eligibilityCriteria || null,\n        operatingOrganization: parsed.operatingOrganization || null,\n        contactPhone:          parsed.contactPhone || null\n      };\n      status = confidence >= 0.6 ? 'OK' : 'LOW_CONFIDENCE';\n    }\n  }\n}\n\nconst enrichment = {\n  sourceUrl: upstream._enrichUrl,\n  fetchedAt: new Date().toISOString(),\n  extractor: 'openai:gpt-4o-mini',\n  confidence,\n  status,\n  sections,\n  extraAttachments: upstream._extraAttachments || [],\n  cleanedText: upstream._cleanedText || null\n};\n\nreturn [{ json: { ...upstream, _enrichment: enrichment } }];\n"
+        "jsCode": "// LLM 노드가 ...upstream 으로 fetch 결과 메타(_cleanedText 등)를 그대로 전달하므로\n// 같은 item 에 _llmResponse + _enrichUrl/_cleanedText/_extraAttachments 가 함께 들어있다.\nconst item = $input.first().json;\n\nlet parsed = null;\nlet status = null;\nlet confidence = null;\nlet sections = null;\n\nconst llmError = item._llmError;\nconst llmResponse = item._llmResponse;\n\nif (llmError) {\n  status = 'LLM_FAILED';\n} else if (!llmResponse) {\n  status = 'PARSE_FAILED';\n} else {\n  const content = llmResponse?.choices?.[0]?.message?.content;\n  if (!content) {\n    status = 'PARSE_FAILED';\n  } else {\n    try {\n      parsed = typeof content === 'string' ? JSON.parse(content) : content;\n    } catch (e) {\n      parsed = null;\n    }\n    if (!parsed || typeof parsed.confidence !== 'number') {\n      status = 'PARSE_FAILED';\n    } else {\n      confidence = parsed.confidence;\n      sections = {\n        supportTarget:         parsed.supportTarget || null,\n        supportContent:        parsed.supportContent || null,\n        applyMethod:           parsed.applyMethod || null,\n        requiredDocuments:     parsed.requiredDocuments || null,\n        deadlineNote:          parsed.deadlineNote || null,\n        policyOverview:        parsed.policyOverview || null,\n        eligibilityCriteria:   parsed.eligibilityCriteria || null,\n        operatingOrganization: parsed.operatingOrganization || null,\n        contactPhone:          parsed.contactPhone || null\n      };\n      status = confidence >= 0.6 ? 'OK' : 'LOW_CONFIDENCE';\n    }\n  }\n}\n\nconst enrichment = {\n  sourceUrl: item._enrichUrl,\n  fetchedAt: new Date().toISOString(),\n  extractor: 'openai:gpt-4o-mini',\n  confidence,\n  status,\n  sections,\n  extraAttachments: item._extraAttachments || [],\n  cleanedText: item._cleanedText || null\n};\n\nreturn [{ json: { ...upstream, _enrichment: enrichment } }];\n"
       },
       "id": "assemble-enrichment",
       "name": "enrichment 객체 조립",
@@ -667,7 +566,7 @@
       "main": [
         [
           {
-            "node": "링크 선택",
+            "node": "링크 fetch + 머지",
             "type": "main",
             "index": 0
           }
@@ -675,68 +574,6 @@
         [
           {
             "node": "정책 → IngestPolicyRequest 변환",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "링크 선택": {
-      "main": [
-        [
-          {
-            "node": "링크 존재",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "링크 존재": {
-      "main": [
-        [
-          {
-            "node": "외부 페이지 fetch",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "enrichment skip: NO_LINK",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "enrichment skip: NO_LINK": {
-      "main": [
-        [
-          {
-            "node": "정책 → IngestPolicyRequest 변환",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "외부 페이지 fetch": {
-      "main": [
-        [
-          {
-            "node": "boilerplate 제거 + 첨부 후보",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "boilerplate 제거 + 첨부 후보": {
-      "main": [
-        [
-          {
-            "node": "cleaned 통과 여부",
             "type": "main",
             "index": 0
           }
@@ -861,6 +698,17 @@
         [
           {
             "node": "getPlcy 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "링크 fetch + 머지": {
+      "main": [
+        [
+          {
+            "node": "cleaned 통과 여부",
             "type": "main",
             "index": 0
           }
