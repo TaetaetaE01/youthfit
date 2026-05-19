@@ -40,6 +40,17 @@ export function mergeFetchResults(results) {
   }
   let cleanedText = ok.map(r => r.cleanedText || '').join(TEXT_SEPARATOR);
   if (cleanedText.length > MAX_CLEANED_LEN) cleanedText = cleanedText.slice(0, MAX_CLEANED_LEN);
-  const extraAttachments = ok.flatMap(r => Array.isArray(r.extraAttachments) ? r.extraAttachments : []);
+  const seenAttachments = new Set();
+  const extraAttachments = [];
+  for (const r of ok) {
+    const items = Array.isArray(r.extraAttachments) ? r.extraAttachments : [];
+    for (const a of items) {
+      if (!a || typeof a.url !== 'string') continue;
+      const key = a.url.toLowerCase();
+      if (seenAttachments.has(key)) continue;
+      seenAttachments.add(key);
+      extraAttachments.push(a);
+    }
+  }
   return { cleanedText, extraAttachments, status: null };
 }
