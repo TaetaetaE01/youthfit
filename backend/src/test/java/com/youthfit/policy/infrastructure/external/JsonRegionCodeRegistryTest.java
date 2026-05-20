@@ -79,4 +79,14 @@ class JsonRegionCodeRegistryTest {
     void findAll_nullInput_returnsEmptyList() {
         assertThat(registry.findAll(null)).isEmpty();
     }
+
+    @Test
+    @DisplayName("findAll() — 전체 행정코드를 반환한다 (서울 25개 구 포함)")
+    void findAll_returnsAll() {
+        List<RegionCode> all = registry.findAll();
+        assertThat(all).isNotEmpty();
+        assertThat(all).extracting(RegionCode::sidoName).contains("서울특별시");
+        long seoulGuCount = all.stream().filter(r -> "11".equals(r.sidoCode())).count();
+        assertThat(seoulGuCount).isGreaterThanOrEqualTo(25);
+    }
 }

@@ -48,4 +48,9 @@ public class JsonRegionCodeRegistry implements RegionCodeRegistry {
                 .filter(Objects::nonNull)
                 .toList();
     }
+
+    @Override
+    public List<RegionCode> findAll() {
+        return List.copyOf(map.values());
+    }
 }

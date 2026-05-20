@@ -9,4 +9,6 @@ public interface RegionCodeRegistry {
     Optional<RegionCode> find(String code);
 
     List<RegionCode> findAll(List<String> codes);
+
+    List<RegionCode> findAll();
 }
