@@ -3,6 +3,7 @@ package com.youthfit.policy.infrastructure.persistence;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,8 +29,11 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     @Override
     public Page<Policy> findAllByFilters(String regionCode, Category category, PolicyStatus status,
                                          Pageable pageable) {
+        // Task 2 임시 브리지: 기존 단일 regionCode 시그니처를 RegionFilter 로 어댑팅.
+        // Task 3/4 에서 PolicyRepository 시그니처 자체를 RegionFilter 로 교체할 때 제거된다.
+        RegionFilter regionFilter = RegionFilter.of(regionCode == null ? null : List.of(regionCode));
         return jpaRepository.findAll(
-                PolicySpecification.withFilters(regionCode, category, status), pageable);
+                PolicySpecification.withFilters(regionFilter, category, status), pageable);
     }
 
     @Override
