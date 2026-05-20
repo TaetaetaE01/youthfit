@@ -4,7 +4,7 @@ import type { Region, RegionLevel } from '@/types/personalInfo';
 import type { RegionListResponse } from '@/types/region';
 
 export async function fetchRegions(): Promise<RegionListResponse> {
-  return api.get('v1/regions').json<RegionListResponse>();
+  return api.get('v1/regions/all').json<RegionListResponse>();
 }
 
 export async function fetchRegionsByLevel(level: RegionLevel, parentCode?: string): Promise<Region[]> {

@@ -35,7 +35,7 @@ class RegionControllerTest {
     private RegionQueryService regionQueryService;
 
     @Test
-    @DisplayName("GET /api/v1/regions - 시·도 + 시·군·구 목록을 반환한다")
+    @DisplayName("GET /api/v1/regions/all - 시·도 + 시·군·구 목록을 반환한다")
     void findAllRegions_returns200WithBothLists() throws Exception {
         RegionListResult mockResult = new RegionListResult(
                 List.of(new RegionListResult.Sido("11", "서울특별시")),
@@ -43,7 +43,7 @@ class RegionControllerTest {
         );
         given(regionQueryService.findAllRegions()).willReturn(mockResult);
 
-        mockMvc.perform(get("/api/v1/regions"))
+        mockMvc.perform(get("/api/v1/regions/all"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "max-age=86400, public"))
                 .andExpect(jsonPath("$.sidos[0].code").value("11"))

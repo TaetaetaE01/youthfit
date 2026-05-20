@@ -19,7 +19,7 @@ public class RegionController implements RegionApi {
 
     private final RegionQueryService regionQueryService;
 
-    @GetMapping
+    @GetMapping("/all")
     @Override
     public ResponseEntity<RegionListResponse> findAllRegions() {
         RegionListResult result = regionQueryService.findAllRegions();
