@@ -10,6 +10,7 @@ import com.youthfit.policy.application.service.PolicyQueryService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.model.SourceType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,7 @@ class PolicyControllerTest {
         PolicyPageResult pageResult = new PolicyPageResult(
                 List.of(summary), 1L, 0, 20, 1, false);
 
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
@@ -73,7 +74,7 @@ class PolicyControllerTest {
     void findPolicies_withFilters_returns200() throws Exception {
         // given
         PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then
@@ -87,7 +88,7 @@ class PolicyControllerTest {
                 .andExpect(jsonPath("$.content").isArray());
 
         then(policyQueryService).should()
-                .findPoliciesByFilters(eq("11"), eq(Category.JOBS), eq(PolicyStatus.OPEN), eq(0), eq(10));
+                .findPoliciesByFilters(any(RegionFilter.class), eq(Category.JOBS), eq(PolicyStatus.OPEN), eq(0), eq(10));
     }
 
     @Test
@@ -95,7 +96,7 @@ class PolicyControllerTest {
     void findPolicies_legacySortTypeParam_isIgnored() throws Exception {
         // given
         PolicyPageResult pageResult = new PolicyPageResult(List.of(), 0L, 0, 20, 0, false);
-        given(policyQueryService.findPoliciesByFilters(any(), any(), any(), anyInt(), anyInt()))
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
                 .willReturn(pageResult);
 
         // when & then — sortType 파라미터가 있어도 200 응답이며 서비스 호출에 새어 들어가지 않는다
@@ -103,7 +104,66 @@ class PolicyControllerTest {
                 .andExpect(status().isOk());
 
         then(policyQueryService).should()
-                .findPoliciesByFilters(isNull(), isNull(), isNull(), eq(0), eq(20));
+                .findPoliciesByFilters(any(RegionFilter.class), isNull(), isNull(), eq(0), eq(20));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/policies - regions CSV 파라미터를 전달하면 RegionFilter 로 변환된다")
+    void findPolicies_withRegions_passesRegionFilter() throws Exception {
+        // given
+        PolicyPageResult pageResult = new PolicyPageResult(java.util.List.of(), 0L, 0, 20, 0, false);
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
+                .willReturn(pageResult);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/policies").param("regions", "11680,11440"))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<RegionFilter> captor =
+                org.mockito.ArgumentCaptor.forClass(RegionFilter.class);
+        then(policyQueryService).should().findPoliciesByFilters(
+                captor.capture(), any(), any(), anyInt(), anyInt());
+        RegionFilter passed = captor.getValue();
+        org.assertj.core.api.Assertions.assertThat(passed.sigunguCodes())
+                .containsExactly("11680", "11440");
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/policies - legacy regionCode 파라미터도 받지만 regions 가 우선한다")
+    void findPolicies_legacyRegionCode_compatible() throws Exception {
+        PolicyPageResult pageResult = new PolicyPageResult(java.util.List.of(), 0L, 0, 20, 0, false);
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
+                .willReturn(pageResult);
+
+        mockMvc.perform(get("/api/v1/policies").param("regionCode", "11680"))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<RegionFilter> captor =
+                org.mockito.ArgumentCaptor.forClass(RegionFilter.class);
+        then(policyQueryService).should().findPoliciesByFilters(
+                captor.capture(), any(), any(), anyInt(), anyInt());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().sigunguCodes())
+                .containsExactly("11680");
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/policies - regions 와 regionCode 가 모두 오면 regions 우선")
+    void findPolicies_regionsWins() throws Exception {
+        PolicyPageResult pageResult = new PolicyPageResult(java.util.List.of(), 0L, 0, 20, 0, false);
+        given(policyQueryService.findPoliciesByFilters(any(RegionFilter.class), any(), any(), anyInt(), anyInt()))
+                .willReturn(pageResult);
+
+        mockMvc.perform(get("/api/v1/policies")
+                        .param("regions", "11680")
+                        .param("regionCode", "SEOUL"))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<RegionFilter> captor =
+                org.mockito.ArgumentCaptor.forClass(RegionFilter.class);
+        then(policyQueryService).should().findPoliciesByFilters(
+                captor.capture(), any(), any(), anyInt(), anyInt());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().sigunguCodes())
+                .containsExactly("11680");
     }
 
     @Test

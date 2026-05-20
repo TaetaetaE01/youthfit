@@ -5,6 +5,7 @@ import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.service.PolicyQueryService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.presentation.dto.response.PolicyDetailResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyPageResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,15 +22,27 @@ public class PolicyController implements PolicyApi {
     @GetMapping
     @Override
     public ResponseEntity<PolicyPageResponse> findPolicies(
+            @RequestParam(required = false) String regions,
             @RequestParam(required = false) String regionCode,
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) PolicyStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        RegionFilter filter = resolveRegionFilter(regions, regionCode);
         PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                regionCode, category, status, page, size);
+                filter, category, status, page, size);
         return ResponseEntity.ok(PolicyPageResponse.from(result));
+    }
+
+    private static RegionFilter resolveRegionFilter(String regions, String legacyRegionCode) {
+        if (regions != null && !regions.isBlank()) {
+            return RegionFilter.ofCsv(regions);
+        }
+        if (legacyRegionCode != null && !legacyRegionCode.isBlank()) {
+            return RegionFilter.of(java.util.List.of(legacyRegionCode));
+        }
+        return RegionFilter.of(null);
     }
 
     @GetMapping("/{policyId}")
