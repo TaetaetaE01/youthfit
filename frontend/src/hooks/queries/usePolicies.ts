@@ -6,23 +6,24 @@ interface UsePoliciesParams {
   keyword?: string;
   category?: PolicyCategory | '';
   status?: PolicyStatus | '';
-  regionCode?: string;
+  regions?: string[];
   page?: number;
   size?: number;
 }
 
 export function usePolicies(params: UsePoliciesParams) {
-  const { keyword, category, status, regionCode, page = 0, size = 6 } = params;
+  const { keyword, category, status, regions, page = 0, size = 6 } = params;
+  const regionsKey = regions && regions.length > 0 ? regions.join(',') : '';
 
   return useQuery({
-    queryKey: ['policies', { keyword, category, status, regionCode, page, size }],
+    queryKey: ['policies', { keyword, category, status, regions: regionsKey, page, size }],
     queryFn: () =>
       keyword
         ? searchPolicies(keyword, { status: status || undefined, page, size })
         : fetchPolicies({
             category: category || undefined,
             status: status || undefined,
-            regionCode: regionCode || undefined,
+            regions: regions && regions.length > 0 ? regions : undefined,
             page,
             size,
           }),

@@ -327,7 +327,8 @@ export default function PolicyListPage() {
     keyword: keyword || undefined,
     category,
     status,
-    regionCode: regionCode || undefined,
+    // TODO(Task 14): replace with regions: regions.length > 0 ? regions : undefined
+    // regionCode: regionCode || undefined,
     page,
     size: PAGE_SIZE,
   });
