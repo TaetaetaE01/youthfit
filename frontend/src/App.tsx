@@ -17,6 +17,7 @@ import AdminQnaCacheDetailPage from '@/pages/admin/AdminQnaCacheDetailPage';
 import AdminLlmCostPage from '@/pages/admin/AdminLlmCostPage';
 import AdminIngestionPage from '@/pages/admin/AdminIngestionPage';
 import AdminIngestionFailureDetailPage from '@/pages/admin/AdminIngestionFailureDetailPage';
+import RegionPickerPlayground from '@/pages/_dev/RegionPickerPlayground';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
             <Route path="/mypage" element={<MyPage />} />
+            <Route path="/_dev/region-picker" element={<RegionPickerPlayground />} />
           </Route>
 
           {/* 어드민 — RequireAdmin → AdminLayout → 자식 페이지 */}
