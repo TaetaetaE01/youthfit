@@ -1,8 +1,13 @@
 import api from './client';
 import type { ApiResponse } from '@/types/policy';
 import type { Region, RegionLevel } from '@/types/personalInfo';
+import type { RegionListResponse } from '@/types/region';
 
-export async function fetchRegions(level: RegionLevel, parentCode?: string): Promise<Region[]> {
+export async function fetchRegions(): Promise<RegionListResponse> {
+  return api.get('v1/regions').json<RegionListResponse>();
+}
+
+export async function fetchRegionsByLevel(level: RegionLevel, parentCode?: string): Promise<Region[]> {
   const searchParams: Record<string, string> = { level };
   if (parentCode) searchParams.parentCode = parentCode;
   const res = await api
