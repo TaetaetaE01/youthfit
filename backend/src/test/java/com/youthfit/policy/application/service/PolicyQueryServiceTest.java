@@ -9,6 +9,7 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
@@ -122,14 +123,14 @@ class PolicyQueryServiceTest {
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
             given(policyRepository.findAllByFilters(
-                    eq("11"), eq(Category.HOUSING), eq(PolicyStatus.OPEN), any(Pageable.class)))
+                    any(RegionFilter.class), eq(Category.HOUSING), eq(PolicyStatus.OPEN), any(Pageable.class)))
                     .willReturn(mockPage);
             given(policySourceRepository.findFirstByPolicyIds(anyList()))
                     .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    "11", Category.HOUSING, PolicyStatus.OPEN, 0, 20);
+                    RegionFilter.of(List.of("11")), Category.HOUSING, PolicyStatus.OPEN, 0, 20);
 
             // then
             assertThat(result.policies()).hasSize(1);
@@ -143,14 +144,14 @@ class PolicyQueryServiceTest {
             // given
             Page<Policy> emptyPage = Page.empty();
             given(policyRepository.findAllByFilters(
-                    isNull(), isNull(), isNull(), any(Pageable.class)))
+                    any(RegionFilter.class), isNull(), isNull(), any(Pageable.class)))
                     .willReturn(emptyPage);
             given(policySourceRepository.findFirstByPolicyIds(anyList()))
                     .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    null, null, null, 0, 20);
+                    RegionFilter.of(null), null, null, 0, 20);
 
             // then
             assertThat(result.policies()).isEmpty();
@@ -170,12 +171,12 @@ class PolicyQueryServiceTest {
                     .rawJson("{}")
                     .sourceHash("hash")
                     .build();
-            given(policyRepository.findAllByFilters(any(), any(), any(), any(Pageable.class)))
+            given(policyRepository.findAllByFilters(any(RegionFilter.class), any(), any(), any(Pageable.class)))
                     .willReturn(mockPage);
             given(policySourceRepository.findFirstByPolicyIds(List.of(1L)))
                     .willReturn(Map.of(1L, source));
 
-            PolicyPageResult result = policyQueryService.findPoliciesByFilters(null, null, null, 0, 20);
+            PolicyPageResult result = policyQueryService.findPoliciesByFilters(RegionFilter.of(null), null, null, 0, 20);
 
             assertThat(result.policies()).hasSize(1);
             assertThat(result.policies().getFirst().sourceType()).isEqualTo(SourceType.YOUTH_CENTER);
