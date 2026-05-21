@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { layoutBars, type BarSegment } from '@/lib/calendarLayout';
+import { isKoreanHoliday } from '@/lib/holidays';
 import CalendarBar from './CalendarBar';
 import CalendarDayPopover from './CalendarDayPopover';
 import type { PolicyCalendarItem } from '@/types/policy';
@@ -142,12 +143,19 @@ export default function CalendarMonthGrid({ items, monthStart, monthEnd, today }
             {week.map((day, di) => {
               const inMonth = Number(day.slice(5, 7)) === monthNum;
               const isToday = day === today;
+              const isRed = di === 0 || isKoreanHoliday(day);
               return (
                 <div
                   key={`d-${day}`}
                   className={cn(
                     'pointer-events-none px-2 pt-1 text-xs',
-                    inMonth ? 'text-neutral-700' : 'text-neutral-400',
+                    inMonth
+                      ? isRed
+                        ? 'text-red-500'
+                        : 'text-neutral-700'
+                      : isRed
+                        ? 'text-red-300'
+                        : 'text-neutral-400',
                     isToday && 'font-bold text-brand-800',
                   )}
                   style={{ gridColumn: di + 1, gridRow: 1 }}

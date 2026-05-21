@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/cn';
+import { isKoreanHoliday } from '@/lib/holidays';
 import type { PolicyCalendarItem } from '@/types/policy';
 
 type Event = {
@@ -84,9 +86,11 @@ export default function CalendarAgenda({
 
   return (
     <ul className="flex flex-col gap-4">
-      {groups.map(([day, evs]) => (
+      {groups.map(([day, evs]) => {
+        const isRed = evs[0].weekday === '일' || isKoreanHoliday(day);
+        return (
         <li key={day}>
-          <h3 className="mb-1 text-sm font-semibold text-neutral-700">
+          <h3 className={cn('mb-1 text-sm font-semibold', isRed ? 'text-red-500' : 'text-neutral-700')}>
             {Number(day.slice(5, 7))}/{Number(day.slice(8, 10))} ({evs[0].weekday})
           </h3>
           <ul className="flex flex-col gap-1.5">
@@ -118,7 +122,8 @@ export default function CalendarAgenda({
             })}
           </ul>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
