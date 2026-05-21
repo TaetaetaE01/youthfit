@@ -8,6 +8,8 @@ import com.youthfit.admin.presentation.dto.response.EnrichmentCandidateSummaryRe
 import com.youthfit.admin.presentation.dto.response.EnrichmentJobResponse;
 import com.youthfit.admin.presentation.dto.response.JobAcceptedResponse;
 import com.youthfit.admin.presentation.dto.response.PolicyEnrichmentDetailResponse;
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.application.dto.command.EnrichmentReviewFilterCommand;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.EnrichmentStatus;
@@ -80,7 +82,12 @@ public class AdminEnrichmentController implements AdminEnrichmentApi {
     public ResponseEntity<JobAcceptedResponse> createJob(@PathVariable Long policyId,
                                                          @RequestBody(required = false) CreateJobRequest body,
                                                          Authentication authentication) {
-        String actor = authentication == null ? "unknown" : authentication.getName();
+        // SecurityConfig 에서 ROLE_ADMIN 을 강제하므로 실제로는 도달 불가능하지만,
+        // 감사 로그에 "unknown" 같은 리터럴이 기록되지 않도록 명시적으로 401 을 던진다.
+        if (authentication == null || authentication.getName() == null) {
+            throw new YouthFitException(ErrorCode.UNAUTHORIZED);
+        }
+        String actor = authentication.getName();
         List<ReferenceSiteRequest> urlsOverride = (body == null) ? null : body.urls();
         EnrichmentJobResponse job = adminEnrichmentService.createJob(policyId, actor, urlsOverride);
         return ResponseEntity.accepted()

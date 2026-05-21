@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,16 +58,28 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
     /**
      * 어드민 enrichment 검토 대상 후보 정책 페이지 조회.
      * needsReviewOnly = true 인 경우 {@link #NEEDS_REVIEW_PREDICATE} 적용.
+     *
+     * <p>statuses / detailLevels 필터는 비어 있을 수 있다. JPA 네이티브 쿼리는 빈 컬렉션 바인딩에 취약하므로
+     * 호출자가 항상 비어있지 않은 컬렉션을 전달하도록 강제하고, 별도 boolean 플래그(allStatuses/allDetailLevels)로
+     * "필터 미적용"을 단축평가한다.
      */
     @Query(value = "SELECT * FROM policy p"
                  + " WHERE (:needsReviewOnly = false OR (" + NEEDS_REVIEW_PREDICATE + "))"
-                 + "   AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))",
+                 + "   AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))"
+                 + "   AND (:allStatuses = true OR (p.enrichment->>'status') IN (:statuses))"
+                 + "   AND (:allDetailLevels = true OR p.detail_level IN (:detailLevels))",
            countQuery = "SELECT COUNT(*) FROM policy p"
                       + " WHERE (:needsReviewOnly = false OR (" + NEEDS_REVIEW_PREDICATE + "))"
-                      + "   AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))",
+                      + "   AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))"
+                      + "   AND (:allStatuses = true OR (p.enrichment->>'status') IN (:statuses))"
+                      + "   AND (:allDetailLevels = true OR p.detail_level IN (:detailLevels))",
            nativeQuery = true)
     Page<Policy> searchForEnrichmentReview(@Param("needsReviewOnly") boolean needsReviewOnly,
                                            @Param("keyword") String keyword,
+                                           @Param("allStatuses") boolean allStatuses,
+                                           @Param("statuses") Collection<String> statuses,
+                                           @Param("allDetailLevels") boolean allDetailLevels,
+                                           @Param("detailLevels") Collection<String> detailLevels,
                                            Pageable pageable);
 
     @Query(value = "SELECT COUNT(*) FROM policy", nativeQuery = true)

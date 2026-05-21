@@ -25,19 +25,27 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
   const createJob = useCreateJob(policyId);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // 최신 잡 상태 전환 감지 (SUCCESS / FAILED 로 전이될 때 알림 hookup 자리).
+  // 최신 잡 상태가 SUCCESS / FAILED 로 전이될 때 사용자에게 알린다.
+  // 표준 토스트 도입 전까지 다른 어드민 탭(IngestionHealthTab)과 동일하게 alert 를 stopgap 으로 사용한다.
   const lastStatusRef = useRef<string | null>(null);
+  const latestJobForEffect = data?.recentJobs[0];
+  const curStatus = latestJobForEffect?.status ?? null;
   useEffect(() => {
-    const cur = data?.recentJobs[0]?.status ?? null;
     if (
       lastStatusRef.current &&
-      (cur === 'SUCCESS' || cur === 'FAILED') &&
-      cur !== lastStatusRef.current
+      (curStatus === 'SUCCESS' || curStatus === 'FAILED') &&
+      curStatus !== lastStatusRef.current
     ) {
-      // 프로젝트 표준 토스트가 도입되면 여기서 사용자에게 알린다. (현재 placeholder)
+      const title = data?.title ?? '';
+      if (curStatus === 'SUCCESS') {
+        alert(`재크롤 완료: ${title}`);
+      } else {
+        const err = latestJobForEffect?.errorMessage ?? '';
+        alert(`재크롤 실패: ${title}${err ? ` — ${err}` : ''}`);
+      }
     }
-    lastStatusRef.current = cur;
-  }, [data?.recentJobs[0]?.status]);
+    lastStatusRef.current = curStatus;
+  }, [curStatus, data?.title, latestJobForEffect?.errorMessage]);
 
   if (isLoading || !data) {
     return <div className="p-4 text-sm">로딩 중...</div>;

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public class PolicyRepositoryImpl implements PolicyRepository {
@@ -60,8 +61,25 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     }
 
     @Override
-    public Page<Policy> searchForEnrichmentReview(boolean needsReviewOnly, String keyword, Pageable pageable) {
-        return jpaRepository.searchForEnrichmentReview(needsReviewOnly, normalizeKeyword(keyword), pageable);
+    public Page<Policy> searchForEnrichmentReview(boolean needsReviewOnly,
+                                                  String keyword,
+                                                  Set<String> statuses,
+                                                  Set<String> detailLevels,
+                                                  Pageable pageable) {
+        boolean allStatuses = statuses == null || statuses.isEmpty();
+        boolean allDetailLevels = detailLevels == null || detailLevels.isEmpty();
+        // JPA 네이티브 쿼리 IN 절은 빈 컬렉션 바인딩에 취약하므로, 필터 미적용 시 매칭되지 않는 sentinel을 사용한다.
+        // 실제로는 :allStatuses / :allDetailLevels 플래그가 true이므로 IN 절은 평가되지 않는다.
+        Set<String> effectiveStatuses = allStatuses ? Set.of("__NONE__") : statuses;
+        Set<String> effectiveDetailLevels = allDetailLevels ? Set.of("__NONE__") : detailLevels;
+        return jpaRepository.searchForEnrichmentReview(
+                needsReviewOnly,
+                normalizeKeyword(keyword),
+                allStatuses,
+                effectiveStatuses,
+                allDetailLevels,
+                effectiveDetailLevels,
+                pageable);
     }
 
     private String normalizeKeyword(String keyword) {

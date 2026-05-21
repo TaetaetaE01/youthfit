@@ -11,6 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * 어드민 enrichment 검토(read-side) 유스케이스.
  * 검토 대상 정책 후보 페이지 조회와 현황 요약을 제공한다.
@@ -34,7 +37,17 @@ public class AdminEnrichmentQueryService {
     public Page<Policy> findReviewCandidates(EnrichmentReviewFilterCommand filter, Pageable pageable) {
         boolean needsReviewOnly = filter != null && Boolean.TRUE.equals(filter.needsReviewOnly());
         String keyword = filter == null ? null : filter.keyword();
-        return policyRepository.searchForEnrichmentReview(needsReviewOnly, keyword, pageable);
+        Set<String> statuses = toEnumNames(filter == null ? null : filter.statuses());
+        Set<String> detailLevels = toEnumNames(filter == null ? null : filter.detailLevels());
+        return policyRepository.searchForEnrichmentReview(
+                needsReviewOnly, keyword, statuses, detailLevels, pageable);
+    }
+
+    private Set<String> toEnumNames(Set<? extends Enum<?>> values) {
+        if (values == null || values.isEmpty()) {
+            return Set.of();
+        }
+        return values.stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
     }
 
     public EnrichmentReviewSummaryResult findReviewSummary() {
