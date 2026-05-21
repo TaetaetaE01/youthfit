@@ -1,0 +1,230 @@
+{
+  "id": "force-enrich",
+  "name": "YouthFit - 강제 enrichment 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "force-enrich",
+        "responseMode": "lastNode",
+        "options": {},
+        "authentication": "headerAuth"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "force-enrich-trigger",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "internal-api-key",
+          "name": "X-Internal-Api-Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE }}/api/internal/enrichment/jobs/{{ $json.body.jobId }}/callback",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "RUNNING"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "callback-running",
+      "name": "callback RUNNING",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// enrichment-merge 메가노드 로직 재활용\n// 실제 n8n UI 연결 시 Sub-workflow 또는 Code 노드로 대체\nconst { jobId, policyId, urls } = $json.body ?? $json;\n\n// URL 선택 및 fetch 결과 병합 (enrich.mjs selectUrls + mergeFetchResults 와 동일한 흐름)\nconst selectedUrls = (urls ?? []).slice(0, 3);\n\n// 실제 fetch는 n8n HTTP Request 노드 체인으로 처리되지만\n// 스켈레톤에서는 결과를 pass-through 한다\nreturn [{ json: { jobId, policyId, selectedUrls, enrichmentResult: {} } }];"
+      },
+      "id": "enrich-node",
+      "name": "enrich",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE }}/api/internal/policy-enrichment",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ policyId: $json.policyId, enrichmentResult: $json.enrichmentResult }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "ingestion-update",
+      "name": "ingestion update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE }}/api/internal/enrichment/jobs/{{ $('Webhook').item.json.body.jobId }}/callback",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "SUCCESS"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "callback-success",
+      "name": "callback SUCCESS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE }}/api/internal/enrichment/jobs/{{ $('Webhook').item.json.body.jobId }}/callback",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'FAILED', error: $execution.lastError?.message ?? 'unknown error' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "callback-failed",
+      "name": "callback FAILED",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "callback RUNNING", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "callback RUNNING": {
+      "main": [
+        [
+          { "node": "enrich", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "enrich": {
+      "main": [
+        [
+          { "node": "ingestion update", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "ingestion update": {
+      "main": [
+        [
+          { "node": "callback SUCCESS", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
