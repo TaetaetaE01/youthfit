@@ -14,9 +14,10 @@ type Props = {
   segment: BarSegment;
   showLabel: boolean;
   daysUntilEnd: number | null;
+  gridRow: number;
 };
 
-export default function CalendarBar({ segment, showLabel, daysUntilEnd }: Props) {
+export default function CalendarBar({ segment, showLabel, daysUntilEnd, gridRow }: Props) {
   const tone = CATEGORY_TONE[segment.category] ?? CATEGORY_TONE.OTHER;
   const urgent = daysUntilEnd !== null && daysUntilEnd <= 3 && daysUntilEnd >= 0;
   const widthCols = segment.endCol - segment.startCol + 1;
@@ -25,7 +26,7 @@ export default function CalendarBar({ segment, showLabel, daysUntilEnd }: Props)
     <Link
       to={`/policies/${segment.itemId}`}
       className={cn(
-        'flex items-center gap-1 border px-2 py-0.5 text-xs font-semibold truncate',
+        'mx-0.5 flex min-w-0 items-center gap-1 border px-2 text-xs font-semibold',
         tone,
         segment.hasStartCap ? 'rounded-l-md' : 'rounded-l-none border-l-0',
         segment.hasEndCap ? 'rounded-r-md' : 'rounded-r-none border-r-0',
@@ -33,6 +34,7 @@ export default function CalendarBar({ segment, showLabel, daysUntilEnd }: Props)
       )}
       style={{
         gridColumn: `${segment.startCol + 1} / span ${widthCols}`,
+        gridRow,
       }}
       title={`${segment.title} · ${segment.applyStart ?? '?'}~${segment.applyEnd ?? '?'}${
         daysUntilEnd !== null ? ` · 마감 D-${daysUntilEnd}` : ''

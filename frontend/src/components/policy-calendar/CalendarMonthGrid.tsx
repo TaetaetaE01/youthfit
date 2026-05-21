@@ -7,6 +7,11 @@ import type { PolicyCalendarItem } from '@/types/policy';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
+const ROW_DATE_HEIGHT = 28;
+const ROW_BAR_HEIGHT = 22;
+const ROW_BAR_COUNT = 3;
+const ROW_OVERFLOW_HEIGHT = 20;
+
 type Props = {
   items: PolicyCalendarItem[];
   monthStart: string;
@@ -74,14 +79,22 @@ export default function CalendarMonthGrid({ items, monthStart, monthEnd, today }
 
   const labelShown = new Set<number>();
 
+  const gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+  const gridTemplateRows = `${ROW_DATE_HEIGHT}px repeat(${ROW_BAR_COUNT}, ${ROW_BAR_HEIGHT}px) ${ROW_OVERFLOW_HEIGHT}px`;
+
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-7 border-b border-neutral-200 text-xs font-semibold text-neutral-600">
+    <div className="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      {/* 요일 헤더 */}
+      <div
+        className="grid border-b border-neutral-200 bg-neutral-50 text-xs font-semibold text-neutral-600"
+        style={{ gridTemplateColumns }}
+      >
         {WEEKDAYS.map((d, i) => (
           <div
             key={d}
             className={cn(
               'py-2 text-center',
+              i !== 6 && 'border-r border-neutral-200',
               i === 0 && 'text-red-500',
               i === 6 && 'text-blue-500',
             )}
@@ -91,74 +104,94 @@ export default function CalendarMonthGrid({ items, monthStart, monthEnd, today }
         ))}
       </div>
 
-      <div className="flex flex-col">
-        {weeks.map((week, wi) => {
-          const segs = segmentsByWeek.get(wi) ?? [];
+      {/* 주별 행 */}
+      {weeks.map((week, wi) => {
+        const segs = segmentsByWeek.get(wi) ?? [];
+        return (
+          <div
+            key={wi}
+            className={cn(
+              'grid',
+              wi !== weeks.length - 1 && 'border-b border-neutral-100',
+            )}
+            style={{ gridTemplateColumns, gridTemplateRows }}
+          >
+            {/* 셀 배경 — 컬럼 구분선 + 오늘 강조용. 각 셀이 자기 컬럼·전체 행을 차지. */}
+            {week.map((day, di) => {
+              const inMonth = Number(day.slice(5, 7)) === monthNum;
+              const isToday = day === today;
+              return (
+                <div
+                  key={`bg-${day}`}
+                  className={cn(
+                    'min-w-0',
+                    di !== 6 && 'border-r border-neutral-100',
+                    !inMonth && 'bg-neutral-50/50',
+                    isToday && 'bg-brand-100/30',
+                  )}
+                  style={{
+                    gridColumn: di + 1,
+                    gridRow: `1 / span ${ROW_BAR_COUNT + 2}`,
+                  }}
+                  aria-hidden="true"
+                />
+              );
+            })}
 
-          return (
-            <div key={wi} className="border-b border-neutral-100">
-              <div className="grid grid-cols-7">
-                {week.map((day) => {
-                  const inMonth = Number(day.slice(5, 7)) === monthNum;
-                  const isToday = day === today;
-                  return (
-                    <div
-                      key={day}
-                      className={cn(
-                        'px-2 pt-1 text-xs',
-                        inMonth ? 'text-neutral-800' : 'text-neutral-400',
-                        isToday && 'font-bold text-brand-800',
-                      )}
-                    >
-                      {Number(day.slice(8, 10))}
-                    </div>
-                  );
-                })}
-              </div>
+            {/* 날짜 번호 */}
+            {week.map((day, di) => {
+              const inMonth = Number(day.slice(5, 7)) === monthNum;
+              const isToday = day === today;
+              return (
+                <div
+                  key={`d-${day}`}
+                  className={cn(
+                    'pointer-events-none px-2 pt-1 text-xs',
+                    inMonth ? 'text-neutral-700' : 'text-neutral-400',
+                    isToday && 'font-bold text-brand-800',
+                  )}
+                  style={{ gridColumn: di + 1, gridRow: 1 }}
+                >
+                  {Number(day.slice(8, 10))}
+                </div>
+              );
+            })}
 
-              <div
-                className="grid grid-cols-7 gap-y-0.5 px-1 pb-1"
-                style={{ gridAutoRows: '20px' }}
-              >
-                {segs
-                  .filter((s) => s.row < 3)
-                  .map((seg) => {
-                    const show = !labelShown.has(seg.itemId);
-                    if (show) labelShown.add(seg.itemId);
-                    return (
-                      <div
-                        key={`${seg.itemId}-${seg.weekIndex}`}
-                        style={{ gridRow: seg.row + 1 }}
-                      >
-                        <CalendarBar
-                          segment={seg}
-                          showLabel={show && seg.hasStartCap}
-                          daysUntilEnd={daysUntil(seg.applyEnd)}
-                        />
-                      </div>
-                    );
-                  })}
-              </div>
+            {/* 막대 */}
+            {segs
+              .filter((s) => s.row < ROW_BAR_COUNT)
+              .map((seg) => {
+                const show = !labelShown.has(seg.itemId);
+                if (show) labelShown.add(seg.itemId);
+                return (
+                  <CalendarBar
+                    key={`${seg.itemId}-${seg.weekIndex}`}
+                    segment={seg}
+                    showLabel={show && seg.hasStartCap}
+                    daysUntilEnd={daysUntil(seg.applyEnd)}
+                    gridRow={seg.row + 2}
+                  />
+                );
+              })}
 
-              <div className="grid grid-cols-7 px-1 pb-1">
-                {week.map((day) => {
-                  const overflow = layout.overflowByDay[day] ?? 0;
-                  if (overflow <= 0) return <div key={day} />;
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => setPopoverDay(day)}
-                      className="text-[10px] font-semibold text-neutral-500 hover:text-brand-800"
-                    >
-                      +{overflow}개 더보기
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            {/* +N 더보기 */}
+            {week.map((day, di) => {
+              const overflow = layout.overflowByDay[day] ?? 0;
+              if (overflow <= 0) return null;
+              return (
+                <button
+                  key={`o-${day}`}
+                  onClick={() => setPopoverDay(day)}
+                  className="self-center px-2 text-left text-[11px] font-semibold text-neutral-500 hover:text-brand-800"
+                  style={{ gridColumn: di + 1, gridRow: ROW_BAR_COUNT + 2 }}
+                >
+                  +{overflow}개 더보기
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
 
       {popoverDay && (
         <CalendarDayPopover
