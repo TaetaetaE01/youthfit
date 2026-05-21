@@ -73,6 +73,11 @@ public class PolicyIngestionService {
                         command.firstComeFirstServed(),
                         command.applyUrl()
                 );
+                policy.updateApplyPeriod(
+                        command.applyStart(), command.applyEnd(),
+                        command.applyPeriodSource(),
+                        command.applyPeriodConfidence(),
+                        command.applyPeriodEvidence());
                 policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
                 policy.replaceAttachments(toAttachments(command.attachments()));
                 policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));

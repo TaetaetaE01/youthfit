@@ -2,20 +2,19 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.event.PolicyUpsertedEvent;
 import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput;
 import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
-import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
+import com.youthfit.ingestion.application.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.FailureReason;
 import com.youthfit.ingestion.domain.model.IngestionItemFailure;
 import com.youthfit.ingestion.domain.model.IngestionRunLog;
-import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.model.ResolvedPeriod;
 import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
 import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
-import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
+import com.youthfit.ingestion.domain.service.PeriodResolver;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult.Outcome;
@@ -34,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -56,11 +54,9 @@ public class IngestionService {
 
     private final PolicyIngestionService policyIngestionService;
     private final ObjectMapper objectMapper;
-    private final PolicyPeriodExtractor policyPeriodExtractor;
-    private final PolicyPeriodLlmProvider policyPeriodLlmProvider;
+    private final PeriodResolver periodResolver;
     private final ApplicationEventPublisher eventPublisher;
     private final AttachmentDownloadService attachmentDownloadService;
-    private final CostGuard costGuard;
     private final IngestionRunLogRepository ingestionRunLogRepository;
     private final IngestionItemFailureRepository ingestionItemFailureRepository;
     private final CodeBasedRuleExtractionService codeBasedRuleExtractionService;
@@ -87,7 +83,7 @@ public class IngestionService {
                     : command.body();
 
             Sections sections = parseSections(command.body());
-            PolicyPeriod period = resolvePeriod(command);
+            ResolvedPeriod period = resolvePeriod(command);
 
             List<String> regionCodes = command.rawCodes() == null
                     ? null
@@ -133,9 +129,9 @@ public class IngestionService {
                     rawJson,
                     sourceHash,
                     command.enrichment(),
-                    null,    // applyPeriodSource — Task 10 will fill from ResolvedPeriod
-                    null,    // applyPeriodConfidence — Task 10
-                    null     // applyPeriodEvidence — Task 10
+                    period.isEmpty() ? null : period.source(),
+                    period.isEmpty() ? null : period.confidence(),
+                    period.isEmpty() ? null : period.evidence()
             );
 
             PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
@@ -224,21 +220,8 @@ public class IngestionService {
         }
     }
 
-    private PolicyPeriod resolvePeriod(IngestPolicyCommand command) {
-        LocalDate applyStart = command.applyStart();
-        LocalDate applyEnd = command.applyEnd();
-        if (applyStart != null || applyEnd != null) {
-            return PolicyPeriod.of(applyStart, applyEnd);
-        }
-        PolicyPeriod regexPeriod = policyPeriodExtractor.extract(command.body());
-        if (!regexPeriod.isEmpty()) {
-            return regexPeriod;
-        }
-        if (costGuard.enabled()) {
-            log.info("cost-guard: skipping period LLM extraction (allowlist 모드, externalId={})", command.externalId());
-            return PolicyPeriod.empty();
-        }
-        return policyPeriodLlmProvider.extractPeriod(command.title(), command.body());
+    private ResolvedPeriod resolvePeriod(IngestPolicyCommand command) {
+        return periodResolver.resolve(PeriodExtractionContext.forIngest(command));
     }
 
     private Sections parseSections(String body) {
