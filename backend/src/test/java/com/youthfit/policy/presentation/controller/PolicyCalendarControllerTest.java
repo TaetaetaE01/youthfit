@@ -2,6 +2,8 @@ package com.youthfit.policy.presentation.controller;
 
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationFilter;
 import com.youthfit.common.config.SecurityConfig;
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.ingestion.infrastructure.config.InternalApiKeyFilter;
 import com.youthfit.policy.application.dto.result.PolicyCalendarPageResult;
 import com.youthfit.policy.application.dto.result.PolicyCalendarResult;
@@ -59,15 +61,17 @@ class PolicyCalendarControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/policies/calendar — from > to 면 400")
+    @DisplayName("GET /api/v1/policies/calendar — from > to 면 400 (YouthFitException YF-001)")
     void calendar_invalidRange() throws Exception {
         when(policyQueryService.findByDateRange(any(), any(), any(), any()))
-                .thenThrow(new IllegalArgumentException("from"));
+                .thenThrow(new YouthFitException(ErrorCode.INVALID_INPUT,
+                        "from 은 to 보다 이전이거나 같아야 합니다"));
 
         mockMvc.perform(get("/api/v1/policies/calendar")
                         .param("from", "2026-03-31")
                         .param("to", "2026-03-01"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("YF-001"));
     }
 
     @Test

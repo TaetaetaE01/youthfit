@@ -13,14 +13,14 @@ public record PolicyCalendarResult(
         LocalDate applyEnd,
         String regionLabel
 ) {
-    public static PolicyCalendarResult from(Policy policy) {
+    public static PolicyCalendarResult from(Policy policy, String regionLabel) {
         return new PolicyCalendarResult(
                 policy.getId(),
                 policy.getTitle(),
                 policy.getCategory(),
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
-                policy.getRegionCode()
+                regionLabel
         );
     }
 }

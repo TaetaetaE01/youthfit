@@ -258,25 +258,27 @@ class PolicyQueryServiceTest {
     }
 
     @Test
-    @DisplayName("findByDateRange — from > to 면 IllegalArgumentException")
+    @DisplayName("findByDateRange — from > to 면 YouthFitException(YF-001)")
     void findByDateRange_invalidOrder() {
         LocalDate from = LocalDate.of(2026, 3, 31);
         LocalDate to = LocalDate.of(2026, 3, 1);
 
         assertThatThrownBy(() ->
                 policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(YouthFitException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
     }
 
     @Test
-    @DisplayName("findByDateRange — 범위가 92일을 초과하면 IllegalArgumentException")
+    @DisplayName("findByDateRange — 범위가 92일을 초과하면 YouthFitException(YF-001)")
     void findByDateRange_rangeTooLarge() {
         LocalDate from = LocalDate.of(2026, 3, 1);
         LocalDate to = LocalDate.of(2026, 6, 30);  // 121일
 
         assertThatThrownBy(() ->
                 policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(YouthFitException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
     }
 
     @Test
