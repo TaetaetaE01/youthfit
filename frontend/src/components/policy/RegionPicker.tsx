@@ -136,7 +136,7 @@ export default function RegionPicker({
         <div
           role="listbox"
           aria-label="시·도 선택"
-          className="w-[38%] overflow-y-auto border-r border-gray-100 bg-gray-50"
+          className="w-[38%] overflow-y-auto border-r border-brand-100 bg-brand-50"
         >
           <button
             type="button"
@@ -147,8 +147,8 @@ export default function RegionPicker({
               setActiveSido(NATIONWIDE_TOKEN);
             }}
             className={cn(
-              'flex w-full items-center justify-between px-3 py-3 text-left text-sm border-b border-gray-100',
-              isNationwide ? 'bg-white font-semibold text-brand-800' : 'text-gray-700 hover:bg-white',
+              'flex w-full items-center justify-between px-3 py-3 text-left text-sm border-b border-brand-100/60',
+              isNationwide ? 'bg-white font-semibold text-brand-800' : 'text-gray-700 hover:bg-brand-100',
             )}
           >
             <span>{NATIONWIDE_SIDO.name}</span>
@@ -165,8 +165,8 @@ export default function RegionPicker({
                 aria-selected={active}
                 onClick={() => setActiveSido(sido.code)}
                 className={cn(
-                  'flex w-full items-center justify-between px-3 py-3 text-left text-sm border-b border-gray-100',
-                  active ? 'bg-white font-semibold text-brand-800' : 'text-gray-700 hover:bg-white',
+                  'flex w-full items-center justify-between px-3 py-3 text-left text-sm border-b border-brand-100/60',
+                  active ? 'bg-white font-semibold text-brand-800' : 'text-gray-700 hover:bg-brand-100',
                 )}
               >
                 <span>{sido.name.replace('특별시', '').replace('광역시', '').replace('특별자치도', '').replace('특별자치시', '').replace('도', '도')}</span>
