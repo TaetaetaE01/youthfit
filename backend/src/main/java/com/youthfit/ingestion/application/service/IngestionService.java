@@ -67,6 +67,7 @@ public class IngestionService {
         String sourceLabel = resolveSourceLabel(command);
         boolean failed = false;
         boolean duplicate = false;
+        ResolvedPeriod resolvedPeriod = ResolvedPeriod.empty();
 
         try {
             Category category = mapCategory(command.category());
@@ -83,7 +84,8 @@ public class IngestionService {
                     : command.body();
 
             Sections sections = parseSections(command.body());
-            ResolvedPeriod period = resolvePeriod(command);
+            resolvedPeriod = resolvePeriod(command);
+            ResolvedPeriod period = resolvedPeriod;  // local alias for the existing reference
 
             List<String> regionCodes = command.rawCodes() == null
                     ? null
@@ -177,9 +179,10 @@ public class IngestionService {
             throw e;
         } finally {
             Instant runEnd = Instant.now();
+            String meta = serializeResolveMeta(resolvedPeriod);
             IngestionRunLog runLog = failed
                     ? IngestionRunLog.failure(sourceLabel, runStart, runEnd)
-                    : IngestionRunLog.success(sourceLabel, runStart, runEnd, duplicate);
+                    : IngestionRunLog.success(sourceLabel, runStart, runEnd, duplicate, meta);
             try {
                 ingestionRunLogRepository.save(runLog);
             } catch (Exception e) {
@@ -284,6 +287,21 @@ public class IngestionService {
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private String serializeResolveMeta(ResolvedPeriod r) {
+        if (r == null || r.isEmpty()) {
+            return "{\"source\":null,\"confidence\":null}";
+        }
+        try {
+            return objectMapper.writeValueAsString(java.util.Map.of(
+                    "source", r.source().name(),
+                    "confidence", r.confidence(),
+                    "evidence", r.evidence() == null ? "" : r.evidence()
+            ));
+        } catch (Exception e) {
+            return "{\"source\":\"" + r.source() + "\"}";
         }
     }
 
