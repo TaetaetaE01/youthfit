@@ -192,6 +192,7 @@ function Navbar() {
         {/* Nav links (desktop) */}
         <nav className="hidden items-center gap-8 md:flex">
           <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</Link>
+          <Link to="/policies/calendar" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 달력</Link>
           <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</Link>
           <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</Link>
         </nav>
@@ -239,6 +240,7 @@ function Navbar() {
         <nav className="border-t border-gray-100 bg-white px-6 py-4 md:hidden">
           <div className="flex flex-col gap-3">
             <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 목록</Link>
+            <Link to="/policies/calendar" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">정책 달력</Link>
             <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">적합도 판정</Link>
             <Link to="/policies" className="text-sm font-semibold text-gray-600 transition-colors hover:text-brand-800">Q&A</Link>
           </div>

@@ -7,6 +7,7 @@ import com.youthfit.policy.domain.model.RegionFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,11 @@ public interface PolicyRepository {
      * 온통청년 ingestion 시점에 복지로 우선 중복 스킵 판단에 사용한다.
      */
     Optional<Policy> findByNormalizedTitleWithBokjiroSource(String normalizedTitle);
+
+    List<Policy> findByCalendarRange(LocalDate from, LocalDate to,
+                                      RegionFilter regionFilter, Category category);
+
+    Page<Policy> findAlwaysOpen(RegionFilter regionFilter, Category category, Pageable pageable);
 
     Policy save(Policy policy);
 }

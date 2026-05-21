@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PolicyCard from '@/components/policy/PolicyCard';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
-import RegionPicker from '@/components/policy/RegionPicker';
-import RegionPickerTrigger from '@/components/policy/RegionPickerTrigger';
+import PolicyFilterBar from '@/components/policy/PolicyFilterBar';
 import RegionPickerBanner from '@/components/policy/RegionPickerBanner';
 import { usePolicies } from '@/hooks/queries/usePolicies';
 import { useMyBookmarkIds } from '@/hooks/queries/useMyBookmarkIds';
@@ -45,8 +44,6 @@ function SkeletonCard() {
 
 const PAGE_SIZE = 6;
 
-const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
-
 const STATUS_TABS: { value: PolicyStatus; label: string }[] = [
   { value: 'OPEN', label: '모집중' },
   { value: 'UPCOMING', label: '예정' },
@@ -59,84 +56,6 @@ const STATUS_VALUES = STATUS_TABS.map((t) => t.value) as readonly PolicyStatus[]
 
 function isPolicyStatus(value: string | null): value is PolicyStatus {
   return value !== null && (STATUS_VALUES as readonly string[]).includes(value);
-}
-
-/* ──────────────────────────────────────────────
-   MobileFilterSheet
-   ────────────────────────────────────────────── */
-
-function MobileFilterSheet({
-  isOpen,
-  onClose,
-  category,
-  onCategoryChange,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  category: PolicyCategory | '';
-  onCategoryChange: (v: PolicyCategory | '') => void;
-}) {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 md:hidden">
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-6 pb-8 shadow-xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">필터</h2>
-          <button
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100"
-            aria-label="필터 닫기"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold text-gray-700">카테고리</legend>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORY_ENTRIES.map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => onCategoryChange(category === key ? '' : key)}
-                className={cn(
-                  'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
-                  category === key
-                    ? 'border-transparent bg-brand-100 text-indigo-600'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <button
-          onClick={onClose}
-          className="mt-6 w-full rounded-xl bg-brand-800 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
-        >
-          필터 적용
-        </button>
-      </div>
-    </div>
-  );
 }
 
 /* ──────────────────────────────────────────────
@@ -265,8 +184,6 @@ function Pagination({
 
 export default function PolicyListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [inputValue, setInputValue] = useState(searchParams.get('keyword') ?? '');
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -479,94 +396,15 @@ export default function PolicyListPage() {
 
       <StatusTabBar status={status} onStatusChange={handleStatusTabChange} />
 
-      {/* ── Desktop Filters ── */}
-      <div className="mb-4 hidden flex-wrap items-center gap-2 md:flex">
-        {CATEGORY_ENTRIES.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => updateParams({ category: category === key ? '' : key, page: '' })}
-            className={cn(
-              'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
-              category === key
-                ? 'border-transparent bg-brand-100 text-indigo-600'
-                : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-
-        <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden="true" />
-
-        <div className="relative">
-          <RegionPickerTrigger
-            selectedCodes={regions}
-            regionData={regionData}
-            onOpen={() => setRegionPickerOpen(true)}
-            disabled={isSearchMode}
-          />
-          {/* 데스크톱 팝오버 모드 */}
-          <div className="hidden md:block">
-            <RegionPicker
-              open={regionPickerOpen}
-              onClose={() => setRegionPickerOpen(false)}
-              selectedCodes={regions}
-              onApply={handleRegionApply}
-              regionData={regionData}
-              mode="desktop-popover"
-            />
-          </div>
-        </div>
-
-        {isSearchMode && (
-          <span className="ml-2 text-xs text-gray-500">검색 결과에는 지역 필터가 적용되지 않습니다</span>
-        )}
-      </div>
-
-      {/* ── Mobile Filter Bar ── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 md:hidden">
-        <button
-          onClick={() => setFilterSheetOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-gray-50"
-          aria-label="필터 열기"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          필터
-          {activeFilters.length > 0 && (
-            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-800 text-xs text-white">
-              {activeFilters.length}
-            </span>
-          )}
-        </button>
-        <RegionPickerTrigger
-          selectedCodes={regions}
-          regionData={regionData}
-          onOpen={() => setRegionPickerOpen(true)}
-          disabled={isSearchMode}
-        />
-        {isSearchMode && (
-          <span className="text-[10px] text-gray-500">검색 결과 미적용</span>
-        )}
-      </div>
-
-      <MobileFilterSheet
-        isOpen={filterSheetOpen}
-        onClose={() => setFilterSheetOpen(false)}
+      <PolicyFilterBar
         category={category}
+        regions={regions}
+        regionData={regionData}
         onCategoryChange={(v) => updateParams({ category: v, page: '' })}
+        onRegionsChange={handleRegionApply}
+        disabled={isSearchMode}
+        disabledHint="검색 결과에는 지역 필터가 적용되지 않습니다"
       />
-
-      {/* 모바일 RegionPicker (sheet) */}
-      <div className="md:hidden">
-        <RegionPicker
-          open={regionPickerOpen}
-          onClose={() => setRegionPickerOpen(false)}
-          selectedCodes={regions}
-          onApply={handleRegionApply}
-          regionData={regionData}
-          mode="mobile-sheet"
-        />
-      </div>
 
       {/* ── Active filter badges ── */}
       {activeFilters.length > 0 && (

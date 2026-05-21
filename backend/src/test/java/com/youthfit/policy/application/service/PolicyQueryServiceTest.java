@@ -2,6 +2,8 @@ package com.youthfit.policy.application.service;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.policy.application.dto.result.PolicyCalendarPageResult;
+import com.youthfit.policy.application.dto.result.PolicyCalendarResult;
 import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.port.RegionCodeRegistry;
@@ -22,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -35,6 +38,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 
 @DisplayName("PolicyQueryService")
 @ExtendWith(MockitoExtension.class)
@@ -228,6 +232,73 @@ class PolicyQueryServiceTest {
             // then
             assertThat(result.policies()).hasSize(1);
         }
+    }
+
+    @Test
+    @DisplayName("findByDateRange — 정상 호출: PolicyRepository.findByCalendarRange 결과를 결과 DTO 로 매핑")
+    void findByDateRange_success() {
+        LocalDate from = LocalDate.of(2026, 3, 1);
+        LocalDate to = LocalDate.of(2026, 3, 31);
+        Policy p = Policy.builder()
+                .title("청년월세").summary("test")
+                .category(Category.HOUSING).regionCode("전국")
+                .applyStart(LocalDate.of(2026, 3, 10))
+                .applyEnd(LocalDate.of(2026, 3, 20))
+                .build();
+        ReflectionTestUtils.setField(p, "id", 1L);
+        when(policyRepository.findByCalendarRange(eq(from), eq(to), any(), eq(null)))
+                .thenReturn(List.of(p));
+
+        List<PolicyCalendarResult> result =
+                policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(1L);
+        assertThat(result.get(0).applyStart()).isEqualTo(LocalDate.of(2026, 3, 10));
+    }
+
+    @Test
+    @DisplayName("findByDateRange — from > to 면 YouthFitException(YF-001)")
+    void findByDateRange_invalidOrder() {
+        LocalDate from = LocalDate.of(2026, 3, 31);
+        LocalDate to = LocalDate.of(2026, 3, 1);
+
+        assertThatThrownBy(() ->
+                policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null))
+                .isInstanceOf(YouthFitException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("findByDateRange — 범위가 92일을 초과하면 YouthFitException(YF-001)")
+    void findByDateRange_rangeTooLarge() {
+        LocalDate from = LocalDate.of(2026, 3, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);  // 121일
+
+        assertThatThrownBy(() ->
+                policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null))
+                .isInstanceOf(YouthFitException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("findAlwaysOpen — 페이지 결과를 PolicyCalendarPageResult 로 매핑")
+    void findAlwaysOpen_success() {
+        Policy p = Policy.builder()
+                .title("상시멘토링").summary("test")
+                .category(Category.EDUCATION).regionCode("전국")
+                .build();
+        ReflectionTestUtils.setField(p, "id", 2L);
+        Page<Policy> page = new PageImpl<>(List.of(p), PageRequest.of(0, 20), 1);
+        when(policyRepository.findAlwaysOpen(any(), eq(null), any(Pageable.class)))
+                .thenReturn(page);
+
+        PolicyCalendarPageResult result =
+                policyQueryService.findAlwaysOpen(RegionFilter.of(null), null, 0, 20);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().get(0).id()).isEqualTo(2L);
+        assertThat(result.totalCount()).isEqualTo(1L);
     }
 
     // ── 헬퍼 메서드 ──

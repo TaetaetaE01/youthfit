@@ -5,6 +5,7 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { RequireAdmin } from '@/components/auth/RequireAdmin';
 import LandingPage from '@/pages/LandingPage';
 import PolicyListPage from '@/pages/PolicyListPage';
+import PolicyCalendarPage from '@/pages/PolicyCalendarPage';
 import PolicyDetailPage from '@/pages/PolicyDetailPage';
 import LoginPage from '@/pages/LoginPage';
 import KakaoCallbackPage from '@/pages/KakaoCallbackPage';
@@ -36,6 +37,7 @@ export default function App() {
 
           <Route element={<AppLayout />}>
             <Route path="/policies" element={<PolicyListPage />} />
+            <Route path="/policies/calendar" element={<PolicyCalendarPage />} />
             <Route path="/policies/:policyId" element={<PolicyDetailPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />

@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/queries/useProfile';
 
 const NAV_LINKS = [
   { to: '/policies', label: '정책 목록' },
+  { to: '/policies/calendar', label: '정책 달력' },
   { to: '/policies#eligibility', label: '적합도 판정' },
   { to: '/policies#qna', label: 'Q&A' },
 ];

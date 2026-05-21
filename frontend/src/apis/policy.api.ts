@@ -1,5 +1,11 @@
 import api from './client';
-import type { PolicyPage, PolicyDetail, PolicyStatus } from '@/types/policy';
+import type {
+  PolicyPage,
+  PolicyDetail,
+  PolicyStatus,
+  PolicyCalendarResponse,
+  PolicyCalendarPageResponse,
+} from '@/types/policy';
 
 interface PolicyListParams {
   category?: string;
@@ -46,4 +52,46 @@ export async function searchPolicies(
 
 export async function fetchPolicyDetail(policyId: number): Promise<PolicyDetail> {
   return api.get(`v1/policies/${policyId}`).json<PolicyDetail>();
+}
+
+interface PolicyCalendarParams {
+  from: string;          // YYYY-MM-DD
+  to: string;            // YYYY-MM-DD
+  regions?: string[];
+  category?: string;
+}
+
+export async function fetchCalendarPolicies(
+  params: PolicyCalendarParams,
+): Promise<PolicyCalendarResponse> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('from', params.from);
+  searchParams.set('to', params.to);
+  if (params.regions && params.regions.length > 0) {
+    searchParams.set('regions', params.regions.join(','));
+  }
+  if (params.category) searchParams.set('category', params.category);
+
+  return api.get('v1/policies/calendar', { searchParams }).json<PolicyCalendarResponse>();
+}
+
+interface AlwaysOpenParams {
+  regions?: string[];
+  category?: string;
+  page?: number;
+  size?: number;
+}
+
+export async function fetchAlwaysOpenPolicies(
+  params: AlwaysOpenParams = {},
+): Promise<PolicyCalendarPageResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.regions && params.regions.length > 0) {
+    searchParams.set('regions', params.regions.join(','));
+  }
+  if (params.category) searchParams.set('category', params.category);
+  searchParams.set('page', String(params.page ?? 0));
+  searchParams.set('size', String(params.size ?? 20));
+
+  return api.get('v1/policies/calendar/always-open', { searchParams }).json<PolicyCalendarPageResponse>();
 }

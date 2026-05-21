@@ -347,3 +347,27 @@ export function getRegionName(
   }
   return REGION_OPTIONS.find((r) => r.value === regionCode)?.label ?? regionCode;
 }
+
+/* ── Policy Calendar ── */
+
+export type PolicyCalendarItem = {
+  id: number;
+  title: string;
+  category: PolicyCategory;
+  applyStart: string | null;   // YYYY-MM-DD
+  applyEnd: string | null;     // YYYY-MM-DD
+  regionLabel: string;
+};
+
+export type PolicyCalendarResponse = {
+  items: PolicyCalendarItem[];
+};
+
+export type PolicyCalendarPageResponse = {
+  content: PolicyCalendarItem[];
+  totalCount: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  hasNext: boolean;
+};
