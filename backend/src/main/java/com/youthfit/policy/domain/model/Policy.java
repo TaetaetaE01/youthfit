@@ -1,6 +1,7 @@
 package com.youthfit.policy.domain.model;
 
 import com.youthfit.common.domain.BaseTimeEntity;
+import com.youthfit.common.domain.PeriodSource;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import jakarta.persistence.*;
@@ -70,6 +71,16 @@ public class Policy extends BaseTimeEntity {
 
     @Column(name = "apply_end")
     private LocalDate applyEnd;
+
+    @Column(name = "apply_period_source", length = 32)
+    @Enumerated(EnumType.STRING)
+    private PeriodSource applyPeriodSource;
+
+    @Column(name = "apply_period_confidence")
+    private Double applyPeriodConfidence;
+
+    @Column(name = "apply_period_evidence", length = 200)
+    private String applyPeriodEvidence;
 
     @Column(name = "reference_year")
     private Integer referenceYear;
@@ -157,6 +168,10 @@ public class Policy extends BaseTimeEntity {
                    String organization, String contact,
                    Category category, String regionCode, List<String> regionCodes,
                    LocalDate applyStart, LocalDate applyEnd,
+                   // 신청기간 추출 메타 (Task 11/12)
+                   PeriodSource applyPeriodSource,
+                   Double applyPeriodConfidence,
+                   String applyPeriodEvidence,
                    Integer referenceYear, String supportCycle, String provideType,
                    String screeningMethod, String submissionDocuments,
                    String additionalQualification, String participationRestriction,
@@ -177,6 +192,9 @@ public class Policy extends BaseTimeEntity {
         this.regionCodes = joinRegionCodes(regionCodes);
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
+        this.applyPeriodSource = applyPeriodSource;
+        this.applyPeriodConfidence = applyPeriodConfidence;
+        this.applyPeriodEvidence = applyPeriodEvidence;
         this.referenceYear = referenceYear;
         this.supportCycle = supportCycle;
         this.provideType = provideType;
@@ -313,5 +331,15 @@ public class Policy extends BaseTimeEntity {
 
     public void replaceEnrichment(PolicyEnrichment newEnrichment) {
         this.enrichment = newEnrichment;
+    }
+
+    public void updateApplyPeriod(
+            LocalDate start, LocalDate end,
+            PeriodSource source, Double confidence, String evidence) {
+        this.applyStart = start;
+        this.applyEnd = end;
+        this.applyPeriodSource = source;
+        this.applyPeriodConfidence = confidence;
+        this.applyPeriodEvidence = evidence;
     }
 }

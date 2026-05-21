@@ -21,4 +21,15 @@ public class AttachmentAsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "periodBackfillExecutor")
+    public Executor periodBackfillExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("period-bf-");
+        executor.initialize();
+        return executor;
+    }
 }

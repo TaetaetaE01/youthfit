@@ -73,6 +73,11 @@ public class PolicyIngestionService {
                         command.firstComeFirstServed(),
                         command.applyUrl()
                 );
+                policy.updateApplyPeriod(
+                        command.applyStart(), command.applyEnd(),
+                        command.applyPeriodSource(),
+                        command.applyPeriodConfidence(),
+                        command.applyPeriodEvidence());
                 policy.replaceTags(command.lifeTags(), command.themeTags(), command.targetTags());
                 policy.replaceAttachments(toAttachments(command.attachments()));
                 policy.replaceReferenceSites(toReferenceSites(command.referenceSites()));
@@ -100,6 +105,9 @@ public class PolicyIngestionService {
                 .regionCodes(command.regionCodes())
                 .applyStart(command.applyStart())
                 .applyEnd(command.applyEnd())
+                .applyPeriodSource(command.applyPeriodSource())
+                .applyPeriodConfidence(command.applyPeriodConfidence())
+                .applyPeriodEvidence(command.applyPeriodEvidence())
                 .referenceYear(command.referenceYear())
                 .supportCycle(command.supportCycle())
                 .provideType(command.provideType())

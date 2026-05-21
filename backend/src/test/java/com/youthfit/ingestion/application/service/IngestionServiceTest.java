@@ -2,18 +2,17 @@ package com.youthfit.ingestion.application.service;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-import com.youthfit.common.config.CostGuard;
-import com.youthfit.common.config.CostGuardProperties;
+import com.youthfit.common.domain.PeriodSource;
 import com.youthfit.common.event.PolicyUpsertedEvent;
 import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput;
 import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
-import com.youthfit.ingestion.application.port.PolicyPeriodLlmProvider;
-import com.youthfit.ingestion.domain.model.PolicyPeriod;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.model.ResolvedPeriod;
 import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
 import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;
-import com.youthfit.ingestion.domain.service.PolicyPeriodExtractor;
+import com.youthfit.ingestion.domain.service.PeriodResolver;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.service.PolicyIngestionService;
@@ -52,7 +51,7 @@ class IngestionServiceTest {
     private PolicyIngestionService policyIngestionService;
 
     @Mock
-    private PolicyPeriodLlmProvider policyPeriodLlmProvider;
+    private PeriodResolver periodResolver;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -70,13 +69,7 @@ class IngestionServiceTest {
     private CodeBasedRuleExtractionService codeBasedRuleExtractionService;
 
     @Spy
-    private PolicyPeriodExtractor policyPeriodExtractor = new PolicyPeriodExtractor();
-
-    @Spy
     private ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
-
-    @Spy
-    private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
 
     @Nested
     @DisplayName("receivePolicy")
@@ -87,6 +80,8 @@ class IngestionServiceTest {
         void delegatesToPolicyIngestionService() {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -104,6 +99,8 @@ class IngestionServiceTest {
         void mapsKoreanCategoryToEnum() {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "주거");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -119,6 +116,8 @@ class IngestionServiceTest {
         void unknownCategoryMapsToWelfare() {
             // given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "알수없는카테고리");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -134,6 +133,8 @@ class IngestionServiceTest {
         void unknownSourceTypeFallsBackToDefault() {
             // given
             IngestPolicyCommand command = command("UNKNOWN_TYPE", "일자리");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -145,10 +146,14 @@ class IngestionServiceTest {
         }
 
         @Test
-        @DisplayName("기간이 비어 있으면 본문에서 정규식으로 보강한다")
-        void enrichesPeriodViaRegexWhenMissing() {
+        @DisplayName("PeriodResolver 가 반환한 신청기간이 RegisterPolicyCommand 에 그대로 전파된다")
+        void propagatesResolvedPeriodToRegisterCommand() {
             // given
             IngestPolicyCommand command = commandWithoutPeriod("신청기간: 2026.05.01.~2026.06.30.");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(new ResolvedPeriod(
+                            LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
+                            PeriodSource.BODY_LABELED, 0.90, "신청기간: 2026.05.01.~2026.06.30."));
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -160,16 +165,18 @@ class IngestionServiceTest {
             then(policyIngestionService).should().registerPolicy(captor.capture());
             assertThat(captor.getValue().applyStart()).isEqualTo(LocalDate.of(2026, 5, 1));
             assertThat(captor.getValue().applyEnd()).isEqualTo(LocalDate.of(2026, 6, 30));
-            then(policyPeriodLlmProvider).shouldHaveNoInteractions();
+            assertThat(captor.getValue().applyPeriodSource()).isEqualTo(PeriodSource.BODY_LABELED);
+            assertThat(captor.getValue().applyPeriodConfidence()).isEqualTo(0.90);
+            assertThat(captor.getValue().applyPeriodEvidence()).isEqualTo("신청기간: 2026.05.01.~2026.06.30.");
         }
 
         @Test
-        @DisplayName("정규식이 실패하면 LLM 제공자로 폴백한다")
-        void fallsBackToLlmWhenRegexFails() {
+        @DisplayName("PeriodResolver 가 empty 를 반환하면 RegisterPolicyCommand 메타는 null 이다")
+        void emptyResolvedPeriodPropagatesNullMeta() {
             // given
             IngestPolicyCommand command = commandWithoutPeriod("상시접수");
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.of(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)));
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(1L));
 
@@ -179,23 +186,11 @@ class IngestionServiceTest {
             // then
             ArgumentCaptor<RegisterPolicyCommand> captor = ArgumentCaptor.forClass(RegisterPolicyCommand.class);
             then(policyIngestionService).should().registerPolicy(captor.capture());
-            assertThat(captor.getValue().applyStart()).isEqualTo(LocalDate.of(2026, 7, 1));
-            assertThat(captor.getValue().applyEnd()).isEqualTo(LocalDate.of(2026, 7, 31));
-        }
-
-        @Test
-        @DisplayName("command에 기간이 이미 있으면 보강 로직을 호출하지 않는다")
-        void keepsCommandPeriodWhenPresent() {
-            // given
-            IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
-            given(policyIngestionService.registerPolicy(any()))
-                    .willReturn(PolicyIngestionResult.registered(1L));
-
-            // when
-            ingestionService.receivePolicy(command);
-
-            // then
-            then(policyPeriodLlmProvider).shouldHaveNoInteractions();
+            assertThat(captor.getValue().applyStart()).isNull();
+            assertThat(captor.getValue().applyEnd()).isNull();
+            assertThat(captor.getValue().applyPeriodSource()).isNull();
+            assertThat(captor.getValue().applyPeriodConfidence()).isNull();
+            assertThat(captor.getValue().applyPeriodEvidence()).isNull();
         }
 
         @Test
@@ -203,6 +198,8 @@ class IngestionServiceTest {
         void 정책_등록_후_PolicyUpsertedEvent_를_발행한다() {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(42L));
 
@@ -221,6 +218,8 @@ class IngestionServiceTest {
         void 가이드와_룰은_직접_호출되지_않는다() {
             // Given
             IngestPolicyCommand command = command("YOUTH_SEOUL_CRAWL", "일자리");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(42L));
 
@@ -237,6 +236,8 @@ class IngestionServiceTest {
         void respondsSkippedDuplicateWithoutSideEffects() {
             // given
             IngestPolicyCommand command = command("YOUTH_CENTER", "주거");
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(resolvedPeriod());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.skippedDuplicate(42L));
 
@@ -253,10 +254,10 @@ class IngestionServiceTest {
         @DisplayName("youth center 상세 필드가 RegisterPolicyCommand 에 그대로 전달된다")
         void receivePolicy_propagates_youth_center_detail_fields_to_register_command() {
             IngestPolicyCommand command = sampleCommandWithDetailFields();
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(99L));
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.empty());
 
             ingestionService.receivePolicy(command);
 
@@ -295,8 +296,8 @@ class IngestionServiceTest {
         @DisplayName("rawCodes가 있고 REGISTERED 이면 CodeBasedRuleExtractionService 를 호출한다")
         void receivePolicy_invokes_codeBased_extractor_when_rawCodes_present_and_REGISTERED() {
             IngestPolicyCommand command = sampleCommandWithRawCodes();
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.empty());
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(123L));
 
@@ -312,8 +313,8 @@ class IngestionServiceTest {
         @DisplayName("rawCodes가 있고 UPDATED 이면 CodeBasedRuleExtractionService 를 호출한다")
         void receivePolicy_invokes_codeBased_extractor_when_rawCodes_present_and_UPDATED() {
             IngestPolicyCommand command = sampleCommandWithRawCodes();
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.empty());
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.updated(456L));
 
@@ -326,8 +327,8 @@ class IngestionServiceTest {
         @DisplayName("SKIPPED_DUPLICATE 이면 CodeBasedRuleExtractionService 를 호출하지 않는다")
         void receivePolicy_skips_codeBased_extractor_when_SKIPPED_DUPLICATE() {
             IngestPolicyCommand command = sampleCommandWithRawCodes();
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.empty());
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.skippedDuplicate(789L));
 
@@ -340,8 +341,8 @@ class IngestionServiceTest {
         @DisplayName("rawCodes 가 null 이면 CodeBasedRuleExtractionService 를 호출하지 않는다")
         void receivePolicy_skips_codeBased_extractor_when_rawCodes_null() {
             IngestPolicyCommand command = sampleCommandWithoutRawCodes();
-            given(policyPeriodLlmProvider.extractPeriod(any(), any()))
-                    .willReturn(PolicyPeriod.empty());
+            given(periodResolver.resolve(any(PeriodExtractionContext.class)))
+                    .willReturn(ResolvedPeriod.empty());
             given(policyIngestionService.registerPolicy(any()))
                     .willReturn(PolicyIngestionResult.registered(111L));
 
@@ -443,6 +444,12 @@ class IngestionServiceTest {
                     null, null, null, null, null, null,
                     null, null, null, null
             );
+        }
+
+        private ResolvedPeriod resolvedPeriod() {
+            return new ResolvedPeriod(
+                    LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
+                    PeriodSource.N8N, 0.95, "n8n");
         }
     }
 }

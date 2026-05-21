@@ -146,7 +146,8 @@ class PolicyIngestionServiceTest {
                 List.of(), List.of(), List.of(),
                 sourceType, externalId, "https://example.com",
                 "{\"json\":\"raw\"}", "hash",
-                null
+                null,
+                null, null, null
         );
     }
 
@@ -205,7 +206,8 @@ class PolicyIngestionServiceTest {
                 List.of(), List.of(), List.of(),
                 SourceType.YOUTH_CENTER, "EXT-001", "https://src.kr",
                 "{}", "abc123",
-                null
+                null,
+                null, null, null
         );
     }
 }

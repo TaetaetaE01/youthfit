@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -47,6 +49,10 @@ public class IngestionRunLog {
     @Column(name = "duration_ms", nullable = false)
     private int durationMs;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "period_resolve_meta", columnDefinition = "jsonb")
+    private String periodResolveMeta;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -61,6 +67,13 @@ public class IngestionRunLog {
         log.processedAt = end;
         log.durationMs = (int) Math.max(0, java.time.Duration.between(start, end).toMillis());
         log.createdAt = Instant.now();
+        return log;
+    }
+
+    public static IngestionRunLog success(String source, Instant start, Instant end,
+                                          boolean isDuplicate, String periodResolveMeta) {
+        IngestionRunLog log = success(source, start, end, isDuplicate);
+        log.periodResolveMeta = periodResolveMeta;
         return log;
     }
 
