@@ -14,8 +14,13 @@ for (const required of [
     'enrich',
     'ingestion update',
     'callback SUCCESS',
+    'callback FAILED',
 ]) {
     assert.ok(nodes.includes(required), `force-enrich.json 에 노드 "${required}" 가 있어야 함`);
 }
+
+const connStr = JSON.stringify(workflow.connections);
+assert.ok(connStr.includes('callback FAILED'),
+    'callback FAILED 노드가 connections 에 연결돼야 함');
 
 console.log('OK: force-enrich workflow has all required nodes');
