@@ -66,6 +66,87 @@ public final class PolicySpecification {
         };
     }
 
+    public static Specification<Policy> withCalendarRange(LocalDate from, LocalDate to,
+                                                          RegionFilter regionFilter,
+                                                          Category category) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            Path<LocalDate> applyStart = root.get("applyStart");
+            Path<LocalDate> applyEnd = root.get("applyEnd");
+
+            // applyStart <= to (null 이면 만족으로 간주)
+            Predicate startOk = cb.or(
+                    cb.isNull(applyStart),
+                    cb.lessThanOrEqualTo(applyStart, to)
+            );
+            // applyEnd >= from (null 이면 만족으로 간주)
+            Predicate endOk = cb.or(
+                    cb.isNull(applyEnd),
+                    cb.greaterThanOrEqualTo(applyEnd, from)
+            );
+            predicates.add(startOk);
+            predicates.add(endOk);
+
+            // 둘 다 null 인 상시 정책은 제외
+            predicates.add(cb.or(
+                    cb.isNotNull(applyStart),
+                    cb.isNotNull(applyEnd)
+            ));
+
+            // applyStart > applyEnd 인 데이터 오류 제외
+            predicates.add(cb.or(
+                    cb.isNull(applyStart),
+                    cb.isNull(applyEnd),
+                    cb.lessThanOrEqualTo(applyStart, applyEnd)
+            ));
+
+            if (regionFilter != null && regionFilter.isActive()) {
+                predicates.add(regionPredicate(root, cb, regionFilter));
+            }
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
+
+            if (query != null) {
+                Class<?> resultType = query.getResultType();
+                if (resultType != Long.class && resultType != long.class) {
+                    query.orderBy(
+                            cb.asc(cb.coalesce(applyStart, FAR_FUTURE)),
+                            cb.desc(cb.coalesce(applyEnd, FAR_PAST))
+                    );
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    public static Specification<Policy> alwaysOpen(RegionFilter regionFilter, Category category) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isNull(root.get("applyStart")));
+            predicates.add(cb.isNull(root.get("applyEnd")));
+
+            if (regionFilter != null && regionFilter.isActive()) {
+                predicates.add(regionPredicate(root, cb, regionFilter));
+            }
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
+
+            if (query != null) {
+                Class<?> resultType = query.getResultType();
+                if (resultType != Long.class && resultType != long.class) {
+                    query.orderBy(cb.desc(root.get("createdAt")));
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
     private static Predicate regionPredicate(Root<Policy> root, CriteriaBuilder cb, RegionFilter f) {
         Path<String> regionCode = root.get("regionCode");
         // 콤마 패딩된 CSV 표현: ',' || region_codes || ','
