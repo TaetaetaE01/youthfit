@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.TimeUnit;
 
-@RestController
+@RestController("policyRegionController")
 @RequestMapping("/api/v1/regions")
 @RequiredArgsConstructor
 public class RegionController implements RegionApi {

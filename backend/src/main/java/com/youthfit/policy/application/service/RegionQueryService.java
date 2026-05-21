@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
+@Service("policyRegionQueryService")
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RegionQueryService {
