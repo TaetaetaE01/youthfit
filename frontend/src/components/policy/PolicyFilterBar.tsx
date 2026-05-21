@@ -69,6 +69,17 @@ function MobileFilterSheet({
         <fieldset>
           <legend className="mb-2 text-sm font-semibold text-gray-700">카테고리</legend>
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onCategoryChange('')}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+                category === ''
+                  ? 'border-transparent bg-brand-100 text-indigo-600'
+                  : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+              )}
+            >
+              전체
+            </button>
             {CATEGORY_ENTRIES.map(([key, label]) => (
               <button
                 key={key}
@@ -120,6 +131,17 @@ export default function PolicyFilterBar({
     <>
       {/* ── Desktop Filters ── */}
       <div className="mb-4 hidden flex-wrap items-center gap-2 md:flex">
+        <button
+          onClick={() => onCategoryChange('')}
+          className={cn(
+            'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+            category === ''
+              ? 'border-transparent bg-brand-100 text-indigo-600'
+              : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+          )}
+        >
+          전체
+        </button>
         {CATEGORY_ENTRIES.map(([key, label]) => (
           <button
             key={key}
