@@ -79,7 +79,8 @@ public class EnrichmentJobService {
         EnrichmentJob job = jobRepo.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
         job.markRunning(LocalDateTime.now(clock));
-        log.info("EnrichmentJob RUNNING: jobId={}", jobId);
+        log.info("EnrichmentJob RUNNING: jobId={} policyId={} attempt={} actor={}",
+                jobId, job.getPolicyId(), job.getAttempt(), job.getRequestedBy());
     }
 
     @Transactional
@@ -102,8 +103,8 @@ public class EnrichmentJobService {
         } else {
             job.markFailed(errorMessage != null ? errorMessage : "failed", now);
         }
-        log.info("EnrichmentJob {}: jobId={} elapsedMs={}",
-                terminal, jobId,
+        log.info("EnrichmentJob {}: jobId={} policyId={} attempt={} actor={} elapsedMs={}",
+                terminal, jobId, job.getPolicyId(), job.getAttempt(), job.getRequestedBy(),
                 job.getStartedAt() == null ? -1
                         : Duration.between(job.getStartedAt(), now).toMillis());
     }
