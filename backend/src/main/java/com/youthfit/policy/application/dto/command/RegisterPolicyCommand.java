@@ -1,5 +1,6 @@
 package com.youthfit.policy.application.dto.command;
 
+import com.youthfit.common.domain.PeriodSource;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.model.SourceType;
@@ -50,7 +51,11 @@ public record RegisterPolicyCommand(
         String rawJson,
         String sourceHash,
         // ── enrichment ──
-        PolicyEnrichment enrichment
+        PolicyEnrichment enrichment,
+        // ── 신청기간 추출 메타 (Task 11/12) ──
+        PeriodSource applyPeriodSource,
+        Double applyPeriodConfidence,
+        String applyPeriodEvidence
 ) {
     public record Attachment(String name, String url, String mediaType) {}
     public record ReferenceSite(String name, String url) {}

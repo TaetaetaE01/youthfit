@@ -168,6 +168,10 @@ public class Policy extends BaseTimeEntity {
                    String organization, String contact,
                    Category category, String regionCode, List<String> regionCodes,
                    LocalDate applyStart, LocalDate applyEnd,
+                   // 신청기간 추출 메타 (Task 11/12)
+                   PeriodSource applyPeriodSource,
+                   Double applyPeriodConfidence,
+                   String applyPeriodEvidence,
                    Integer referenceYear, String supportCycle, String provideType,
                    String screeningMethod, String submissionDocuments,
                    String additionalQualification, String participationRestriction,
@@ -188,6 +192,9 @@ public class Policy extends BaseTimeEntity {
         this.regionCodes = joinRegionCodes(regionCodes);
         this.applyStart = applyStart;
         this.applyEnd = applyEnd;
+        this.applyPeriodSource = applyPeriodSource;
+        this.applyPeriodConfidence = applyPeriodConfidence;
+        this.applyPeriodEvidence = applyPeriodEvidence;
         this.referenceYear = referenceYear;
         this.supportCycle = supportCycle;
         this.provideType = provideType;

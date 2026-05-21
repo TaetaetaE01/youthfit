@@ -132,7 +132,10 @@ public class IngestionService {
                     command.sourceUrl(),
                     rawJson,
                     sourceHash,
-                    command.enrichment()
+                    command.enrichment(),
+                    null,    // applyPeriodSource — Task 10 will fill from ResolvedPeriod
+                    null,    // applyPeriodConfidence — Task 10
+                    null     // applyPeriodEvidence — Task 10
             );
 
             PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
