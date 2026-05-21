@@ -7,6 +7,7 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyReferenceSite;
 import com.youthfit.policy.domain.repository.EnrichmentJobRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class EnrichmentJobService {
 
     private static final int RATE_LIMIT_PER_HOUR = 5;
@@ -26,16 +28,6 @@ public class EnrichmentJobService {
     private final PolicyRepository policyRepo;
     private final ForceEnrichTrigger trigger;
     private final Clock clock;
-
-    public EnrichmentJobService(EnrichmentJobRepository jobRepo,
-                                PolicyRepository policyRepo,
-                                ForceEnrichTrigger trigger,
-                                Clock clock) {
-        this.jobRepo = jobRepo;
-        this.policyRepo = policyRepo;
-        this.trigger = trigger;
-        this.clock = clock;
-    }
 
     @Transactional
     public EnrichmentJob create(Long policyId, String requestedBy, List<PolicyReferenceSite> urlsOverride) {
@@ -68,8 +60,8 @@ public class EnrichmentJobService {
             trigger.forceEnrich(job.getId(), policyId, urls);
         } catch (ForceEnrichTrigger.EnrichmentTriggerException e) {
             log.warn("ForceEnrichTrigger failed: jobId={} cause={}", job.getId(), e.getMessage());
+            // dirty checking 으로 트랜잭션 커밋 시 자동 반영 (명시적 save 불필요)
             job.markFailed("n8n_unreachable: " + e.getMessage(), LocalDateTime.now(clock));
-            jobRepo.save(job);
         }
         return job;
     }

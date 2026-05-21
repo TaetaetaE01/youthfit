@@ -99,12 +99,22 @@ class EnrichmentJobServiceTest {
                 List.of(PolicyReferenceSite.auto("n", "https://a.example.com")),
                 1, LocalDateTime.now(FIXED_CLOCK));
         when(jobRepo.findById(100L)).thenReturn(Optional.of(job));
-        when(jobRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service.complete(100L, EnrichmentJobStatus.SUCCESS, null);
 
         assertThat(job.getStatus()).isEqualTo(EnrichmentJobStatus.SUCCESS);
         assertThat(job.getFinishedAt()).isNotNull();
+    }
+
+    @Test
+    void 시간당_레이트리밋_초과시_RateLimitException() {
+        when(jobRepo.findActiveByPolicyId(42L)).thenReturn(Optional.empty());
+        when(jobRepo.countRecentByPolicyId(eq(42L), any())).thenReturn(5L);
+
+        assertThatThrownBy(() -> service.create(42L, "admin@youthfit", null))
+                .isInstanceOf(EnrichmentJobRateLimitException.class);
+
+        verifyNoInteractions(trigger);
     }
 
     @Test

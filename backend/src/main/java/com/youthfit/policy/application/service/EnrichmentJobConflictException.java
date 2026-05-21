@@ -1,7 +1,11 @@
 package com.youthfit.policy.application.service;
 
-public class EnrichmentJobConflictException extends RuntimeException {
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
+
+public class EnrichmentJobConflictException extends YouthFitException {
     public EnrichmentJobConflictException(Long policyId) {
-        super("EnrichmentJob already active for policy " + policyId);
+        super(ErrorCode.ENRICHMENT_JOB_CONFLICT,
+                "EnrichmentJob already active for policy " + policyId);
     }
 }
