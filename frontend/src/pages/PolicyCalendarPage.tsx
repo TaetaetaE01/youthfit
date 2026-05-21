@@ -10,13 +10,14 @@ import CalendarAgenda from '@/components/policy-calendar/CalendarAgenda';
 import AlwaysOpenSection from '@/components/policy-calendar/AlwaysOpenSection';
 import type { PolicyCategory } from '@/types/policy';
 
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+function todayKST(): string {
+  // toISOString 은 UTC 기준이라 KST 0~9시 사이에 어제 날짜를 돌려준다.
+  // 'en-CA' 로케일이 YYYY-MM-DD 포맷, timeZone: 'Asia/Seoul' 로 KST 자정 경계 보장.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 }
 
-function todayKST(): string {
-  return new Date().toISOString().slice(0, 10);
+function currentMonth(): string {
+  return todayKST().slice(0, 7);
 }
 
 function monthBoundaries(month: string): { start: string; end: string } {

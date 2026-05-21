@@ -161,13 +161,16 @@ export default function CalendarMonthGrid({ items, monthStart, monthEnd, today }
             {segs
               .filter((s) => s.row < ROW_BAR_COUNT)
               .map((seg) => {
-                const show = !labelShown.has(seg.itemId);
-                if (show) labelShown.add(seg.itemId);
+                // 첫 등장 세그먼트에만 라벨을 노출. hasStartCap=false 인 세그먼트(이전 달에서
+                // 이어온 막대)는 라벨을 그리지 않는 동시에 labelShown 갱신도 보류 —
+                // 그래야 같은 itemId 의 다음 캡 있는 세그먼트가 라벨을 받을 수 있다.
+                const showLabel = !labelShown.has(seg.itemId) && seg.hasStartCap;
+                if (showLabel) labelShown.add(seg.itemId);
                 return (
                   <CalendarBar
                     key={`${seg.itemId}-${seg.weekIndex}`}
                     segment={seg}
-                    showLabel={show && seg.hasStartCap}
+                    showLabel={showLabel}
                     daysUntilEnd={daysUntil(seg.applyEnd)}
                     gridRow={seg.row + 2}
                   />
