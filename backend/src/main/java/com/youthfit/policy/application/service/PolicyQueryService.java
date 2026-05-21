@@ -2,6 +2,8 @@ package com.youthfit.policy.application.service;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.policy.application.dto.result.PolicyCalendarPageResult;
+import com.youthfit.policy.application.dto.result.PolicyCalendarResult;
 import com.youthfit.policy.application.dto.result.PolicyDetailResult;
 import com.youthfit.policy.application.dto.result.PolicyPageResult;
 import com.youthfit.policy.application.dto.result.PolicySummaryResult;
@@ -22,6 +24,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +47,7 @@ public class PolicyQueryService {
     }
 
     private static final int NATIONWIDE_CODE_THRESHOLD = 100;
+    private static final long CALENDAR_RANGE_MAX_DAYS = 92;
 
     public PolicyDetailResult findPolicyById(Long policyId) {
         Policy policy = policyRepository.findById(policyId)
@@ -80,6 +85,47 @@ public class PolicyQueryService {
                         .map(a -> new PolicyDetailResult.Enrichment.ExtraAttachment(a.name(), a.url()))
                         .toList();
         return new PolicyDetailResult.Enrichment(e.sourceUrl(), e.fetchedAt(), sections, atts);
+    }
+
+    public List<PolicyCalendarResult> findByDateRange(LocalDate from, LocalDate to,
+                                                       RegionFilter regionFilter,
+                                                       Category category) {
+        if (from == null || to == null) {
+            throw new IllegalArgumentException("from, to 는 필수입니다");
+        }
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("from 은 to 보다 이전이거나 같아야 합니다");
+        }
+        long days = ChronoUnit.DAYS.between(from, to);
+        if (days > CALENDAR_RANGE_MAX_DAYS) {
+            throw new IllegalArgumentException(
+                    "조회 범위는 " + CALENDAR_RANGE_MAX_DAYS + "일을 초과할 수 없습니다");
+        }
+
+        return policyRepository.findByCalendarRange(from, to, regionFilter, category)
+                .stream()
+                .map(PolicyCalendarResult::from)
+                .toList();
+    }
+
+    public PolicyCalendarPageResult findAlwaysOpen(RegionFilter regionFilter,
+                                                    Category category,
+                                                    int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Policy> policyPage = policyRepository.findAlwaysOpen(regionFilter, category, pageable);
+
+        List<PolicyCalendarResult> items = policyPage.getContent().stream()
+                .map(PolicyCalendarResult::from)
+                .toList();
+
+        return new PolicyCalendarPageResult(
+                items,
+                policyPage.getTotalElements(),
+                policyPage.getNumber(),
+                policyPage.getSize(),
+                policyPage.getTotalPages(),
+                policyPage.hasNext()
+        );
     }
 
     public PolicyPageResult searchPoliciesByKeyword(String keyword, PolicyStatus status, int page, int size) {
