@@ -151,7 +151,7 @@ public class PolicyIngestionService {
     private List<PolicyReferenceSite> toReferenceSites(List<RegisterPolicyCommand.ReferenceSite> sites) {
         if (sites == null || sites.isEmpty()) return List.of();
         return sites.stream()
-                .map(s -> new PolicyReferenceSite(s.name(), s.url()))
+                .map(s -> PolicyReferenceSite.auto(s.name(), s.url()))
                 .toList();
     }
 
