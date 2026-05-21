@@ -31,11 +31,12 @@ public final class PeriodRegexPatterns {
     private static final Pattern SAME_MONTH = Pattern.compile(
             Y4 + SEP + M2 + SEP + D2 + TAIL + ARROW + "(?!20\\d{2})(?!\\d{1,2}\\s*[.\\-/월])" + D2 + "(?:\\s*일\\.?)?");
 
-    // 단일 마감: (마감일: 접두 OR ~ 접두) + 날짜 + 까지/마감/이내
-    // ~ 접두만으로는 부족(범위 중간일 수 있음) → 반드시 후행 키워드 또는 마감 접두가 있어야 함
+    // 단일 마감: (마감일: 접두) OR (~ 접두 + 후행 키워드) OR (날짜 + 후행 키워드)
+    // ~ 접두 단독은 부족(범위 중간일 수 있음). 후행 키워드 단독은 단일 마감으로 해석.
     private static final Pattern DEADLINE_ONLY = Pattern.compile(
             "(?:마감(?:일)?\\s*[:：]?\\s*" + Y4 + SEP + M2 + SEP + D2 + "\\s*(?:까지|마감|이내)?"
-            + "|[~〜∼\\-]\\s*" + Y4 + SEP + M2 + SEP + D2 + "\\s*(?:까지|마감|이내))");
+            + "|[~〜∼\\-]\\s*" + Y4 + SEP + M2 + SEP + D2 + "\\s*(?:까지|마감|이내)"
+            + "|" + Y4 + SEP + M2 + SEP + D2 + "\\s*(?:까지|마감|이내))");
 
     // 단일 시작: 날짜 + 부터
     private static final Pattern START_ONLY = Pattern.compile(
@@ -88,12 +89,17 @@ public final class PeriodRegexPatterns {
     private static void scanDeadlineOnly(String text, List<Hit> out) {
         Matcher m = DEADLINE_ONLY.matcher(text);
         while (m.find()) {
-            String y = m.group(1) != null ? m.group(1) : m.group(4);
-            String mo = m.group(2) != null ? m.group(2) : m.group(5);
-            String d = m.group(3) != null ? m.group(3) : m.group(6);
+            String y = firstNonNull(m.group(1), m.group(4), m.group(7));
+            String mo = firstNonNull(m.group(2), m.group(5), m.group(8));
+            String d = firstNonNull(m.group(3), m.group(6), m.group(9));
             LocalDate e = toDate(y, mo, d);
             if (e != null) out.add(new Hit(null, e, PatternKind.DEADLINE_ONLY, m.group()));
         }
+    }
+
+    private static String firstNonNull(String... vals) {
+        for (String v : vals) if (v != null) return v;
+        return null;
     }
 
     private static void scanStartOnly(String text, List<Hit> out) {
