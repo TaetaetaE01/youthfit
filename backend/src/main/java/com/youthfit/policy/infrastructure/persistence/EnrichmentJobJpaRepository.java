@@ -15,7 +15,8 @@ public interface EnrichmentJobJpaRepository extends JpaRepository<EnrichmentJob,
     @Query("""
             SELECT j FROM EnrichmentJob j
              WHERE j.policyId = :policyId
-               AND j.status IN ('PENDING','RUNNING')
+               AND j.status IN (com.youthfit.policy.domain.model.EnrichmentJobStatus.PENDING,
+                                com.youthfit.policy.domain.model.EnrichmentJobStatus.RUNNING)
             """)
     Optional<EnrichmentJob> findActiveByPolicyId(@Param("policyId") Long policyId);
 
@@ -30,7 +31,8 @@ public interface EnrichmentJobJpaRepository extends JpaRepository<EnrichmentJob,
 
     @Query("""
             SELECT j FROM EnrichmentJob j
-             WHERE j.status IN ('PENDING','RUNNING')
+             WHERE j.status IN (com.youthfit.policy.domain.model.EnrichmentJobStatus.PENDING,
+                                com.youthfit.policy.domain.model.EnrichmentJobStatus.RUNNING)
                AND j.requestedAt < :threshold
             """)
     List<EnrichmentJob> findActiveStaleBefore(@Param("threshold") LocalDateTime threshold);

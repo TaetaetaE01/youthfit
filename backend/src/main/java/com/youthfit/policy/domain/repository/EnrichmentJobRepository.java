@@ -1,7 +1,6 @@
 package com.youthfit.policy.domain.repository;
 
 import com.youthfit.policy.domain.model.EnrichmentJob;
-import com.youthfit.policy.domain.model.EnrichmentJobStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
