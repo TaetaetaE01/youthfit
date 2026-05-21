@@ -161,3 +161,32 @@ docker compose exec -T postgres psql -U youthfit -d youthfit \
 
 두 SQL 모두 idempotent (이미 정리된 행은 skip). 적용 순서는 정해져 있지 않으나 위 순서를 권장한다.
 운영 환경에서는 워크플로우 재배포(`docker compose restart n8n` + 워크플로우 import) 직후 같은 시점에 적용한다.
+
+## 어드민 Enrichment 강제 재크롤 (2026-05-21)
+
+### 환경변수 슬롯 (`.env`)
+
+| 키 | 용도 | 예시 / 기본값 |
+|---|---|---|
+| `N8N_FORCE_ENRICH_WEBHOOK_URL` | 백엔드 → n8n `force-enrich` 워크플로우 webhook URL | `https://n8n.internal/webhook/force-enrich` (local 기본 `http://localhost:5678/webhook/force-enrich`) |
+| `INTERNAL_API_KEY` (기존, `youthfit.internal.api-key`) | 백엔드 ↔ n8n 콜백 공유 시크릿 — 기존 키 재사용 | 32+자 랜덤 |
+| `ENRICHMENT_TIMEOUT_FIXED_DELAY_MS` (선택) | 타임아웃 스케줄러 실행 주기(ms). application.yml `enrichment.timeout.fixed-delay-ms` 기본 60000 | `60000` |
+
+### DB 마이그레이션
+
+운영 PG 에 enrichment_job 테이블 + `policy` 변경분 수동 적용 (Flyway 미사용):
+
+```bash
+psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-21-enrichment-job.sql
+psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-21-policy-reference-site-source.sql
+```
+
+`ddl-auto: validate` 환경이라 미적용 상태로 배포 시 부팅 실패.
+
+### 운영 노트
+
+- 5분(`EnrichmentJobTimeoutScheduler.TIMEOUT`) 이상 PENDING/RUNNING 인 잡은 자동으로 `FAILED`(error=`timeout`) 처리된다.
+- 같은 정책에 1시간 내 5회를 초과하는 재크롤 시도는 `429`(`EnrichmentJobRateLimitException`)로 거절된다.
+- 같은 정책에 이미 진행 중인(`PENDING`/`RUNNING`) 잡이 있으면 새 요청은 `409`(`EnrichmentJobConflictException`)로 거절된다 — DB unique index + service guard 의 이중 방어.
+- n8n webhook 호출 실패 시 잡은 즉시 `FAILED`(error=`n8n_unreachable: ...`)로 저장된다.
+- 멀티 인스턴스 도입 시 `EnrichmentJobTimeoutScheduler` 에 ShedLock 추가가 필요하다 (현재 단일 인스턴스 가정).
