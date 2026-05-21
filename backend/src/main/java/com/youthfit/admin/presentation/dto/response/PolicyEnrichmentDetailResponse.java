@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto;
+package com.youthfit.admin.presentation.dto.response;
 
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.EnrichmentJob;
@@ -10,37 +10,37 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * 단일 정책의 enrichment 상세 뷰.
+ * 단일 정책의 enrichment 상세 응답 DTO.
  */
-public record PolicyEnrichmentDetailView(
+public record PolicyEnrichmentDetailResponse(
         Long policyId,
         String title,
-        EnrichmentView enrichment,
+        EnrichmentResponse enrichment,
         DetailLevel detailLevel,
-        List<UrlView> referenceSites,
-        List<EnrichmentJobView> recentJobs,
+        List<UrlResponse> referenceSites,
+        List<EnrichmentJobResponse> recentJobs,
         boolean needsReview
 ) {
-    public record EnrichmentView(
+    public record EnrichmentResponse(
             EnrichmentStatus status,
             Double confidence,
             Instant fetchedAt,
             String extractor,
-            SectionsView sections
+            SectionsResponse sections
     ) {
-        public static EnrichmentView of(PolicyEnrichment e) {
+        public static EnrichmentResponse of(PolicyEnrichment e) {
             if (e == null) return null;
-            return new EnrichmentView(
+            return new EnrichmentResponse(
                     e.status(),
                     e.confidence(),
                     e.fetchedAt(),
                     e.extractor(),
-                    SectionsView.of(e.sections())
+                    SectionsResponse.of(e.sections())
             );
         }
     }
 
-    public record SectionsView(
+    public record SectionsResponse(
             String supportTarget,
             String supportContent,
             String eligibilityCriteria,
@@ -51,9 +51,9 @@ public record PolicyEnrichmentDetailView(
             String operatingOrganization,
             String contactPhone
     ) {
-        public static SectionsView of(PolicyEnrichment.Sections s) {
+        public static SectionsResponse of(PolicyEnrichment.Sections s) {
             if (s == null) return null;
-            return new SectionsView(
+            return new SectionsResponse(
                     s.supportTarget(),
                     s.supportContent(),
                     s.eligibilityCriteria(),
@@ -67,17 +67,17 @@ public record PolicyEnrichmentDetailView(
         }
     }
 
-    public static PolicyEnrichmentDetailView of(Policy policy, List<EnrichmentJob> recentJobs, boolean needsReview) {
-        List<UrlView> sites = policy.getReferenceSites() == null
+    public static PolicyEnrichmentDetailResponse of(Policy policy, List<EnrichmentJob> recentJobs, boolean needsReview) {
+        List<UrlResponse> sites = policy.getReferenceSites() == null
                 ? List.of()
-                : policy.getReferenceSites().stream().map(UrlView::of).toList();
-        List<EnrichmentJobView> jobs = recentJobs == null
+                : policy.getReferenceSites().stream().map(UrlResponse::of).toList();
+        List<EnrichmentJobResponse> jobs = recentJobs == null
                 ? List.of()
-                : recentJobs.stream().map(EnrichmentJobView::of).toList();
-        return new PolicyEnrichmentDetailView(
+                : recentJobs.stream().map(EnrichmentJobResponse::of).toList();
+        return new PolicyEnrichmentDetailResponse(
                 policy.getId(),
                 policy.getTitle(),
-                EnrichmentView.of(policy.getEnrichment()),
+                EnrichmentResponse.of(policy.getEnrichment()),
                 policy.getDetailLevel(),
                 sites,
                 jobs,

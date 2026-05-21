@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto;
+package com.youthfit.admin.presentation.dto.request;
 
 import jakarta.validation.Valid;
 

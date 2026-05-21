@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto;
+package com.youthfit.admin.presentation.dto.response;
 
 import com.youthfit.policy.domain.model.EnrichmentJob;
 import com.youthfit.policy.domain.model.EnrichmentJobStatus;
@@ -7,9 +7,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * EnrichmentJob 의 평면 응답 뷰.
+ * EnrichmentJob 의 평면 응답 DTO.
  */
-public record EnrichmentJobView(
+public record EnrichmentJobResponse(
         Long id,
         Long policyId,
         EnrichmentJobStatus status,
@@ -19,14 +19,14 @@ public record EnrichmentJobView(
         LocalDateTime requestedAt,
         LocalDateTime startedAt,
         LocalDateTime finishedAt,
-        List<UrlView> requestedUrls
+        List<UrlResponse> requestedUrls
 ) {
-    public static EnrichmentJobView of(EnrichmentJob job) {
+    public static EnrichmentJobResponse of(EnrichmentJob job) {
         if (job == null) return null;
-        List<UrlView> urls = job.getRequestedUrls() == null
+        List<UrlResponse> urls = job.getRequestedUrls() == null
                 ? List.of()
-                : job.getRequestedUrls().stream().map(UrlView::of).toList();
-        return new EnrichmentJobView(
+                : job.getRequestedUrls().stream().map(UrlResponse::of).toList();
+        return new EnrichmentJobResponse(
                 job.getId(),
                 job.getPolicyId(),
                 job.getStatus(),

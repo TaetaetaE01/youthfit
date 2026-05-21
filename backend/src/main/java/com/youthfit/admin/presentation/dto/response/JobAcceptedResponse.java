@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto;
+package com.youthfit.admin.presentation.dto.response;
 
 import com.youthfit.policy.domain.model.EnrichmentJobStatus;
 

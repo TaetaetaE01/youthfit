@@ -1,31 +1,22 @@
 package com.youthfit.admin.presentation.controller;
 
-import com.youthfit.admin.presentation.dto.CandidateSummaryView;
-import com.youthfit.admin.presentation.dto.CandidateView;
-import com.youthfit.admin.presentation.dto.CreateJobRequest;
-import com.youthfit.admin.presentation.dto.EnrichmentJobView;
-import com.youthfit.admin.presentation.dto.JobAcceptedResponse;
-import com.youthfit.admin.presentation.dto.PolicyEnrichmentDetailView;
-import com.youthfit.admin.presentation.dto.ReferenceSiteRequest;
+import com.youthfit.admin.application.service.AdminEnrichmentService;
+import com.youthfit.admin.presentation.dto.request.CreateJobRequest;
+import com.youthfit.admin.presentation.dto.request.ReferenceSiteRequest;
+import com.youthfit.admin.presentation.dto.response.EnrichmentCandidateResponse;
+import com.youthfit.admin.presentation.dto.response.EnrichmentCandidateSummaryResponse;
+import com.youthfit.admin.presentation.dto.response.EnrichmentJobResponse;
+import com.youthfit.admin.presentation.dto.response.JobAcceptedResponse;
+import com.youthfit.admin.presentation.dto.response.PolicyEnrichmentDetailResponse;
 import com.youthfit.policy.application.dto.command.EnrichmentReviewFilterCommand;
-import com.youthfit.policy.application.service.AdminEnrichmentQueryService;
-import com.youthfit.policy.application.service.EnrichmentJobService;
 import com.youthfit.policy.domain.model.DetailLevel;
-import com.youthfit.policy.domain.model.EnrichmentJob;
 import com.youthfit.policy.domain.model.EnrichmentStatus;
-import com.youthfit.policy.domain.model.Policy;
-import com.youthfit.policy.domain.model.PolicyReferenceSite;
-import com.youthfit.policy.domain.model.PolicyReferenceSiteSource;
-import com.youthfit.policy.domain.repository.EnrichmentJobRepository;
-import com.youthfit.policy.domain.repository.PolicyRepository;
-import com.youthfit.policy.domain.service.PolicyReferenceSiteMerger;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,27 +32,19 @@ import java.util.Set;
 /**
  * 관리자 enrichment 검토 콘솔용 컨트롤러.
  *
- * <p>다음 유스케이스를 제공한다.
- * <ul>
- *   <li>검토 대상 후보 목록 / 현황 요약</li>
- *   <li>정책별 enrichment 상세 + 최근 잡 이력</li>
- *   <li>관리자 입력 reference site URL 갱신</li>
- *   <li>강제 enrichment 잡 생성</li>
- * </ul>
+ * <p>비즈니스 로직 / 트랜잭션 / 도메인 리포지토리 접근은 {@link AdminEnrichmentService}로 위임한다.
+ * Swagger 어노테이션은 {@link AdminEnrichmentApi} 인터페이스에 위치한다.
  */
 @RestController
 @RequestMapping("/api/v1/admin/enrichment")
 @RequiredArgsConstructor
-public class AdminEnrichmentController {
+public class AdminEnrichmentController implements AdminEnrichmentApi {
 
-    private final AdminEnrichmentQueryService queryService;
-    private final EnrichmentJobService jobService;
-    private final PolicyRepository policyRepo;
-    private final EnrichmentJobRepository jobRepo;
-    private final PolicyReferenceSiteMerger merger;
+    private final AdminEnrichmentService adminEnrichmentService;
 
+    @Override
     @GetMapping("/candidates")
-    public Page<CandidateView> candidates(
+    public Page<EnrichmentCandidateResponse> getCandidates(
             @RequestParam(defaultValue = "true") Boolean needsReview,
             @RequestParam(required = false) Set<EnrichmentStatus> statuses,
             @RequestParam(required = false) Set<DetailLevel> detailLevels,
@@ -69,60 +52,44 @@ public class AdminEnrichmentController {
             Pageable pageable) {
         EnrichmentReviewFilterCommand filter =
                 new EnrichmentReviewFilterCommand(needsReview, statuses, detailLevels, q);
-        Page<Policy> page = queryService.findReviewCandidates(filter, pageable);
-        return page.map(p -> {
-            List<EnrichmentJob> recent = jobRepo.findRecentByPolicyId(p.getId(), 1);
-            EnrichmentJob latest = recent.isEmpty() ? null : recent.get(0);
-            return CandidateView.of(p, latest, queryService.needsReview(p));
-        });
+        return adminEnrichmentService.listCandidates(filter, pageable);
     }
 
+    @Override
     @GetMapping("/candidates/summary")
-    public CandidateSummaryView summary() {
-        return CandidateSummaryView.of(queryService.findReviewSummary());
+    public EnrichmentCandidateSummaryResponse getCandidateSummary() {
+        return adminEnrichmentService.findSummary();
     }
 
+    @Override
     @GetMapping("/policies/{policyId}")
-    public PolicyEnrichmentDetailView detail(@PathVariable Long policyId) {
-        Policy policy = policyRepo.findById(policyId)
-                .orElseThrow(() -> new IllegalArgumentException("Policy not found: " + policyId));
-        List<EnrichmentJob> jobs = jobRepo.findRecentByPolicyId(policyId, 5);
-        return PolicyEnrichmentDetailView.of(policy, jobs, queryService.needsReview(policy));
+    public PolicyEnrichmentDetailResponse getPolicyDetail(@PathVariable Long policyId) {
+        return adminEnrichmentService.findDetail(policyId);
     }
 
+    @Override
     @PutMapping("/policies/{policyId}/reference-sites")
-    @Transactional
     public ResponseEntity<Void> updateReferenceSites(@PathVariable Long policyId,
                                                      @RequestBody @Valid List<ReferenceSiteRequest> body) {
-        Policy policy = policyRepo.findById(policyId)
-                .orElseThrow(() -> new IllegalArgumentException("Policy not found: " + policyId));
-        List<PolicyReferenceSite> adminInputs = body == null ? List.of() : body.stream()
-                .map(r -> new PolicyReferenceSite(r.name(), r.url(), PolicyReferenceSiteSource.ADMIN))
-                .toList();
-        List<PolicyReferenceSite> merged = merger.merge(policy.getReferenceSites(), adminInputs);
-        policy.replaceReferenceSites(merged);
-        policyRepo.save(policy);
+        adminEnrichmentService.updateReferenceSites(policyId, body);
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/policies/{policyId}/jobs")
     public ResponseEntity<JobAcceptedResponse> createJob(@PathVariable Long policyId,
                                                          @RequestBody(required = false) CreateJobRequest body,
                                                          Authentication authentication) {
-        List<PolicyReferenceSite> urls = (body == null || body.urls() == null) ? null
-                : body.urls().stream()
-                    .map(u -> new PolicyReferenceSite(u.name(), u.url(), PolicyReferenceSiteSource.ADMIN))
-                    .toList();
         String actor = authentication == null ? "unknown" : authentication.getName();
-        EnrichmentJob job = jobService.create(policyId, actor, urls);
+        List<ReferenceSiteRequest> urlsOverride = (body == null) ? null : body.urls();
+        EnrichmentJobResponse job = adminEnrichmentService.createJob(policyId, actor, urlsOverride);
         return ResponseEntity.accepted()
-                .body(new JobAcceptedResponse(job.getId(), job.getStatus()));
+                .body(new JobAcceptedResponse(job.id(), job.status()));
     }
 
+    @Override
     @GetMapping("/jobs/{jobId}")
-    public EnrichmentJobView job(@PathVariable Long jobId) {
-        EnrichmentJob job = jobRepo.findById(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
-        return EnrichmentJobView.of(job);
+    public EnrichmentJobResponse getJob(@PathVariable Long jobId) {
+        return adminEnrichmentService.findJob(jobId);
     }
 }

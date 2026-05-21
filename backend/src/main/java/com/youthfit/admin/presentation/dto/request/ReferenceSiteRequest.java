@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto;
+package com.youthfit.admin.presentation.dto.request;
 
 import com.youthfit.policy.domain.model.PolicyReferenceSiteSource;
 import jakarta.validation.constraints.NotBlank;
