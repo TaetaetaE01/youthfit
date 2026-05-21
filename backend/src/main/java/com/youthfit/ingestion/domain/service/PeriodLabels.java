@@ -10,7 +10,9 @@ public final class PeriodLabels {
     public static final List<String> POSITIVE = List.of(
             "신청기간", "신청 기간", "접수기간", "접수 기간",
             "모집기간", "모집 기간", "공모기간", "공모 기간",
-            "사업신청기간", "사업 신청 기간", "신청일정", "신청 일정"
+            "사업신청기간", "사업 신청 기간", "신청일정", "신청 일정",
+            "신청마감", "신청 마감", "접수마감", "접수 마감",
+            "모집마감", "모집 마감", "공모마감", "공모 마감"
     );
 
     public static final List<String> NEGATIVE = List.of(

@@ -16,19 +16,7 @@ public class LabeledRegexExtractor {
     public List<PeriodCandidate> candidatesInLabeledWindows(String body, PeriodSource source) {
         if (body == null || body.isBlank()) return List.of();
         List<PeriodLabels.LabelMatch> labels = PeriodLabels.matchAll(body);
-
-        // 라벨이 전혀 없으면 본문 전체를 라벨 윈도우로 간주한다.
-        // (DEADLINE_ONLY 같은 패턴은 `마감` 키워드를 자체 접두로 가지므로 라벨 없이도 자기 식별이 가능하다.)
-        if (labels.isEmpty()) {
-            List<PeriodCandidate> out = new ArrayList<>();
-            for (PeriodRegexPatterns.Hit hit : PeriodRegexPatterns.findAll(body)) {
-                double conf = labeledConfidence(hit.kind());
-                out.add(new PeriodCandidate(
-                        hit.start(), hit.end(), source, conf,
-                        clipEvidence(hit.matchedText())));
-            }
-            return out;
-        }
+        if (labels.isEmpty()) return List.of();
 
         List<PeriodCandidate> out = new ArrayList<>();
         for (int i = 0; i < labels.size(); i++) {
