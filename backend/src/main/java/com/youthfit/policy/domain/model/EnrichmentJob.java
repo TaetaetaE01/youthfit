@@ -1,12 +1,17 @@
 package com.youthfit.policy.domain.model;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "enrichment_job")
 public class EnrichmentJob {
@@ -43,8 +48,6 @@ public class EnrichmentJob {
 
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
-
-    protected EnrichmentJob() { }
 
     public static EnrichmentJob pending(Long policyId,
                                         String requestedBy,
@@ -86,14 +89,4 @@ public class EnrichmentJob {
         this.finishedAt = now;
     }
 
-    public Long getId() { return id; }
-    public Long getPolicyId() { return policyId; }
-    public String getRequestedBy() { return requestedBy; }
-    public List<PolicyReferenceSite> getRequestedUrls() { return requestedUrls; }
-    public EnrichmentJobStatus getStatus() { return status; }
-    public int getAttempt() { return attempt; }
-    public String getErrorMessage() { return errorMessage; }
-    public LocalDateTime getRequestedAt() { return requestedAt; }
-    public LocalDateTime getStartedAt() { return startedAt; }
-    public LocalDateTime getFinishedAt() { return finishedAt; }
 }
