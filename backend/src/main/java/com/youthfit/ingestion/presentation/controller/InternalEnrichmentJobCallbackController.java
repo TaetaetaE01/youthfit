@@ -1,7 +1,9 @@
 package com.youthfit.ingestion.presentation.controller;
 
+import com.youthfit.ingestion.presentation.dto.request.EnrichmentCallbackRequest;
 import com.youthfit.policy.application.service.EnrichmentJobService;
 import com.youthfit.policy.domain.model.EnrichmentJobStatus;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,15 +11,14 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/internal/enrichment")
 @RequiredArgsConstructor
-public class InternalEnrichmentJobCallbackController {
+public class InternalEnrichmentJobCallbackController implements InternalEnrichmentJobCallbackApi {
 
     private final EnrichmentJobService service;
 
-    public record CallbackRequest(EnrichmentJobStatus status, String error) { }
-
     @PostMapping("/jobs/{jobId}/callback")
+    @Override
     public ResponseEntity<Void> callback(@PathVariable Long jobId,
-                                         @RequestBody CallbackRequest body) {
+                                         @Valid @RequestBody EnrichmentCallbackRequest body) {
         switch (body.status()) {
             case RUNNING -> service.markRunning(jobId);
             case SUCCESS -> service.complete(jobId, EnrichmentJobStatus.SUCCESS, null);

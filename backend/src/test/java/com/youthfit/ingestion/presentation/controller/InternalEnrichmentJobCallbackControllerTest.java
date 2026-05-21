@@ -70,4 +70,15 @@ class InternalEnrichmentJobCallbackControllerTest {
 
         verify(jobService).complete(100L, EnrichmentJobStatus.FAILED, "fetch_timeout");
     }
+
+    @Test
+    void status_누락_시_400을_반환한다() throws Exception {
+        mvc.perform(post("/api/internal/enrichment/jobs/100/callback")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"error":"some_error"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
 }
