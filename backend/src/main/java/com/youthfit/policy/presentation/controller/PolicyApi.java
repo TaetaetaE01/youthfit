@@ -16,7 +16,10 @@ import org.springframework.http.ResponseEntity;
 public interface PolicyApi {
 
     @Operation(summary = "정책 목록 조회",
-            description = "필터 조건에 따라 정책 목록을 페이징 조회한다. status에 따라 정렬이 자동 결정된다 — OPEN: applyEnd asc, UPCOMING: applyStart asc, CLOSED: applyEnd desc.")
+            description = "필터 조건에 따라 정책 목록을 페이징 조회한다. regions 는 행정코드 CSV (예: '11680,11440,11')."
+                    + " 시·도(2자리)/시·군·구(5자리) 혼합 가능. 'NATIONWIDE' 단독은 전국 정책만 반환."
+                    + " 그 외에는 '전국' 정책이 항상 OR 로 포함된다."
+                    + " regionCode(단수) 는 deprecated — regions 가 있으면 무시된다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "400", description = "입력값이 올바르지 않습니다 (YF-001)"),
@@ -24,7 +27,8 @@ public interface PolicyApi {
     })
     @SecurityRequirements
     ResponseEntity<PolicyPageResponse> findPolicies(
-            String regionCode,
+            @Parameter(description = "행정코드 CSV. 예: '11680,11440' 또는 'NATIONWIDE'") String regions,
+            @Parameter(description = "[Deprecated] 단일 지역 코드. regions 가 있으면 무시.") String regionCode,
             Category category,
             @Parameter(description = "정책 상태 필터: OPEN(진행중) / UPCOMING(예정) / CLOSED(마감). 미지정 시 전체.")
             PolicyStatus status,

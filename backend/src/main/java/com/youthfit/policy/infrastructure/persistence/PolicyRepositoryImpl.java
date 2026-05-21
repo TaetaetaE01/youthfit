@@ -3,6 +3,7 @@ package com.youthfit.policy.infrastructure.persistence;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,10 +27,10 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     }
 
     @Override
-    public Page<Policy> findAllByFilters(String regionCode, Category category, PolicyStatus status,
+    public Page<Policy> findAllByFilters(RegionFilter regionFilter, Category category, PolicyStatus status,
                                          Pageable pageable) {
         return jpaRepository.findAll(
-                PolicySpecification.withFilters(regionCode, category, status), pageable);
+                PolicySpecification.withFilters(regionFilter, category, status), pageable);
     }
 
     @Override

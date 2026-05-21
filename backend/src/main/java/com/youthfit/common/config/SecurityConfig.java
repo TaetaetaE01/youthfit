@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/policies/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/policies/attachments/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/guides/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/regions").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/regions", "/api/v1/regions/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // 내부 API (API 키 필터로 인증)

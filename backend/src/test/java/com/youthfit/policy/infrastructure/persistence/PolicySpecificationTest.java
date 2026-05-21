@@ -3,9 +3,11 @@ package com.youthfit.policy.infrastructure.persistence;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.*;
 
 @DisplayName("PolicySpecification")
@@ -67,7 +70,7 @@ class PolicySpecificationTest {
         given(root.get("createdAt")).willReturn(createdAtPath);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, null);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null);
 
         // when
         Predicate result = spec.toPredicate(root, query, cb);
@@ -87,13 +90,19 @@ class PolicySpecificationTest {
         Predicate predicate = mock(Predicate.class);
         Order descOrder = mock(Order.class);
         given(query.getResultType()).willReturn((Class) Policy.class);
-        given(root.get("regionCode")).willReturn(path);
+        given(root.get(anyString())).willReturn(path);
         given(root.get("createdAt")).willReturn(createdAtPath);
-        given(cb.equal(path, "11")).willReturn(predicate);
+        given(cb.equal(any(), anyString())).willReturn(predicate);
+        given(cb.like(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(predicate);
+        given(cb.or(any(Predicate[].class))).willReturn(predicate);
+        Expression<String> concatExpr = mock(Expression.class);
+        given(cb.concat(anyString(), any(jakarta.persistence.criteria.Expression.class))).willReturn(concatExpr);
+        given(cb.concat(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(concatExpr);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(predicate);
 
-        Specification<Policy> spec = PolicySpecification.withFilters("11", null, null);
+        Specification<Policy> spec = PolicySpecification.withFilters(
+                RegionFilter.of(java.util.List.of("11")), null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -121,7 +130,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(combined);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -150,7 +159,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, PolicyStatus.UPCOMING);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.UPCOMING);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -178,7 +187,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descCreatedOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, PolicyStatus.CLOSED);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.CLOSED);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -200,7 +209,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, null);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -216,7 +225,7 @@ class PolicySpecificationTest {
         given(query.getResultType()).willReturn((Class) Long.class);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(null, null, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -295,5 +304,102 @@ class PolicySpecificationTest {
         // then
         then(cb).should().asc(coalesced);
         then(query).should().orderBy(java.util.List.of(ascOrder, descOrder));
+    }
+
+    @Nested
+    @DisplayName("withFilters(regionFilter) — 매칭 분기")
+    class RegionMatching {
+
+        @Test
+        @DisplayName("비활성 필터: 지역 관련 predicate 가 추가되지 않는다 (status/category 만)")
+        void inactiveFilter_noRegionPredicate() {
+            // given
+            given(query.getResultType()).willReturn((Class) Long.class); // skip orderBy branch
+            Predicate any = mock(Predicate.class);
+            given(cb.equal(any(), anyString())).willReturn(any);
+            given(cb.like(any(), anyString())).willReturn(any);
+            given(cb.concat(anyString(), any(jakarta.persistence.criteria.Expression.class))).willReturn(mock(jakarta.persistence.criteria.Expression.class));
+            given(cb.concat(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(mock(jakarta.persistence.criteria.Expression.class));
+            given(cb.or(any(Predicate[].class))).willReturn(any);
+            given(cb.and(any(Predicate[].class))).willReturn(any);
+            Path<Object> path = mock(Path.class);
+            given(root.get(anyString())).willReturn(path);
+
+            // when
+            PolicySpecification.withFilters(RegionFilter.of(null), null, null).toPredicate(root, query, cb);
+
+            // then — region 쪽 cb.or 가 호출되지 않음을 확인하기 위해, 적어도 그 분기에 진입했을 때만 사용하는 메서드(cb.concat) 호출 회수가 0 이어야 한다
+            then(cb).should(times(0)).concat(anyString(), any(jakarta.persistence.criteria.Expression.class));
+        }
+
+        @Test
+        @DisplayName("NATIONWIDE 단독: regionCode == '전국' predicate 만 추가된다")
+        void nationwideOnly_addsEqualNationwidePredicate() {
+            // given
+            given(query.getResultType()).willReturn((Class) Long.class); // skip orderBy branch
+            Predicate eq = mock(Predicate.class);
+            given(cb.equal(any(), anyString())).willReturn(eq);
+            given(cb.and(any(Predicate[].class))).willReturn(eq);
+            Path<Object> path = mock(Path.class);
+            given(root.get("regionCode")).willReturn(path);
+
+            // when
+            PolicySpecification.withFilters(
+                    RegionFilter.of(java.util.List.of("NATIONWIDE")), null, null)
+                    .toPredicate(root, query, cb);
+
+            // then — cb.equal(regionCode, "전국") 이 호출되었음을 검증
+            then(cb).should().equal(eq(path), eq("전국"));
+        }
+
+        @Test
+        @DisplayName("시·도 코드: regionCode 정확/prefix 매칭 + regionCodes CSV LIKE 가 모두 OR 로 추가된다")
+        void sidoCode_addsMultiplePredicates() {
+            // given
+            given(query.getResultType()).willReturn((Class) Long.class); // skip orderBy branch
+            Predicate p = mock(Predicate.class);
+            given(cb.equal(any(), anyString())).willReturn(p);
+            given(cb.like(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(p);
+            given(cb.or(any(Predicate[].class))).willReturn(p);
+            given(cb.and(any(Predicate[].class))).willReturn(p);
+            jakarta.persistence.criteria.Expression<String> concatExpr = mock(jakarta.persistence.criteria.Expression.class);
+            given(cb.concat(anyString(), any(jakarta.persistence.criteria.Expression.class))).willReturn(concatExpr);
+            given(cb.concat(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(concatExpr);
+            Path<Object> path = mock(Path.class);
+            given(root.get(anyString())).willReturn(path);
+
+            // when
+            PolicySpecification.withFilters(
+                    RegionFilter.of(java.util.List.of("11")), null, null)
+                    .toPredicate(root, query, cb);
+
+            // then — like 가 시·도 prefix(11%) + CSV 패딩(",11," ",11xxx,") 으로 최소 3회 이상 호출됨
+            then(cb).should(atLeast(3)).like(any(jakarta.persistence.criteria.Expression.class), anyString());
+        }
+
+        @Test
+        @DisplayName("시·군·구 코드: regionCode 정확 매칭 + CSV 콤마 패딩 LIKE 가 추가된다")
+        void sigunguCode_addsExactAndCsvLike() {
+            // given
+            given(query.getResultType()).willReturn((Class) Long.class); // skip orderBy branch
+            Predicate p = mock(Predicate.class);
+            given(cb.equal(any(), anyString())).willReturn(p);
+            given(cb.like(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(p);
+            given(cb.or(any(Predicate[].class))).willReturn(p);
+            given(cb.and(any(Predicate[].class))).willReturn(p);
+            jakarta.persistence.criteria.Expression<String> concatExpr = mock(jakarta.persistence.criteria.Expression.class);
+            given(cb.concat(anyString(), any(jakarta.persistence.criteria.Expression.class))).willReturn(concatExpr);
+            given(cb.concat(any(jakarta.persistence.criteria.Expression.class), anyString())).willReturn(concatExpr);
+            Path<Object> path = mock(Path.class);
+            given(root.get(anyString())).willReturn(path);
+
+            // when
+            PolicySpecification.withFilters(
+                    RegionFilter.of(java.util.List.of("11680")), null, null)
+                    .toPredicate(root, query, cb);
+
+            // then — 콤마 패딩 LIKE %,11680,% 가 호출되어야 함
+            then(cb).should().like(any(jakarta.persistence.criteria.Expression.class), eq("%,11680,%"));
+        }
     }
 }

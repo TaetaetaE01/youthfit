@@ -3,6 +3,7 @@ package com.youthfit.policy.infrastructure.persistence;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.RegionFilter;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -20,16 +21,19 @@ public final class PolicySpecification {
 
     private static final LocalDate FAR_FUTURE = LocalDate.of(9999, 12, 31);
     private static final LocalDate FAR_PAST = LocalDate.of(1, 1, 1);
+    private static final String NATIONWIDE_LABEL = "전국";
 
     private PolicySpecification() {
     }
 
-    public static Specification<Policy> withFilters(String regionCode, Category category, PolicyStatus status) {
+    public static Specification<Policy> withFilters(RegionFilter regionFilter,
+                                                    Category category,
+                                                    PolicyStatus status) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (regionCode != null) {
-                predicates.add(cb.equal(root.get("regionCode"), regionCode));
+            if (regionFilter != null && regionFilter.isActive()) {
+                predicates.add(regionPredicate(root, cb, regionFilter));
             }
             if (category != null) {
                 predicates.add(cb.equal(root.get("category"), category));
@@ -62,15 +66,43 @@ public final class PolicySpecification {
         };
     }
 
+    private static Predicate regionPredicate(Root<Policy> root, CriteriaBuilder cb, RegionFilter f) {
+        Path<String> regionCode = root.get("regionCode");
+        // 콤마 패딩된 CSV 표현: ',' || region_codes || ','
+        Expression<String> paddedCsv = cb.concat(cb.concat(",", root.<String>get("regionCodes")), ",");
+
+        if (f.isNationwideOnly()) {
+            return cb.equal(regionCode, NATIONWIDE_LABEL);
+        }
+
+        List<Predicate> ors = new ArrayList<>();
+        // 전국 정책은 어떤 지역 필터에서도 항상 포함
+        ors.add(cb.equal(regionCode, NATIONWIDE_LABEL));
+
+        for (String sigungu : f.sigunguCodes()) {
+            // 정확 매칭 (단일 대표 코드)
+            ors.add(cb.equal(regionCode, sigungu));
+            // CSV 안 멤버십 (콤마 패딩으로 false-positive 방지)
+            ors.add(cb.like(paddedCsv, "%," + sigungu + ",%"));
+        }
+        for (String sido : f.sidoCodes()) {
+            // 정확 매칭 — 시·도 자체 코드 (예: regionCode = "11")
+            ors.add(cb.equal(regionCode, sido));
+            // 5자리 행정코드의 prefix (예: "11680" 은 "11" 로 시작)
+            ors.add(cb.like(regionCode, sido + "___"));
+            // CSV 안 시·도 코드 정확 매칭 — ",11," 형태
+            ors.add(cb.like(paddedCsv, "%," + sido + ",%"));
+            // CSV 안 시·도 prefix 5자리 — ",11xxx," 형태. SQL '_' 와이드카드로 정확히 5자리만.
+            ors.add(cb.like(paddedCsv, "%," + sido + "___,%"));
+        }
+        return cb.or(ors.toArray(new Predicate[0]));
+    }
+
     private static void applyOrder(Root<Policy> root, CriteriaQuery<?> query,
                                    CriteriaBuilder cb, PolicyStatus status) {
-        if (query == null) {
-            return;
-        }
+        if (query == null) return;
         Class<?> resultType = query.getResultType();
-        if (resultType == Long.class || resultType == long.class) {
-            return; // count query
-        }
+        if (resultType == Long.class || resultType == long.class) return;
         query.orderBy(buildOrders(root, cb, status));
     }
 
@@ -94,10 +126,6 @@ public final class PolicySpecification {
         };
     }
 
-    /**
-     * 정책의 신청기간(applyStart/applyEnd)과 기준연도(referenceYear)로부터 effective status를 도출하는 SQL CASE 식.
-     * frontend/src/lib/policyStatus.ts:23 의 getEffectiveStatus 와 동일한 우선순위.
-     */
     private static Expression<String> effectiveStatusExpr(Root<Policy> root, CriteriaBuilder cb) {
         LocalDate today = LocalDate.now();
         int currentYear = today.getYear();

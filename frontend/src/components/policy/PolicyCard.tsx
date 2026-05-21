@@ -40,7 +40,37 @@ function formatSubRegions(subRegions: string[]): string {
   return rest > 0 ? `${head} 외 ${rest}곳` : head;
 }
 
-export { CategoryBadge, StatusBadge };
+function RegionBadge({ policy }: { policy: Policy }) {
+  const isNationwide = policy.regionCode === '전국';
+
+  if (isNationwide) {
+    return (
+      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
+        {getRegionName(policy.regionCode, policy.sourceType)}
+      </span>
+    );
+  }
+
+  // 시·군·구 정책: subRegions 첫 번째를 풀라벨로
+  const first = policy.subRegions?.[0];
+  if (!first) {
+    // fallback — regionCode 자체 라벨
+    return (
+      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+        {getRegionName(policy.regionCode, policy.sourceType)}
+      </span>
+    );
+  }
+  const rest = (policy.subRegions?.length ?? 0) - 1;
+  const label = rest > 0 ? `${first} +${rest}` : first;
+  return (
+    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+      {label}
+    </span>
+  );
+}
+
+export { CategoryBadge, StatusBadge, RegionBadge };
 
 export default function PolicyCard({ policy, isBookmarked = false, onBookmarkToggle, dDay }: PolicyCardProps) {
   const effectiveStatus = getEffectiveStatus(policy);
@@ -54,6 +84,7 @@ export default function PolicyCard({ policy, isBookmarked = false, onBookmarkTog
     >
       {/* 상단: 배지 + 북마크 */}
       <div className="mb-3 flex items-center gap-2">
+        <RegionBadge policy={policy} />
         <CategoryBadge category={policy.category} />
         <StatusBadge status={effectiveStatus} />
         <SourceBadge sourceType={policy.sourceType} sourceLabel={policy.sourceLabel} size="sm" />

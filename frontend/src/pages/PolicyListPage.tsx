@@ -1,21 +1,25 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PolicyCard from '@/components/policy/PolicyCard';
 import LoginPromptModal from '@/components/auth/LoginPromptModal';
+import RegionPicker from '@/components/policy/RegionPicker';
+import RegionPickerTrigger from '@/components/policy/RegionPickerTrigger';
+import RegionPickerBanner from '@/components/policy/RegionPickerBanner';
 import { usePolicies } from '@/hooks/queries/usePolicies';
 import { useMyBookmarkIds } from '@/hooks/queries/useMyBookmarkIds';
+import { useRegions } from '@/hooks/queries/useRegions';
+import { useNotificationSettings } from '@/hooks/queries/useNotificationSettings';
 import { useAddBookmark, useRemoveBookmark } from '@/hooks/mutations/useToggleBookmark';
 import { useAuthStore } from '@/stores/authStore';
 import type {
   PolicyCategory,
   PolicyStatus,
 } from '@/types/policy';
-import {
-  CATEGORY_LABELS,
-  REGION_OPTIONS,
-} from '@/types/policy';
+import { CATEGORY_LABELS } from '@/types/policy';
+import { SIDO_CODE_BY_ENUM, type RegionSidoCode } from '@/lib/labels/region';
+import { parseRegionsParam, toRegionsParam } from '@/lib/regionFilter';
 
 /* ──────────────────────────────────────────────
    Sub-components
@@ -65,16 +69,12 @@ function MobileFilterSheet({
   isOpen,
   onClose,
   category,
-  regionCode,
   onCategoryChange,
-  onRegionChange,
 }: {
   isOpen: boolean;
   onClose: () => void;
   category: PolicyCategory | '';
-  regionCode: string;
   onCategoryChange: (v: PolicyCategory | '') => void;
-  onRegionChange: (v: string) => void;
 }) {
   useEffect(() => {
     if (isOpen) {
@@ -126,23 +126,6 @@ function MobileFilterSheet({
               </button>
             ))}
           </div>
-        </fieldset>
-
-        <fieldset className="mt-5">
-          <legend className="mb-2 text-sm font-semibold text-gray-700">지역</legend>
-          <select
-            value={regionCode}
-            onChange={(e) => onRegionChange(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-brand-800 focus:outline-none focus:ring-1 focus:ring-brand-800"
-            aria-label="지역 선택"
-          >
-            <option value="">전체 지역</option>
-            {REGION_OPTIONS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
         </fieldset>
 
         <button
@@ -283,12 +266,17 @@ function Pagination({
 export default function PolicyListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const [inputValue, setInputValue] = useState(searchParams.get('keyword') ?? '');
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data: bookmarkIdPairs } = useMyBookmarkIds();
+  const { data: regionData } = useRegions();
+  const { data: notificationSettings } = useNotificationSettings();
   const addBookmarkMutation = useAddBookmark();
   const removeBookmarkMutation = useRemoveBookmark();
+  const autoAppliedRef = useRef(false);
 
   const bookmarkMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -319,15 +307,64 @@ export default function PolicyListPage() {
   const category = (searchParams.get('category') ?? '') as PolicyCategory | '';
   const rawStatus = searchParams.get('status');
   const status: PolicyStatus = isPolicyStatus(rawStatus) ? rawStatus : DEFAULT_STATUS;
-  const regionCode = searchParams.get('regionCode') ?? '';
+  const regions = parseRegionsParam(searchParams.get('regions'));
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
+
+  // Legacy ?regionCode=SEOUL → ?regions=11 정규화 (1회)
+  useEffect(() => {
+    const legacy = searchParams.get('regionCode');
+    if (!legacy) return;
+    const mapped = SIDO_CODE_BY_ENUM[legacy as RegionSidoCode];
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('regionCode');
+        if (mapped) next.set('regions', mapped);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
+
+  // 자동 적용 effect — 로그인 + interestRegions 존재 + URL에 regions 없음일 때 1회 적용
+  useEffect(() => {
+    if (autoAppliedRef.current) return;
+    if (!isAuthenticated) return;
+    if (searchParams.has('regions')) return;
+    if (!notificationSettings) return;
+    const interest = notificationSettings.interestRegions;
+    if (!interest || interest.length === 0) return;
+
+    const sidoCode = SIDO_CODE_BY_ENUM[interest[0]];
+    if (!sidoCode) return;
+
+    autoAppliedRef.current = true;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('regions', sidoCode);
+        next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [isAuthenticated, notificationSettings, searchParams, setSearchParams]);
+
+  // 자동 적용된 라벨 (배너용)
+  const autoBannerLabel = useMemo(() => {
+    if (!isAuthenticated || bannerDismissed) return null;
+    if (!autoAppliedRef.current) return null;
+    if (regions.length !== 1 || regions[0].length !== 2) return null;
+    const sido = regionData?.sidos.find((s) => s.code === regions[0]);
+    return sido ? sido.name : null;
+  }, [isAuthenticated, bannerDismissed, regions, regionData]);
 
   // Fetch data via API
   const { data, isLoading, isError, refetch } = usePolicies({
     keyword: keyword || undefined,
     category,
     status,
-    regionCode: regionCode || undefined,
+    regions: regions.length > 0 ? regions : undefined,
     page,
     size: PAGE_SIZE,
   });
@@ -357,6 +394,18 @@ export default function PolicyListPage() {
     [updateParams],
   );
 
+  const handleRegionApply = useCallback(
+    (codes: string[]) => {
+      updateParams({ regions: codes.length > 0 ? toRegionsParam(codes) : '', page: '' });
+    },
+    [updateParams],
+  );
+
+  const handleBannerDismiss = useCallback(() => {
+    setBannerDismissed(true);
+    updateParams({ regions: '' });
+  }, [updateParams]);
+
   const resetFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setInputValue('');
@@ -377,20 +426,17 @@ export default function PolicyListPage() {
     setInputValue(searchParams.get('keyword') ?? '');
   }, [searchParams]);
 
-  // Active filter badges
+  // Active filter badges (지역은 트리거 자체가 활성 칩 역할이므로 제외)
   const activeFilters: { key: string; label: string }[] = [];
   if (category) activeFilters.push({ key: 'category', label: CATEGORY_LABELS[category] });
-  if (regionCode) {
-    const regionLabel = REGION_OPTIONS.find((r) => r.value === regionCode)?.label;
-    if (regionLabel) activeFilters.push({ key: 'regionCode', label: regionLabel });
-  }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateParams({ keyword: inputValue, page: '' });
   };
 
-  const hasActiveQuery = Boolean(keyword || category || regionCode || status !== DEFAULT_STATUS);
+  const isSearchMode = Boolean(keyword);
+  const hasActiveQuery = Boolean(keyword || category || regions.length > 0 || status !== DEFAULT_STATUS);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
@@ -426,6 +472,11 @@ export default function PolicyListPage() {
         </button>
       </form>
 
+      {/* 자동 적용 배너 */}
+      {autoBannerLabel && (
+        <RegionPickerBanner regionLabel={autoBannerLabel} onDismiss={handleBannerDismiss} />
+      )}
+
       <StatusTabBar status={status} onStatusChange={handleStatusTabChange} />
 
       {/* ── Desktop Filters ── */}
@@ -447,23 +498,33 @@ export default function PolicyListPage() {
 
         <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden="true" />
 
-        <select
-          value={regionCode}
-          onChange={(e) => updateParams({ regionCode: e.target.value, page: '' })}
-          className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 focus:border-brand-800 focus:outline-none focus:ring-1 focus:ring-brand-800"
-          aria-label="지역 필터"
-        >
-          <option value="">전체 지역</option>
-          {REGION_OPTIONS.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <RegionPickerTrigger
+            selectedCodes={regions}
+            regionData={regionData}
+            onOpen={() => setRegionPickerOpen(true)}
+            disabled={isSearchMode}
+          />
+          {/* 데스크톱 팝오버 모드 */}
+          <div className="hidden md:block">
+            <RegionPicker
+              open={regionPickerOpen}
+              onClose={() => setRegionPickerOpen(false)}
+              selectedCodes={regions}
+              onApply={handleRegionApply}
+              regionData={regionData}
+              mode="desktop-popover"
+            />
+          </div>
+        </div>
+
+        {isSearchMode && (
+          <span className="ml-2 text-xs text-gray-500">검색 결과에는 지역 필터가 적용되지 않습니다</span>
+        )}
       </div>
 
-      {/* ── Mobile Filter Button ── */}
-      <div className="mb-4 md:hidden">
+      {/* ── Mobile Filter Bar ── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 md:hidden">
         <button
           onClick={() => setFilterSheetOpen(true)}
           className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-gray-50"
@@ -477,16 +538,35 @@ export default function PolicyListPage() {
             </span>
           )}
         </button>
+        <RegionPickerTrigger
+          selectedCodes={regions}
+          regionData={regionData}
+          onOpen={() => setRegionPickerOpen(true)}
+          disabled={isSearchMode}
+        />
+        {isSearchMode && (
+          <span className="text-[10px] text-gray-500">검색 결과 미적용</span>
+        )}
       </div>
 
       <MobileFilterSheet
         isOpen={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
         category={category}
-        regionCode={regionCode}
         onCategoryChange={(v) => updateParams({ category: v, page: '' })}
-        onRegionChange={(v) => updateParams({ regionCode: v, page: '' })}
       />
+
+      {/* 모바일 RegionPicker (sheet) */}
+      <div className="md:hidden">
+        <RegionPicker
+          open={regionPickerOpen}
+          onClose={() => setRegionPickerOpen(false)}
+          selectedCodes={regions}
+          onApply={handleRegionApply}
+          regionData={regionData}
+          mode="mobile-sheet"
+        />
+      </div>
 
       {/* ── Active filter badges ── */}
       {activeFilters.length > 0 && (
