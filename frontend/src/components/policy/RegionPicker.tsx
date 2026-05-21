@@ -104,7 +104,7 @@ export default function RegionPicker({
       'flex flex-col bg-white',
       mode === 'mobile-sheet'
         ? 'fixed inset-0 z-50 md:hidden'
-        : 'absolute right-0 top-full z-40 mt-2 w-[460px] overflow-hidden rounded-2xl border border-gray-200 shadow-xl',
+        : 'absolute right-0 top-full z-40 mt-2 w-[460px] max-h-[calc(100vh-120px)] overflow-hidden rounded-2xl border border-gray-200 shadow-xl',
     )}>
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h2 id="region-picker-title" className="text-base font-bold text-gray-900">지역 선택</h2>
@@ -216,22 +216,22 @@ export default function RegionPicker({
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+      {/* Footer — 확인/적용 버튼 영역 */}
+      <div className="sticky bottom-0 z-10 border-t border-gray-100 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={resetAll}
-            className="rounded-md px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100"
+            className="min-h-11 rounded-md px-3 text-xs font-semibold text-gray-600 hover:bg-gray-100"
           >
             전체 해제
           </button>
           <button
             type="button"
             onClick={applyAndClose}
-            className="flex-1 rounded-xl bg-brand-800 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-900"
+            className="min-h-11 flex-1 rounded-xl bg-brand-800 px-4 text-sm font-semibold text-white hover:bg-brand-900"
           >
-            {appliedCount === 0 ? '전체 보기' : `${appliedCount}개 지역 적용`}
+            {appliedCount === 0 ? '확인 (전체 보기)' : `확인 · ${appliedCount}개 적용`}
           </button>
         </div>
       </div>
