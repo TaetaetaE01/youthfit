@@ -1,4 +1,4 @@
-package com.youthfit.policy.application.service;
+package com.youthfit.policy.infrastructure.scheduler;
 
 import com.youthfit.policy.domain.model.EnrichmentJob;
 import com.youthfit.policy.domain.repository.EnrichmentJobRepository;
@@ -37,7 +37,6 @@ public class EnrichmentJobTimeoutScheduler {
         LocalDateTime now = LocalDateTime.now(clock);
         for (EnrichmentJob job : stale) {
             job.markFailed("timeout", now);
-            repo.save(job);
             log.warn("EnrichmentJob expired: jobId={} policyId={} attempt={}",
                     job.getId(), job.getPolicyId(), job.getAttempt());
         }
