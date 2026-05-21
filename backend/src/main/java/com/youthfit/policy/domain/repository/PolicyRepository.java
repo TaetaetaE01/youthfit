@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface PolicyRepository {
 
@@ -36,4 +37,16 @@ public interface PolicyRepository {
     Page<Policy> findAlwaysOpen(RegionFilter regionFilter, Category category, Pageable pageable);
 
     Policy save(Policy policy);
+
+    /**
+     * 어드민 enrichment 검토 대상 Policy를 검색한다.
+     * needsReviewOnly = true 인 경우 enrichment 상태/신뢰도/detailLevel/핵심 섹션 누락 기준으로 필터링한다.
+     * statuses / detailLevels 가 null 또는 빈 컬렉션이면 해당 필터를 적용하지 않는다.
+     * application/presentation 레이어 의존을 차단하기 위해 primitive 및 문자열 컬렉션만 받는다.
+     */
+    Page<Policy> searchForEnrichmentReview(boolean needsReviewOnly,
+                                           String keyword,
+                                           Set<String> statuses,
+                                           Set<String> detailLevels,
+                                           Pageable pageable);
 }

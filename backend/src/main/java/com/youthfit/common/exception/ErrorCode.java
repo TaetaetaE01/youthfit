@@ -21,6 +21,10 @@ public enum ErrorCode {
 
     // 409
     DUPLICATE(409, "YF-005", "이미 존재하는 리소스입니다"),
+    ENRICHMENT_JOB_CONFLICT(409, "YF-006", "이미 진행 중인 enrichment 잡이 존재합니다"),
+
+    // 429
+    ENRICHMENT_JOB_RATE_LIMITED(429, "YF-007", "enrichment 잡 레이트 리밋을 초과했습니다"),
 
     // 500
     INTERNAL_ERROR(500, "YF-500", "서버 내부 오류가 발생했습니다");

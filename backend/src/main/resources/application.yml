@@ -144,6 +144,13 @@ youthfit:
       access-key-id:     ${AWS_SES_ACCESS_KEY_ID:}
       secret-access-key: ${AWS_SES_SECRET_ACCESS_KEY:}
 
+n8n:
+  force-enrich-webhook-url: ${N8N_FORCE_ENRICH_WEBHOOK_URL:http://localhost:5678/webhook/force-enrich}
+
+enrichment:
+  timeout:
+    fixed-delay-ms: 60000
+
 attachment:
   storage:
     type: ${ATTACHMENT_STORAGE_TYPE:local}
