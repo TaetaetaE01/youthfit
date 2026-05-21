@@ -129,6 +129,15 @@ public final class PolicySpecification {
             predicates.add(cb.isNull(root.get("applyStart")));
             predicates.add(cb.isNull(root.get("applyEnd")));
 
+            // 만료된 정책 제외: referenceYear < currentYear 면 effective status 가 CLOSED.
+            // ingestion 단계에서 신청 기간이 누락된 과년도 정책이 상시로 잘못 노출되는 케이스 차단.
+            int currentYear = LocalDate.now().getYear();
+            Path<Integer> referenceYear = root.get("referenceYear");
+            predicates.add(cb.or(
+                    cb.isNull(referenceYear),
+                    cb.greaterThanOrEqualTo(referenceYear, currentYear)
+            ));
+
             if (regionFilter != null && regionFilter.isActive()) {
                 predicates.add(regionPredicate(root, cb, regionFilter));
             }

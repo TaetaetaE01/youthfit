@@ -168,6 +168,22 @@ class PolicySpecificationCalendarTest {
                 .containsExactlyInAnyOrder("상시1", "상시2");
     }
 
+    @Test
+    @DisplayName("alwaysOpen 은 referenceYear 가 현재 연도보다 이전인 만료 정책을 제외")
+    void alwaysOpenExcludesExpiredReferenceYear() {
+        int currentYear = LocalDate.now().getYear();
+        repository.save(policyWithDatesAndYear("작년상시", null, null, currentYear - 1));
+        repository.save(policyWithDatesAndYear("올해상시", null, null, currentYear));
+        repository.save(policyWithDatesAndYear("연도없는상시", null, null, null));
+
+        List<Policy> result = repository.findAll(
+                PolicySpecification.alwaysOpen(RegionFilter.of(null), null));
+
+        assertThat(result).hasSize(2)
+                .extracting(Policy::getTitle)
+                .containsExactlyInAnyOrder("올해상시", "연도없는상시");
+    }
+
     private Policy policyWithDates(String title, LocalDate start, LocalDate end) {
         return Policy.builder()
                 .title(title)
@@ -176,6 +192,18 @@ class PolicySpecificationCalendarTest {
                 .regionCode("전국")
                 .applyStart(start)
                 .applyEnd(end)
+                .build();
+    }
+
+    private Policy policyWithDatesAndYear(String title, LocalDate start, LocalDate end, Integer year) {
+        return Policy.builder()
+                .title(title)
+                .summary("test")
+                .category(Category.HOUSING)
+                .regionCode("전국")
+                .applyStart(start)
+                .applyEnd(end)
+                .referenceYear(year)
                 .build();
     }
 }
