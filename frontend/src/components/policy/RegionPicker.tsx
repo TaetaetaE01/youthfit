@@ -103,19 +103,28 @@ export default function RegionPicker({
     <div className={cn(
       'flex flex-col bg-white',
       mode === 'mobile-sheet'
-        ? 'fixed inset-0 z-50 md:hidden'
+        ? 'fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] rounded-t-2xl shadow-2xl md:hidden'
         : 'absolute right-0 top-full z-40 mt-2 w-[460px] max-h-[calc(100vh-120px)] overflow-hidden rounded-2xl border border-gray-200 shadow-xl',
     )}>
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h2 id="region-picker-title" className="text-base font-bold text-gray-900">지역 선택</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="닫기"
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
-        >
-          <X className="h-5 w-5 text-gray-500" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={applyAndClose}
+            className="min-h-9 rounded-lg bg-brand-800 px-3 text-sm font-semibold text-white hover:bg-brand-900"
+          >
+            {appliedCount === 0 ? '확인' : `확인 · ${appliedCount}`}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
       </div>
 
       <div className="border-b border-gray-100 bg-green-50 px-4 py-2 text-xs text-green-700">
