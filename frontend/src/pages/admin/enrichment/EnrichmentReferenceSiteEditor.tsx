@@ -56,6 +56,7 @@ export function EnrichmentReferenceSiteEditor({ initialSites, onSave }: Props) {
             <button
               type="button"
               onClick={() => remove(s.url)}
+              aria-label={`${s.url} 제거`}
               className="ml-auto text-xs text-red-600 hover:text-red-700"
             >
               제거

@@ -24,6 +24,16 @@ describe('EnrichmentReferenceSiteEditor', () => {
     expect(screen.getByText(/이미 등록/i)).toBeInTheDocument();
   });
 
+  test('초기 AUTO 항목은 AUTO 뱃지로 표시된다', () => {
+    render(
+      <EnrichmentReferenceSiteEditor
+        initialSites={[{ name: 'a', url: 'https://a.example.com', source: 'AUTO' }]}
+        onSave={() => {}}
+      />,
+    );
+    expect(screen.getByText('AUTO')).toBeInTheDocument();
+  });
+
   test('저장 클릭 시 onSave가 ADMIN 플래그로 호출된다', () => {
     const onSave = vi.fn();
     render(<EnrichmentReferenceSiteEditor initialSites={[]} onSave={onSave} />);
