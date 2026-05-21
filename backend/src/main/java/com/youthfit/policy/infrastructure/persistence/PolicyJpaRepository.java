@@ -2,6 +2,8 @@ package com.youthfit.policy.infrastructure.persistence;
 
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -29,4 +31,75 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
           )
     """)
     Optional<Policy> findByNormalizedTitleWithBokjiroSource(@Param("normalizedTitle") String normalizedTitle);
+
+    /**
+     * 어드민 enrichment 검토 대상 후보 정책 페이지 조회.
+     * needsReviewOnly = true 인 경우 enrichment 결측/실패 상태/저신뢰도/LITE/핵심 섹션 2개 이상 누락 기준 필터.
+     */
+    @Query(value = """
+        SELECT * FROM policy p
+         WHERE (:needsReviewOnly = false OR (
+                p.enrichment IS NULL
+             OR (p.enrichment->>'status') <> 'OK'
+             OR ((p.enrichment->>'confidence')::numeric) < 0.6
+             OR p.detail_level = 'LITE'
+             OR (
+                  (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportTarget','') = '' THEN 1 ELSE 0 END)
+                + (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportContent','') = '' THEN 1 ELSE 0 END)
+                + (CASE WHEN COALESCE(p.enrichment->'sections'->>'eligibilityCriteria','') = '' THEN 1 ELSE 0 END)
+               ) >= 2
+           ))
+           AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM policy p
+         WHERE (:needsReviewOnly = false OR (
+                p.enrichment IS NULL
+             OR (p.enrichment->>'status') <> 'OK'
+             OR ((p.enrichment->>'confidence')::numeric) < 0.6
+             OR p.detail_level = 'LITE'
+             OR (
+                  (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportTarget','') = '' THEN 1 ELSE 0 END)
+                + (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportContent','') = '' THEN 1 ELSE 0 END)
+                + (CASE WHEN COALESCE(p.enrichment->'sections'->>'eligibilityCriteria','') = '' THEN 1 ELSE 0 END)
+               ) >= 2
+           ))
+           AND (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%'))
+        """,
+        nativeQuery = true)
+    Page<Policy> searchForEnrichmentReview(@Param("needsReviewOnly") boolean needsReviewOnly,
+                                           @Param("keyword") String keyword,
+                                           Pageable pageable);
+
+    @Query(value = "SELECT COUNT(*) FROM policy", nativeQuery = true)
+    long countTotal();
+
+    @Query(value = """
+        SELECT COUNT(*) FROM policy p
+         WHERE p.enrichment IS NULL
+            OR (p.enrichment->>'status') <> 'OK'
+            OR ((p.enrichment->>'confidence')::numeric) < 0.6
+            OR p.detail_level = 'LITE'
+            OR (
+                 (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportTarget','') = '' THEN 1 ELSE 0 END)
+               + (CASE WHEN COALESCE(p.enrichment->'sections'->>'supportContent','') = '' THEN 1 ELSE 0 END)
+               + (CASE WHEN COALESCE(p.enrichment->'sections'->>'eligibilityCriteria','') = '' THEN 1 ELSE 0 END)
+              ) >= 2
+        """, nativeQuery = true)
+    long countNeedsReview();
+
+    @Query(value = """
+        SELECT p.enrichment->>'status' AS status, COUNT(*) AS cnt
+          FROM policy p
+         WHERE p.enrichment IS NOT NULL
+         GROUP BY p.enrichment->>'status'
+        """, nativeQuery = true)
+    List<Object[]> aggregateStatusCounts();
+
+    @Query(value = """
+        SELECT p.detail_level AS level, COUNT(*) AS cnt
+          FROM policy p
+         GROUP BY p.detail_level
+        """, nativeQuery = true)
+    List<Object[]> aggregateDetailLevelCounts();
 }
