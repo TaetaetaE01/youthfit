@@ -37,7 +37,7 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
       // 프로젝트 표준 토스트가 도입되면 여기서 사용자에게 알린다. (현재 placeholder)
     }
     lastStatusRef.current = cur;
-  }, [data?.recentJobs]);
+  }, [data?.recentJobs[0]?.status]);
 
   if (isLoading || !data) {
     return <div className="p-4 text-sm">로딩 중...</div>;
@@ -78,7 +78,7 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
       <section>
         <h3 className="text-sm font-semibold mb-1">잡 이력 (최근 5)</h3>
         <ul className="text-xs space-y-0.5">
-          {data.recentJobs.map((j) => (
+          {data.recentJobs.slice(0, 5).map((j) => (
             <li key={j.id} className="flex items-center gap-2">
               <EnrichmentJobBadge status={j.status} />
               <span>
@@ -103,10 +103,12 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
       {confirmOpen && (
         <div
           role="dialog"
+          aria-modal="true"
+          aria-labelledby="enrichment-rerun-confirm-title"
           className="fixed inset-0 bg-black/30 flex items-center justify-center"
         >
           <div className="bg-white p-4 space-y-2 w-[360px]">
-            <p className="font-semibold">"{data.title}" 재크롤을 실행할까요?</p>
+            <p id="enrichment-rerun-confirm-title" className="font-semibold">"{data.title}" 재크롤을 실행할까요?</p>
             <ul className="text-xs">
               {data.referenceSites.map((s) => (
                 <li key={s.url}>· {s.url}</li>
