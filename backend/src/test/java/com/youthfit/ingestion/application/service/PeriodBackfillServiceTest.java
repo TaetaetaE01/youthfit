@@ -82,6 +82,26 @@ class PeriodBackfillServiceTest {
     }
 
     @Test
+    @DisplayName("기존이 완전 범위인데 새 결과가 부분 범위(DEADLINE_ONLY 등)면 거부 — 정보 파괴 방지")
+    void skipsPartialOverwriteOfFullRange() {
+        Policy p = mock(Policy.class);
+        when(p.getApplyStart()).thenReturn(LocalDate.of(2026, 3, 1));
+        when(p.getApplyEnd()).thenReturn(LocalDate.of(2026, 4, 30));
+        when(p.getApplyPeriodConfidence()).thenReturn(0.60); // n8n
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of());
+        // 새 결과: DEADLINE_ONLY (start=null) — confidence 가 높아도 부분 범위
+        when(resolver.resolve(any())).thenReturn(new ResolvedPeriod(
+                null, LocalDate.of(2026, 6, 30),
+                PeriodSource.ATTACHMENT_LABELED, 0.85, "마감 ..."));
+
+        service.onAttachmentsReindexed(new PolicyAttachmentReindexedEvent(1L));
+
+        verify(p, never()).updateApplyPeriod(any(), any(), any(), any(), any());
+        verify(publisher, never()).publishEvent(any(PolicyPeriodUpdated.class));
+    }
+
+    @Test
     @DisplayName("새 결과가 empty 면 덮어쓰지 않는다")
     void skipsWhenEmpty() {
         Policy p = mock(Policy.class);

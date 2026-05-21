@@ -7,7 +7,7 @@ import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput
 import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
-import com.youthfit.ingestion.application.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.FailureReason;
 import com.youthfit.ingestion.domain.model.IngestionItemFailure;
 import com.youthfit.ingestion.domain.model.IngestionRunLog;
@@ -224,7 +224,15 @@ public class IngestionService {
     }
 
     private ResolvedPeriod resolvePeriod(IngestPolicyCommand command) {
-        return periodResolver.resolve(PeriodExtractionContext.forIngest(command));
+        PeriodExtractionContext ctx = new PeriodExtractionContext(
+                command.title(),
+                command.body(),
+                command.applyStart(),
+                command.applyEnd(),
+                command.externalId(),
+                List.of()
+        );
+        return periodResolver.resolve(ctx);
     }
 
     private Sections parseSections(String body) {

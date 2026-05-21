@@ -1,8 +1,8 @@
 package com.youthfit.ingestion.domain.service.source;
 
 import com.youthfit.common.domain.PeriodSource;
-import com.youthfit.ingestion.application.port.PeriodCandidateSource;
-import com.youthfit.ingestion.application.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.service.port.PeriodCandidateSource;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.PeriodCandidate;
 import org.springframework.stereotype.Component;
 

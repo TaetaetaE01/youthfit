@@ -1,7 +1,7 @@
 package com.youthfit.ingestion.domain.service.source;
 
 import com.youthfit.common.domain.PeriodSource;
-import com.youthfit.ingestion.application.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.PeriodCandidate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,7 @@ package com.youthfit.ingestion.domain.service;
 
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.domain.PeriodSource;
-import com.youthfit.ingestion.application.port.*;
+import com.youthfit.ingestion.domain.service.port.*;
 import com.youthfit.ingestion.domain.model.*;
 import com.youthfit.ingestion.domain.service.source.*;
 import org.junit.jupiter.api.DisplayName;

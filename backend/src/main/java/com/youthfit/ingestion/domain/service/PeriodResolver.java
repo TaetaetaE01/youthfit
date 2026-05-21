@@ -1,7 +1,7 @@
 package com.youthfit.ingestion.domain.service;
 
 import com.youthfit.common.config.CostGuard;
-import com.youthfit.ingestion.application.port.*;
+import com.youthfit.ingestion.domain.service.port.*;
 import com.youthfit.ingestion.domain.model.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

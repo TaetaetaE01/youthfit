@@ -2,7 +2,7 @@ package com.youthfit.ingestion.application.service;
 
 import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
 import com.youthfit.common.event.PolicyPeriodUpdated;
-import com.youthfit.ingestion.application.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.ResolvedPeriod;
 import com.youthfit.ingestion.domain.service.PeriodResolver;
 import com.youthfit.policy.domain.model.Policy;
@@ -54,10 +54,17 @@ public class PeriodBackfillService {
                 .filter(t -> t != null && !t.isBlank())
                 .toList();
 
-        ResolvedPeriod result = periodResolver.resolve(
-                PeriodExtractionContext.forBackfill(policy, attachmentTexts));
+        PeriodExtractionContext ctx = new PeriodExtractionContext(
+                policy.getTitle(),
+                policy.getBody(),
+                policy.getApplyStart(),
+                policy.getApplyEnd(),
+                null,
+                attachmentTexts
+        );
+        ResolvedPeriod result = periodResolver.resolve(ctx);
 
-        if (!shouldOverwrite(current, result)) {
+        if (!shouldOverwrite(policy, result)) {
             log.info("period-backfill no improvement: policyId={} current={} new={}",
                     event.policyId(), current, result.confidence());
             return;
@@ -70,8 +77,15 @@ public class PeriodBackfillService {
         eventPublisher.publishEvent(new PolicyPeriodUpdated(policy.getId()));
     }
 
-    private boolean shouldOverwrite(Double current, ResolvedPeriod r) {
+    private boolean shouldOverwrite(Policy policy, ResolvedPeriod r) {
         if (r.isEmpty()) return false;
+        // 기존이 완전 범위(start+end 모두 채워짐)인데 새 결과가 부분 범위면 거부.
+        // DEADLINE_ONLY/START_ONLY 결과가 n8n 등에서 들어온 완전 정보를 NULL 로 파괴하는 것을 막는다.
+        boolean currentFullRange = policy.getApplyStart() != null && policy.getApplyEnd() != null;
+        boolean newPartial = r.start() == null || r.end() == null;
+        if (currentFullRange && newPartial) return false;
+
+        Double current = policy.getApplyPeriodConfidence();
         if (current == null) return true;
         return r.confidence() > current + OVERWRITE_MARGIN;
     }

@@ -1,7 +1,7 @@
 package com.youthfit.ingestion.infrastructure.external;
 
 import com.youthfit.common.domain.PeriodSource;
-import com.youthfit.ingestion.application.port.PeriodLlmDirectExtractor;
+import com.youthfit.ingestion.domain.service.port.PeriodLlmDirectExtractor;
 import com.youthfit.ingestion.domain.model.PeriodCandidate;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;

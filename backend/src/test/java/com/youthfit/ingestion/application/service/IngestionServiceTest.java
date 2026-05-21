@@ -8,7 +8,7 @@ import com.youthfit.eligibility.application.dto.command.CodeBasedExtractionInput
 import com.youthfit.eligibility.application.service.CodeBasedRuleExtractionService;
 import com.youthfit.ingestion.application.dto.command.IngestPolicyCommand;
 import com.youthfit.ingestion.application.dto.result.IngestPolicyResult;
-import com.youthfit.ingestion.application.port.PeriodExtractionContext;
+import com.youthfit.ingestion.domain.service.port.PeriodExtractionContext;
 import com.youthfit.ingestion.domain.model.ResolvedPeriod;
 import com.youthfit.ingestion.domain.repository.IngestionItemFailureRepository;
 import com.youthfit.ingestion.domain.repository.IngestionRunLogRepository;

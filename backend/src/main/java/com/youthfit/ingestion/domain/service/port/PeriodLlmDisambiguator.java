@@ -1,4 +1,4 @@
-package com.youthfit.ingestion.application.port;
+package com.youthfit.ingestion.domain.service.port;
 
 import com.youthfit.ingestion.domain.model.PeriodCandidate;
 
