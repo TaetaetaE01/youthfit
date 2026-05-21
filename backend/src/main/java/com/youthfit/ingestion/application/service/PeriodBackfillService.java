@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -35,7 +36,8 @@ public class PeriodBackfillService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Async("periodBackfillExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onAttachmentsReindexed(PolicyAttachmentReindexedEvent event) {
         Optional<Policy> policyOpt = policyRepository.findById(event.policyId());
         if (policyOpt.isEmpty()) return;
