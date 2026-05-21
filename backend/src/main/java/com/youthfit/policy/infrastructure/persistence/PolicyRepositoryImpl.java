@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +53,19 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     @Override
     public Optional<Policy> findByNormalizedTitleWithBokjiroSource(String normalizedTitle) {
         return jpaRepository.findByNormalizedTitleWithBokjiroSource(normalizedTitle);
+    }
+
+    @Override
+    public List<Policy> findByCalendarRange(LocalDate from, LocalDate to,
+                                             RegionFilter regionFilter, Category category) {
+        return jpaRepository.findAll(
+                PolicySpecification.withCalendarRange(from, to, regionFilter, category));
+    }
+
+    @Override
+    public Page<Policy> findAlwaysOpen(RegionFilter regionFilter, Category category, Pageable pageable) {
+        return jpaRepository.findAll(
+                PolicySpecification.alwaysOpen(regionFilter, category), pageable);
     }
 
     @Override
