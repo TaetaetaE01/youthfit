@@ -163,7 +163,13 @@ export default function RegionPicker({
                 type="button"
                 role="option"
                 aria-selected={active}
-                onClick={() => setActiveSido(sido.code)}
+                onClick={() => {
+                  setActiveSido(sido.code);
+                  // '전국만 보기' 모드 잠금 해제 — 사용자가 일반 시·도 탐색으로 전환한다는 신호
+                  setDraft((prev) => prev.includes(NATIONWIDE_TOKEN)
+                    ? prev.filter((c) => c !== NATIONWIDE_TOKEN)
+                    : prev);
+                }}
                 className={cn(
                   'flex w-full items-center justify-between px-3 py-3 text-left text-sm border-b border-brand-100/60',
                   active ? 'bg-white font-semibold text-brand-800' : 'text-gray-700 hover:bg-brand-100',
