@@ -1,53 +1,113 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { DashboardOverview } from '@/types/adminDashboard';
 import AdminDashboardPage from '../AdminDashboardPage';
 
-vi.mock('@/apis/admin.api', () => ({
-  pingAdmin: vi.fn(),
+vi.mock('@/apis/adminDashboard.api', () => ({
+  getDashboardOverview: vi.fn(),
 }));
 
-import { pingAdmin } from '@/apis/admin.api';
+import { getDashboardOverview } from '@/apis/adminDashboard.api';
+
+const mockedGetOverview = getDashboardOverview as unknown as ReturnType<typeof vi.fn>;
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <AdminDashboardPage />
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
+const baseOverview: DashboardOverview = {
+  generatedAt: new Date().toISOString(),
+  actionItems: [],
+  areas: [
+    {
+      key: 'ingestion',
+      label: '수집',
+      status: 'OK',
+      summary: '최근 7일 정상 수신',
+      sparkline: [1, 2, 3, 4, 5, 6, 7],
+      deeplink: '/admin/ingestion',
+    },
+  ],
+};
+
 describe('AdminDashboardPage', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('KPI 카드 4개를 노출한다', () => {
-    (pingAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({ message: 'pong', serverTime: '2026-05-05T10:00:00' });
-    renderPage();
-    expect(screen.getByText('이메일 발송')).toBeInTheDocument();
-    expect(screen.getByText('Q&A 캐시 hit률')).toBeInTheDocument();
-    expect(screen.getByText('LLM 비용 (이번주)')).toBeInTheDocument();
-    expect(screen.getByText('Ingestion 신규')).toBeInTheDocument();
+  beforeEach(() => {
+    mockedGetOverview.mockReset();
   });
 
-  it('차트/테이블 placeholder 섹션을 노출한다', () => {
-    (pingAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({ message: 'pong', serverTime: '2026-05-05T10:00:00' });
+  it('초기 로딩 중에는 스켈레톤을 노출한다', async () => {
+    mockedGetOverview.mockImplementation(
+      () =>
+        new Promise<DashboardOverview>((resolve) =>
+          setTimeout(() => resolve(baseOverview), 50),
+        ),
+    );
+
     renderPage();
-    expect(screen.getByText('발송 / 캐시 추이')).toBeInTheDocument();
-    expect(screen.getByText('Q&A 캐시 적중률')).toBeInTheDocument();
-    expect(screen.getByText('최근 발송 이메일')).toBeInTheDocument();
-    expect(screen.getByText('LLM 비용 분포')).toBeInTheDocument();
+
+    expect(screen.getByTestId('admin-dashboard-skeleton')).toBeInTheDocument();
   });
 
-  it('ping 성공 시 pong을 표시한다', async () => {
-    (pingAdmin as ReturnType<typeof vi.fn>).mockResolvedValue({ message: 'pong', serverTime: '2026-05-05T10:00:00' });
+  it('actionItems 가 비어 있으면 AllClearBanner 를 노출한다', async () => {
+    mockedGetOverview.mockResolvedValue(baseOverview);
+
     renderPage();
-    await waitFor(() => expect(screen.getByText(/pong/i)).toBeInTheDocument());
+
+    await waitFor(() =>
+      expect(screen.getByText(/현재 이상 없음/)).toBeInTheDocument(),
+    );
   });
 
-  it('ping 실패 시 에러 메시지 표시', async () => {
-    (pingAdmin as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+  it('HIGH actionItem 이 있으면 Action Required 헤더와 항목 제목을 노출한다', async () => {
+    mockedGetOverview.mockResolvedValue({
+      ...baseOverview,
+      actionItems: [
+        {
+          code: 'INGESTION_FAILURE',
+          severity: 'HIGH',
+          title: '수집 파이프라인 실패',
+          detail: '최근 1시간 내 실패율 30%',
+          deeplink: '/admin/ingestion',
+          detectedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
     renderPage();
-    await waitFor(() => expect(screen.getByText(/연결 실패/)).toBeInTheDocument());
+
+    await waitFor(() =>
+      expect(screen.getByText('수집 파이프라인 실패')).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Action Required \(1\)/)).toBeInTheDocument();
+  });
+
+  it('조회 실패 시 에러 메시지와 다시 시도 버튼을 노출한다', async () => {
+    mockedGetOverview.mockRejectedValue(new Error('boom'));
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(/불러오지 못했습니다/)).toBeInTheDocument(),
+    );
+
+    const retryButton = screen.getByRole('button', { name: /다시 시도/ });
+    expect(retryButton).toBeInTheDocument();
+
+    mockedGetOverview.mockResolvedValueOnce(baseOverview);
+    await userEvent.click(retryButton);
+
+    await waitFor(() =>
+      expect(screen.getByText(/현재 이상 없음/)).toBeInTheDocument(),
+    );
   });
 });
