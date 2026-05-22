@@ -33,6 +33,16 @@ describe('AreaStatusCard', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/admin/ingestion');
   });
 
+  it('exposes aria-label combining area label and summary', () => {
+    render(
+      <BrowserRouter>
+        <AreaStatusCard area={area} />
+      </BrowserRouter>,
+    );
+    const link = screen.getByRole('link', { name: /Ingestion/ });
+    expect(link).toHaveAttribute('aria-label', 'Ingestion — 확인 필요');
+  });
+
   it('hides sparkline when values are empty', () => {
     const empty = { ...area, sparkline: [] };
     const { container } = render(

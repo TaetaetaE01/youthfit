@@ -28,4 +28,14 @@ describe('Sparkline', () => {
     expect(ys[0]).toBeCloseTo(24, 1);
     expect(ys[1]).toBeCloseTo(0, 1);
   });
+
+  it('renders <title> with provided label and exposes svg as role="img"', () => {
+    const { container } = render(<Sparkline values={[1, 2, 3]} label="최근 7일 추세" />);
+    const svg = container.querySelector('svg')!;
+    expect(svg.getAttribute('role')).toBe('img');
+    expect(svg.hasAttribute('aria-hidden')).toBe(false);
+    const title = svg.querySelector('title');
+    expect(title).not.toBeNull();
+    expect(title!.textContent).toBe('최근 7일 추세');
+  });
 });

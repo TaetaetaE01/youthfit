@@ -6,7 +6,11 @@ export default function ActionItemRow({ item }: { item: DashboardActionItem }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
       <div className="flex items-start gap-3">
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+        <span
+          data-severity={item.severity}
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`}
+          aria-hidden
+        />
         <div>
           <p className="text-sm font-semibold text-slate-900">{item.title}</p>
           {item.detail && <p className="mt-0.5 text-xs text-slate-500">{item.detail}</p>}

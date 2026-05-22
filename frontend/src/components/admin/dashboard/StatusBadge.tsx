@@ -10,6 +10,7 @@ export default function StatusBadge({ status }: { status: AreaStatus }) {
   const c = CONFIG[status];
   return (
     <span
+      data-status={status}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${c.className}`}
     >
       <span aria-hidden>{c.icon}</span>

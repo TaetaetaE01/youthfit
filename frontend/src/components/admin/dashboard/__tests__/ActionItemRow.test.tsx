@@ -20,14 +20,14 @@ describe('ActionItemRow', () => {
     expect(screen.getByRole('link', { name: /확인/ })).toHaveAttribute('href', item.deeplink);
   });
 
-  it('uses red dot for HIGH severity', () => {
+  it('exposes data-severity="HIGH" on the dot', () => {
     const { container } = render(<BrowserRouter><ActionItemRow item={item} /></BrowserRouter>);
-    expect(container.querySelector('.bg-error-500')).not.toBeNull();
+    expect(container.querySelector('[data-severity="HIGH"]')).not.toBeNull();
   });
 
-  it('uses amber dot for MEDIUM severity', () => {
+  it('exposes data-severity="MEDIUM" on the dot', () => {
     const med = { ...item, severity: 'MEDIUM' as const };
     const { container } = render(<BrowserRouter><ActionItemRow item={med} /></BrowserRouter>);
-    expect(container.querySelector('.bg-amber-500')).not.toBeNull();
+    expect(container.querySelector('[data-severity="MEDIUM"]')).not.toBeNull();
   });
 });
