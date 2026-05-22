@@ -21,10 +21,16 @@ class EmailFailureSignalTest {
 
     private final EmailSendAttemptRepository repository = mock(EmailSendAttemptRepository.class);
 
-    private final DashboardThresholds.Email emailThresholds =
-            new DashboardThresholds.Email(new BigDecimal("0.05"), 10);
+    private final DashboardThresholds thresholds = new DashboardThresholds(
+            new DashboardThresholds.Llm(BigDecimal.ZERO, BigDecimal.ZERO),
+            new DashboardThresholds.Ingestion(7),
+            new DashboardThresholds.Enrichment(20),
+            new DashboardThresholds.Email(new BigDecimal("0.05"), 10),
+            new DashboardThresholds.QnaCache(BigDecimal.ZERO),
+            new DashboardThresholds.PolicyIntake(BigDecimal.ZERO)
+    );
 
-    private final EmailFailureSignal signal = new EmailFailureSignal(repository, emailThresholds);
+    private final EmailFailureSignal signal = new EmailFailureSignal(repository, thresholds);
 
     @Test
     void code_is_EMAIL_FAILURE() {

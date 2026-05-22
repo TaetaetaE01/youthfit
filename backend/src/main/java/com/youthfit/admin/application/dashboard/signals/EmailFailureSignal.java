@@ -6,6 +6,7 @@ import com.youthfit.admin.application.dashboard.DashboardSignalResult;
 import com.youthfit.admin.application.dashboard.DashboardThresholds;
 import com.youthfit.user.domain.model.EmailSendStatus;
 import com.youthfit.user.domain.repository.EmailSendAttemptRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -25,6 +26,7 @@ import java.util.Set;
  * 전달 자체는 성공한 경우이므로 제외한다.</p>
  */
 @Component
+@RequiredArgsConstructor
 public class EmailFailureSignal implements DashboardSignal {
 
     private static final String CODE = "EMAIL_FAILURE";
@@ -34,15 +36,7 @@ public class EmailFailureSignal implements DashboardSignal {
             EnumSet.of(EmailSendStatus.FAILED, EmailSendStatus.BOUNCED);
 
     private final EmailSendAttemptRepository repository;
-    private final BigDecimal failureRateThreshold;
-    private final int failureCountThreshold;
-
-    public EmailFailureSignal(EmailSendAttemptRepository repository,
-                              DashboardThresholds.Email emailThresholds) {
-        this.repository = repository;
-        this.failureRateThreshold = emailThresholds.getFailureRateThreshold();
-        this.failureCountThreshold = emailThresholds.getFailureCountThreshold();
-    }
+    private final DashboardThresholds thresholds;
 
     @Override
     public String code() {
@@ -63,8 +57,8 @@ public class EmailFailureSignal implements DashboardSignal {
         BigDecimal failureRate = BigDecimal.valueOf(failedCount)
                 .divide(BigDecimal.valueOf(totalSent), 4, RoundingMode.HALF_UP);
 
-        boolean rateExceeded = failureRate.compareTo(failureRateThreshold) > 0;
-        boolean countExceeded = failedCount > failureCountThreshold;
+        boolean rateExceeded = failureRate.compareTo(thresholds.getEmail().getFailureRateThreshold()) > 0;
+        boolean countExceeded = failedCount > thresholds.getEmail().getFailureCountThreshold();
 
         if (!rateExceeded && !countExceeded) {
             return Optional.empty();
