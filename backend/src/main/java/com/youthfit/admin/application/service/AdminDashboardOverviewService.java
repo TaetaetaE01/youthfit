@@ -5,9 +5,9 @@ import com.youthfit.admin.application.dashboard.AreaStatusBuilder;
 import com.youthfit.admin.application.dashboard.AreaStatusBuilder.AreaKey;
 import com.youthfit.admin.application.dashboard.DashboardSignalEvaluator;
 import com.youthfit.admin.application.dashboard.DashboardSignalResult;
-import com.youthfit.admin.presentation.dto.response.DashboardActionItemResponse;
-import com.youthfit.admin.presentation.dto.response.DashboardAreaStatusResponse;
-import com.youthfit.admin.presentation.dto.response.DashboardOverviewResponse;
+import com.youthfit.admin.application.dto.result.DashboardActionItemResult;
+import com.youthfit.admin.application.dto.result.DashboardAreaStatusResult;
+import com.youthfit.admin.application.dto.result.DashboardOverviewResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +21,7 @@ import java.util.List;
  *
  * <p>{@link DashboardSignalEvaluator} 를 호출해 발화된 신호 목록을 얻고,
  * {@link AreaStatusBuilder} 의 6개 영역 정의를 사용해 카드 상태를 계산한 뒤
- * 응답 DTO 로 변환한다.</p>
+ * application 결과 DTO 로 변환한다. presentation 응답 DTO 매핑은 controller 가 담당한다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -31,13 +31,13 @@ public class AdminDashboardOverviewService {
     private final AreaStatusBuilder areaStatusBuilder;
 
     @Transactional(readOnly = true)
-    public DashboardOverviewResponse findOverview() {
+    public DashboardOverviewResult findOverview() {
         Instant now = Instant.now();
         List<DashboardSignalResult> fired = evaluator.evaluateAll(now);
 
-        List<DashboardActionItemResponse> actionItems = new ArrayList<>(fired.size());
+        List<DashboardActionItemResult> actionItems = new ArrayList<>(fired.size());
         for (DashboardSignalResult r : fired) {
-            actionItems.add(new DashboardActionItemResponse(
+            actionItems.add(new DashboardActionItemResult(
                     r.code(),
                     r.severity(),
                     r.title(),
@@ -48,21 +48,21 @@ public class AdminDashboardOverviewService {
         }
 
         List<AreaKey> areas = areaStatusBuilder.areas();
-        List<DashboardAreaStatusResponse> areaResponses = new ArrayList<>(areas.size());
+        List<DashboardAreaStatusResult> areaResults = new ArrayList<>(areas.size());
         for (AreaKey area : areas) {
             AreaStatus status = areaStatusBuilder.statusFor(area, fired);
             // sparkline 데이터는 v1.1 에서 채움
-            areaResponses.add(new DashboardAreaStatusResponse(
+            areaResults.add(new DashboardAreaStatusResult(
                     area.key(),
                     area.label(),
-                    status.name(),
+                    status,
                     summaryFor(status),
                     List.of(),
                     area.deeplink()
             ));
         }
 
-        return new DashboardOverviewResponse(now, actionItems, areaResponses);
+        return new DashboardOverviewResult(now, actionItems, areaResults);
     }
 
     private static String summaryFor(AreaStatus status) {

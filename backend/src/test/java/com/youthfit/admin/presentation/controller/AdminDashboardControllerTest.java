@@ -1,10 +1,11 @@
 package com.youthfit.admin.presentation.controller;
 
+import com.youthfit.admin.application.dashboard.AreaStatus;
 import com.youthfit.admin.application.dashboard.DashboardSeverity;
+import com.youthfit.admin.application.dto.result.DashboardActionItemResult;
+import com.youthfit.admin.application.dto.result.DashboardAreaStatusResult;
+import com.youthfit.admin.application.dto.result.DashboardOverviewResult;
 import com.youthfit.admin.application.service.AdminDashboardOverviewService;
-import com.youthfit.admin.presentation.dto.response.DashboardActionItemResponse;
-import com.youthfit.admin.presentation.dto.response.DashboardAreaStatusResponse;
-import com.youthfit.admin.presentation.dto.response.DashboardOverviewResponse;
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationEntryPoint;
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationFilter;
 import com.youthfit.common.config.SecurityConfig;
@@ -72,7 +73,7 @@ class AdminDashboardControllerTest {
     void overview_returns200_forAdmin() throws Exception {
         Instant generatedAt = Instant.parse("2026-05-22T03:00:00Z");
         Instant detectedAt = Instant.parse("2026-05-22T02:55:00Z");
-        var actionItem = new DashboardActionItemResponse(
+        var actionItem = new DashboardActionItemResult(
                 "INGESTION_FAILURE",
                 DashboardSeverity.HIGH,
                 "수집 실패율 상승",
@@ -80,16 +81,16 @@ class AdminDashboardControllerTest {
                 "/admin/ingestion",
                 detectedAt
         );
-        var area = new DashboardAreaStatusResponse(
+        var area = new DashboardAreaStatusResult(
                 "ingestion",
                 "Ingestion",
-                "CRITICAL",
+                AreaStatus.CRITICAL,
                 "확인 필요",
                 List.of(),
                 "/admin/ingestion"
         );
         when(service.findOverview()).thenReturn(
-                new DashboardOverviewResponse(generatedAt, List.of(actionItem), List.of(area)));
+                new DashboardOverviewResult(generatedAt, List.of(actionItem), List.of(area)));
 
         var auth = new UsernamePasswordAuthenticationToken(
                 1L, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
