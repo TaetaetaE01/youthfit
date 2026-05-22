@@ -29,7 +29,11 @@ public class DashboardSignalEvaluator {
     private final List<DashboardSignal> signals;
 
     /**
-     * 모든 신호를 {@code now} 기준으로 평가하고 발화된 결과만 정렬해 반환한다.
+     * 모든 등록된 신호를 평가하고, 발화된 결과만 severity DESC, detectedAt DESC 로 정렬해 반환한다.
+     *
+     * <p>한 신호의 평가가 {@link RuntimeException} 을 던지면 그 신호만 결과에서 빠지고
+     * 나머지 신호는 계속 평가된다 (운영자에게 일부 신호 실패가 전체 대시보드를 가리지 않도록).
+     * {@link Error} 는 잡지 않고 전파한다.
      */
     public List<DashboardSignalResult> evaluateAll(Instant now) {
         List<DashboardSignalResult> results = new ArrayList<>();
@@ -51,6 +55,6 @@ public class DashboardSignalEvaluator {
      * 주입된 신호 빈 목록. 다운스트림(진단/디버깅) 용도로 노출한다.
      */
     public List<DashboardSignal> signals() {
-        return signals;
+        return List.copyOf(signals);
     }
 }

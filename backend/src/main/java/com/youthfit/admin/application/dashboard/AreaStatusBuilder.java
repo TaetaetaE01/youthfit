@@ -15,17 +15,6 @@ import java.util.List;
 public class AreaStatusBuilder {
 
     /**
-     * 영역 카드의 상태값.
-     *
-     * <ul>
-     *   <li>{@link #OK} : 해당 영역에 발화된 신호가 없음</li>
-     *   <li>{@link #WARN} : MEDIUM 신호만 발화</li>
-     *   <li>{@link #CRITICAL} : 하나 이상 HIGH 신호 발화</li>
-     * </ul>
-     */
-    public enum Status { OK, WARN, CRITICAL }
-
-    /**
      * 영역 메타데이터. {@code signalCodes} 가 영역에 속하는 신호 코드 집합이다.
      */
     public record AreaKey(String key, String label, String deeplink, List<String> signalCodes) {}
@@ -59,7 +48,7 @@ public class AreaStatusBuilder {
      * {@link DashboardSeverity} 의 자연 순서(ordinal)가 HIGH &lt; MEDIUM 이므로
      * {@code compareTo} 비교로 더 작은 값이 더 심각하다.</p>
      */
-    public Status statusFor(AreaKey area, List<DashboardSignalResult> firedResults) {
+    public AreaStatus statusFor(AreaKey area, List<DashboardSignalResult> firedResults) {
         DashboardSeverity worst = null;
         for (DashboardSignalResult r : firedResults) {
             if (area.signalCodes().contains(r.code())) {
@@ -69,8 +58,8 @@ public class AreaStatusBuilder {
             }
         }
         if (worst == null) {
-            return Status.OK;
+            return AreaStatus.OK;
         }
-        return worst == DashboardSeverity.HIGH ? Status.CRITICAL : Status.WARN;
+        return worst == DashboardSeverity.HIGH ? AreaStatus.CRITICAL : AreaStatus.WARN;
     }
 }

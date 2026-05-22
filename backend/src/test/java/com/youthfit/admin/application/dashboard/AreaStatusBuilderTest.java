@@ -14,7 +14,7 @@ class AreaStatusBuilderTest {
     @Test
     void area_with_no_signal_returns_ok() {
         AreaStatusBuilder.AreaKey ingestion = builder.areas().get(0);
-        assertThat(builder.statusFor(ingestion, List.of())).isEqualTo(AreaStatusBuilder.Status.OK);
+        assertThat(builder.statusFor(ingestion, List.of())).isEqualTo(AreaStatus.OK);
     }
 
     @Test
@@ -23,7 +23,7 @@ class AreaStatusBuilderTest {
         List<DashboardSignalResult> fired = List.of(
                 new DashboardSignalResult("INGESTION_FAILURE", DashboardSeverity.HIGH, "t", null, "/d", Instant.now())
         );
-        assertThat(builder.statusFor(ingestion, fired)).isEqualTo(AreaStatusBuilder.Status.CRITICAL);
+        assertThat(builder.statusFor(ingestion, fired)).isEqualTo(AreaStatus.CRITICAL);
     }
 
     @Test
@@ -32,7 +32,7 @@ class AreaStatusBuilderTest {
         List<DashboardSignalResult> fired = List.of(
                 new DashboardSignalResult("ENRICHMENT_BACKLOG", DashboardSeverity.MEDIUM, "t", null, "/d", Instant.now())
         );
-        assertThat(builder.statusFor(enrichment, fired)).isEqualTo(AreaStatusBuilder.Status.WARN);
+        assertThat(builder.statusFor(enrichment, fired)).isEqualTo(AreaStatus.WARN);
     }
 
     @Test
@@ -42,7 +42,7 @@ class AreaStatusBuilderTest {
                 new DashboardSignalResult("ENRICHMENT_BACKLOG", DashboardSeverity.MEDIUM, "t", null, "/d", Instant.now()),
                 new DashboardSignalResult("ENRICHMENT_FAILURE", DashboardSeverity.HIGH, "t", null, "/d", Instant.now())
         );
-        assertThat(builder.statusFor(enrichment, fired)).isEqualTo(AreaStatusBuilder.Status.CRITICAL);
+        assertThat(builder.statusFor(enrichment, fired)).isEqualTo(AreaStatus.CRITICAL);
     }
 
     @Test
@@ -51,6 +51,6 @@ class AreaStatusBuilderTest {
         List<DashboardSignalResult> fired = List.of(
                 new DashboardSignalResult("INGESTION_FAILURE", DashboardSeverity.HIGH, "t", null, "/d", Instant.now())
         );
-        assertThat(builder.statusFor(email, fired)).isEqualTo(AreaStatusBuilder.Status.OK);
+        assertThat(builder.statusFor(email, fired)).isEqualTo(AreaStatus.OK);
     }
 }
