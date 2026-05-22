@@ -167,6 +167,8 @@ admin:
       hit-drop-threshold-pp: 10
     policy-intake:
       stall-ratio: 0.3
+    scheduled-tasks:
+      stale-hours: 24
 
 attachment:
   storage:

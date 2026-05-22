@@ -80,7 +80,8 @@ class QnaCacheHitDropSignalTest {
                 new DashboardThresholds.Enrichment(20),
                 new DashboardThresholds.Email(BigDecimal.ZERO, 0),
                 new DashboardThresholds.QnaCache(new BigDecimal(hitDropPp)),
-                new DashboardThresholds.PolicyIntake(BigDecimal.ZERO)
+                new DashboardThresholds.PolicyIntake(BigDecimal.ZERO),
+                new DashboardThresholds.ScheduledTasks(24)
         );
     }
 }

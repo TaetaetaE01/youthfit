@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 발화된 {@link DashboardSignalResult} 목록을 6개 어드민 영역 카드의
+ * 발화된 {@link DashboardSignalResult} 목록을 7개 어드민 영역 카드의
  * OK/WARN/CRITICAL 상태로 매핑한다.
  *
  * <p>영역과 신호 코드의 매핑은 spec 3.2 의 영역 카드 정의를 따르며,
@@ -31,11 +31,13 @@ public class AreaStatusBuilder {
             new AreaKey("qna-cache", "Q&A Cache", "/admin/qna-cache",
                     List.of("QNA_CACHE_HIT_DROP")),
             new AreaKey("policy-intake", "신규 정책", "/admin/ingestion",
-                    List.of("POLICY_INTAKE_STALL"))
+                    List.of("POLICY_INTAKE_STALL")),
+            new AreaKey("scheduled-tasks", "배치", "/admin",
+                    List.of("SCHEDULED_TASK_MISSED", "SCHEDULED_TASK_FAILED"))
     );
 
     /**
-     * 6개 영역 정의를 선언 순서대로 반환한다.
+     * 7개 영역 정의를 선언 순서대로 반환한다.
      */
     public List<AreaKey> areas() {
         return AREAS;

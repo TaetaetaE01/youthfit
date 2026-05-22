@@ -24,7 +24,8 @@ class PolicyIntakeStallSignalTest {
             new DashboardThresholds.Enrichment(20),
             new DashboardThresholds.Email(BigDecimal.ZERO, 0),
             new DashboardThresholds.QnaCache(BigDecimal.ZERO),
-            new DashboardThresholds.PolicyIntake(new BigDecimal("0.3"))
+            new DashboardThresholds.PolicyIntake(new BigDecimal("0.3")),
+            new DashboardThresholds.ScheduledTasks(24)
     );
     private final PolicyIntakeStallSignal signal = new PolicyIntakeStallSignal(repo, thresholds);
 

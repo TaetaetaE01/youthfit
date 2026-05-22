@@ -23,6 +23,7 @@ public class DashboardThresholds {
     private final Email email;
     private final QnaCache qnaCache;
     private final PolicyIntake policyIntake;
+    private final ScheduledTasks scheduledTasks;
 
     @Getter
     @RequiredArgsConstructor
@@ -60,5 +61,11 @@ public class DashboardThresholds {
     @RequiredArgsConstructor
     public static class PolicyIntake {
         private final BigDecimal stallRatio;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class ScheduledTasks {
+        private final int staleHours;
     }
 }

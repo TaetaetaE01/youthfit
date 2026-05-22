@@ -40,13 +40,13 @@ class AdminDashboardOverviewServiceIntegrationTest {
     AdminDashboardOverviewService service;
 
     @Test
-    @DisplayName("6개 영역 카드가 정의된 순서로 반환된다")
-    void returns_six_areas_in_expected_order() {
+    @DisplayName("7개 영역 카드가 정의된 순서로 반환된다")
+    void returns_seven_areas_in_expected_order() {
         DashboardOverviewResult r = service.findOverview();
 
-        assertThat(r.areas()).hasSize(6);
+        assertThat(r.areas()).hasSize(7);
         assertThat(r.areas()).extracting("key")
-                .containsExactly("ingestion", "enrichment", "llm-cost", "email", "qna-cache", "policy-intake");
+                .containsExactly("ingestion", "enrichment", "llm-cost", "email", "qna-cache", "policy-intake", "scheduled-tasks");
         // 빈 DB(또는 기본 테스트 데이터) → 각 카드는 OK 또는 CRITICAL/WARN 중 하나여야 한다(상태값 자체는 평가 가능).
         assertThat(r.areas()).allSatisfy(a -> assertThat(a.status())
                 .isIn(AreaStatus.OK, AreaStatus.WARN, AreaStatus.CRITICAL));

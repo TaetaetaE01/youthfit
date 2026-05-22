@@ -27,7 +27,8 @@ class EmailFailureSignalTest {
             new DashboardThresholds.Enrichment(20),
             new DashboardThresholds.Email(new BigDecimal("0.05"), 10),
             new DashboardThresholds.QnaCache(BigDecimal.ZERO),
-            new DashboardThresholds.PolicyIntake(BigDecimal.ZERO)
+            new DashboardThresholds.PolicyIntake(BigDecimal.ZERO),
+            new DashboardThresholds.ScheduledTasks(24)
     );
 
     private final EmailFailureSignal signal = new EmailFailureSignal(repository, thresholds);
