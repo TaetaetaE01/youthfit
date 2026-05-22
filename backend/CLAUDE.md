@@ -34,6 +34,19 @@ cd backend
 - `domain` 레이어에 Spring, JPA, OpenAI SDK 등 프레임워크 의존을 넣지 않는다.
 - 비즈니스 규칙을 표현하는 동작은 가능하면 도메인 모델 안에 둔다.
 
+## 백엔드 모듈 목록
+
+- `admin`: 어드민 도구 (정책 enrichment 리뷰, RAG 미리보기, 이메일 로그, Q&A 캐시, LLM 비용, ingestion 헬스, 지통실 대시보드)
+- `auth`: 소셜 로그인, JWT 발급·갱신·검증
+- `common`: 공통 설정, 예외, 유틸
+- `eligibility`: 규칙 기반 적합도 판정
+- `guide`: 구조화된 AI 가이드 콘텐츠 생성
+- `ingestion`: n8n 및 외부 수집 파이프라인에서 원천 데이터를 수신
+- `policy`: 정책 도메인, 정규화, 중복 제거
+- `qna`: 정책 Q&A, 스트리밍 응답
+- `rag`: 임베딩, 청크 분할, 벡터 조회
+- `user`: 프로필, 북마크, 알림
+
 ## 모듈 내부 레이어 구조
 ```
 {module}/

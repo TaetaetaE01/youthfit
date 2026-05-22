@@ -55,6 +55,7 @@ Presentation  →  Application  →  Domain
 
 ```
 com.youthfit/
+├── admin/          # 어드민 도구 (enrichment 리뷰, RAG 미리보기, 이메일 로그, Q&A 캐시, LLM 비용, ingestion 헬스, 지통실 대시보드)
 ├── auth/           # 소셜 로그인, JWT 발급/갱신/검증
 ├── user/           # 프로필, 북마크, 알림 설정/발송
 ├── policy/         # 정책 도메인, 정규화, 검색
