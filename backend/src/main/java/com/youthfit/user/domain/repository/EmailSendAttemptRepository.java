@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,13 @@ public interface EmailSendAttemptRepository extends JpaRepository<EmailSendAttem
     Optional<EmailSendAttempt> findBySesMessageId(String sesMessageId);
 
     EmailSendAttempt findTopByOrderByIdDesc();
+
+    @Query("SELECT COUNT(a) FROM EmailSendAttempt a WHERE a.sentAt >= :since")
+    long countSentSince(@Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(a) FROM EmailSendAttempt a WHERE a.sentAt >= :since AND a.status IN :failedStatuses")
+    long countByStatusSince(@Param("since") LocalDateTime since,
+                            @Param("failedStatuses") Collection<EmailSendStatus> failedStatuses);
 
     @Query("""
         SELECT a FROM EmailSendAttempt a
