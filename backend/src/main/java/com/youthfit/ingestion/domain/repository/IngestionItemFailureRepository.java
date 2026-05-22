@@ -20,4 +20,7 @@ public interface IngestionItemFailureRepository
     @Modifying
     @Query("DELETE FROM IngestionItemFailure f WHERE f.createdAt < :before")
     int deleteOlderThan(@Param("before") Instant before);
+
+    @Query("SELECT COUNT(f) FROM IngestionItemFailure f WHERE f.createdAt >= :since")
+    long countCreatedAfter(@Param("since") Instant since);
 }
