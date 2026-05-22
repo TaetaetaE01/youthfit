@@ -1,7 +1,10 @@
 package com.youthfit.rag.application.service;
 
+import com.youthfit.rag.application.dto.command.HybridSearchOverrides;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
+import com.youthfit.rag.application.dto.result.EffectiveConfig;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
+import com.youthfit.rag.application.dto.result.RagSearchTrace;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.model.PolicyDocumentSource;
@@ -25,6 +28,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -52,6 +56,9 @@ class RagSearchServiceTest {
 
     @Mock
     private ReciprocalRankFusion reciprocalRankFusion;
+
+    @Mock
+    private EffectiveConfigFactory effectiveConfigFactory;
 
     @Nested
     @DisplayName("searchRelevantChunks - 관련 청크 검색")
@@ -351,6 +358,138 @@ class RagSearchServiceTest {
 
             assertThat(result).hasSize(10);
             verify(reciprocalRankFusion).merge(eq(vec20), eq(List.of()), eq(60), eq(10));
+        }
+    }
+
+    @Nested
+    @DisplayName("searchRelevantChunksWithTrace - 어드민 미리보기")
+    class WithTrace {
+
+        @Test
+        @DisplayName("overrides null 이면 운영 properties 값으로 검색한다")
+        void nullOverrides_usesBaselineProperties() {
+            SearchChunksCommand cmd = new SearchChunksCommand(1L, "주거");
+            float[] emb = new float[]{0.1f};
+            EffectiveConfig baseConfig = new EffectiveConfig(true, 20, 60, 0.10, false, 5);
+            given(effectiveConfigFactory.baseline(null)).willReturn(baseConfig);
+
+            List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
+                    .willReturn(vec);
+            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+                    .willReturn(List.of());
+            given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
+                    .willReturn(vec);
+
+            RagSearchTrace trace =
+                    ragSearchService.searchRelevantChunksWithTrace(cmd, emb, null);
+
+            assertThat(trace.effective().rrfK()).isEqualTo(60);
+            assertThat(trace.effective().topNPerSearch()).isEqualTo(20);
+            assertThat(trace.vectorTopN()).hasSize(1);
+            assertThat(trace.merged()).hasSize(1);
+            assertThat(trace.merged().get(0).rank()).isEqualTo(1);
+            assertThat(trace.tookMs()).isGreaterThanOrEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("overrides 의 rrfK 만 지정하면 그 값으로 RRF 가 호출된다")
+        void overridesRrfK_passedToRrf() {
+            SearchChunksCommand cmd = new SearchChunksCommand(1L, "주거");
+            float[] emb = new float[]{0.1f};
+            HybridSearchOverrides ov = new HybridSearchOverrides(
+                    null, null, 30, null, null, null);
+            EffectiveConfig overrideConfig = new EffectiveConfig(true, 20, 30, 0.10, false, 5);
+            given(effectiveConfigFactory.baseline(ov)).willReturn(overrideConfig);
+
+            List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
+                    .willReturn(vec);
+            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+                    .willReturn(List.of());
+            given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(30), eq(10)))
+                    .willReturn(vec);
+
+            RagSearchTrace trace =
+                    ragSearchService.searchRelevantChunksWithTrace(cmd, emb, ov);
+
+            assertThat(trace.effective().rrfK()).isEqualTo(30);
+            verify(reciprocalRankFusion).merge(eq(vec), eq(List.of()), eq(30), eq(10));
+        }
+
+        @Test
+        @DisplayName("overrides.hybridEnabled=false 면 vector-only 경로, trigramTopN 은 빈 리스트")
+        void hybridDisabledOverride_returnsVectorOnly() {
+            SearchChunksCommand cmd = new SearchChunksCommand(1L, "주거");
+            float[] emb = new float[]{0.1f};
+            HybridSearchOverrides ov = new HybridSearchOverrides(
+                    false, null, null, null, null, null);
+            // baseline 은 hybrid=true 인데 override 로 끔
+            EffectiveConfig overrideConfig = new EffectiveConfig(false, 20, 60, 0.10, false, 5);
+            given(effectiveConfigFactory.baseline(ov)).willReturn(overrideConfig);
+
+            List<SimilarChunk> vec = List.of(
+                    new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(10)))
+                    .willReturn(vec);
+
+            RagSearchTrace trace =
+                    ragSearchService.searchRelevantChunksWithTrace(cmd, emb, ov);
+
+            assertThat(trace.effective().hybridEnabled()).isFalse();
+            assertThat(trace.trigramTopN()).isEmpty();
+            assertThat(trace.merged()).hasSize(1);
+            verify(policyDocumentRepository, never()).findTopByTrigram(any(), any(), anyDouble(), anyInt());
+            verify(reciprocalRankFusion, never()).merge(any(), any(), anyInt(), anyInt());
+        }
+
+        @Test
+        @DisplayName("overrides.keywordBoostEnabled=false 면 keywords 빈 리스트로 호출")
+        void keywordBoostDisabledOverride_passesEmptyKeywords() {
+            SearchChunksCommand cmd = new SearchChunksCommand(1L, "주거 지원");
+            float[] emb = new float[]{0.1f};
+            HybridSearchOverrides ov = new HybridSearchOverrides(
+                    null, null, null, null, false, null);
+            // baseline 은 keywordBoost=true 인데 override 로 끔
+            EffectiveConfig overrideConfig = new EffectiveConfig(true, 20, 60, 0.10, false, 5);
+            given(effectiveConfigFactory.baseline(ov)).willReturn(overrideConfig);
+
+            List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), eq(List.of()), eq(20)))
+                    .willReturn(vec);
+            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거 지원"), eq(0.10), eq(20)))
+                    .willReturn(List.of());
+            given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
+                    .willReturn(vec);
+
+            ragSearchService.searchRelevantChunksWithTrace(cmd, emb, ov);
+
+            verify(keywordExtractor, never()).extract(any());
+            verify(policyDocumentRepository).findSimilarByEmbedding(
+                    eq(1L), eq(emb), eq(List.of()), eq(20));
+        }
+
+        @Test
+        @DisplayName("trigram 예외 발생 시에도 trace.trigramTopN 은 빈 리스트로 반환")
+        void trigramFailure_returnsEmptyTrigramTopN() {
+            SearchChunksCommand cmd = new SearchChunksCommand(1L, "주거");
+            float[] emb = new float[]{0.1f};
+            EffectiveConfig baseConfig = new EffectiveConfig(true, 20, 60, 0.10, false, 5);
+            given(effectiveConfigFactory.baseline(null)).willReturn(baseConfig);
+
+            List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
+            given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
+                    .willReturn(vec);
+            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+                    .willThrow(new RuntimeException("trigram down"));
+            given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
+                    .willReturn(vec);
+
+            RagSearchTrace trace =
+                    ragSearchService.searchRelevantChunksWithTrace(cmd, emb, null);
+
+            assertThat(trace.trigramTopN()).isEmpty();
+            assertThat(trace.vectorTopN()).hasSize(1);
         }
     }
 
