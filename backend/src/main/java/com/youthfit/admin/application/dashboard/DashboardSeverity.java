@@ -1,4 +1,4 @@
-package com.youthfit.admin.presentation.dto.response;
+package com.youthfit.admin.application.dashboard;
 
 /**
  * 어드민 대시보드 신호의 심각도.

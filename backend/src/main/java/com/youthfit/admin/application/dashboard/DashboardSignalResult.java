@@ -1,7 +1,5 @@
 package com.youthfit.admin.application.dashboard;
 
-import com.youthfit.admin.presentation.dto.response.DashboardSeverity;
-
 import java.time.Instant;
 
 /**
