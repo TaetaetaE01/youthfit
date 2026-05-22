@@ -5,7 +5,9 @@ import com.youthfit.policy.domain.repository.EnrichmentJobRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,5 +38,11 @@ public class EnrichmentJobRepositoryImpl implements EnrichmentJobRepository {
     @Override
     public long countRecentByPolicyId(Long policyId, LocalDateTime since) {
         return jpa.countByPolicyIdAndRequestedAtAfter(policyId, since);
+    }
+
+    @Override
+    public long countFailedSince(Instant since) {
+        LocalDateTime sinceLdt = LocalDateTime.ofInstant(since, ZoneId.systemDefault());
+        return jpa.countFailedSince(sinceLdt);
     }
 }
