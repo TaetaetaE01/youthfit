@@ -12,16 +12,19 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.99.0",
     "ky": "^2.0.1",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-hook-form": "^7.76.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.1",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.2.2",
+    "zod": "^4.4.3",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

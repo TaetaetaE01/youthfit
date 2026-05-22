@@ -73,6 +73,16 @@ public interface QnaCacheLookupLogRepository extends JpaRepository<QnaCacheLooku
                                 @Param("yesterday") LocalDateTime yesterday,
                                 @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo);
 
+    @Query(value = """
+        SELECT
+          COUNT(*) FILTER (WHERE result = 'HIT') AS hits,
+          COUNT(*) AS total
+        FROM qna_cache_lookup_log
+        WHERE looked_up_at >= :from AND looked_up_at < :to
+        """, nativeQuery = true)
+    List<Object[]> hitTotalsBetween(@Param("from") LocalDateTime from,
+                                    @Param("to") LocalDateTime to);
+
     @Modifying
     @Query("DELETE FROM QnaCacheLookupLog l WHERE l.lookedUpAt < :threshold")
     int deleteOlderThan(@Param("threshold") LocalDateTime threshold);

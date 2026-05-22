@@ -1,5 +1,6 @@
 package com.youthfit.common.exception;
 
+import com.youthfit.admin.rag.application.service.RagPreviewRateLimitException;
 import com.youthfit.common.response.ApiResponse;
 import com.youthfit.policy.domain.exception.AttachmentNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(RagPreviewRateLimitException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRagPreviewRateLimit(
+            RagPreviewRateLimitException e) {
+        ErrorCode code = e.getErrorCode();
+        return ResponseEntity.status(code.getStatus())
+                .header("Retry-After", "60")
+                .body(ApiResponse.error(code.getCode(), e.getMessage()));
+    }
 
     @ExceptionHandler(YouthFitException.class)
     public ResponseEntity<ApiResponse<Void>> handleYouthFitException(

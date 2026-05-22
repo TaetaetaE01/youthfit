@@ -151,6 +151,25 @@ enrichment:
   timeout:
     fixed-delay-ms: 60000
 
+admin:
+  dashboard:
+    llm:
+      weekly-budget-krw: 100000
+      daily-spike-multiplier: 1.5
+    ingestion:
+      stale-days: 7
+    enrichment:
+      backlog-warn: 20
+    email:
+      failure-rate-threshold: 0.05
+      failure-count-threshold: 10
+    qna-cache:
+      hit-drop-threshold-pp: 10
+    policy-intake:
+      stall-ratio: 0.3
+    scheduled-tasks:
+      stale-hours: 24
+
 attachment:
   storage:
     type: ${ATTACHMENT_STORAGE_TYPE:local}

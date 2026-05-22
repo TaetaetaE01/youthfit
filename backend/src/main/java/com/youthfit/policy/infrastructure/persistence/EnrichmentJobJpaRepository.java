@@ -38,4 +38,11 @@ public interface EnrichmentJobJpaRepository extends JpaRepository<EnrichmentJob,
     List<EnrichmentJob> findActiveStaleBefore(@Param("threshold") LocalDateTime threshold);
 
     long countByPolicyIdAndRequestedAtAfter(Long policyId, LocalDateTime since);
+
+    @Query("""
+            SELECT COUNT(j) FROM EnrichmentJob j
+             WHERE j.status = com.youthfit.policy.domain.model.EnrichmentJobStatus.FAILED
+               AND j.finishedAt >= :since
+            """)
+    long countFailedSince(@Param("since") LocalDateTime since);
 }
