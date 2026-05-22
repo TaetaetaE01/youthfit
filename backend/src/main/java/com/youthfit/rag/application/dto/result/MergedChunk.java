@@ -1,4 +1,3 @@
-// backend/src/main/java/com/youthfit/rag/application/dto/result/MergedChunk.java
 package com.youthfit.rag.application.dto.result;
 
 /**

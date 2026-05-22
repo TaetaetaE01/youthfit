@@ -1,4 +1,3 @@
-// backend/src/main/java/com/youthfit/rag/application/dto/result/RagSearchTrace.java
 package com.youthfit.rag.application.dto.result;
 
 import com.youthfit.rag.domain.model.SimilarChunk;
