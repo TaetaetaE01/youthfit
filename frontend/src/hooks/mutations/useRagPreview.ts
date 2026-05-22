@@ -1,6 +1,7 @@
 // frontend/src/hooks/mutations/useRagPreview.ts
 import { useMutation } from '@tanstack/react-query';
-import { ragPreview, type RagPreviewRequest, type RagPreviewResponse } from '@/apis/adminRag.api';
+import { ragPreview } from '@/apis/adminRag.api';
+import type { RagPreviewRequest, RagPreviewResponse } from '@/types/ragPreview';
 
 export function useRagPreview() {
   return useMutation<RagPreviewResponse, Error, RagPreviewRequest>({

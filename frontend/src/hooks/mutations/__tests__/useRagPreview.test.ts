@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useRagPreview } from '../useRagPreview';
 import * as api from '@/apis/adminRag.api';
+import type { RagPreviewRequest } from '@/types/ragPreview';
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -41,5 +42,19 @@ describe('useRagPreview', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe('boom');
+  });
+
+  it('candidate.rrfK 경계값(30)을 그대로 전달한다', async () => {
+    const spy = vi.spyOn(api, 'ragPreview').mockResolvedValue({} as any);
+
+    const req: RagPreviewRequest = { policyId: 2, query: 'boundary', candidate: { rrfK: 30 } };
+    const { result } = renderHook(() => useRagPreview(), { wrapper });
+    result.current.mutate(req);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({ candidate: { rrfK: 30 } }),
+      expect.anything(),
+    );
   });
 });
