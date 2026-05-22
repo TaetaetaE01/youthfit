@@ -14,7 +14,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
@@ -45,7 +45,8 @@ public class EmailFailureSignal implements DashboardSignal {
 
     @Override
     public Optional<DashboardSignalResult> evaluate(Instant now) {
-        LocalDateTime since = LocalDateTime.ofInstant(now.minus(WINDOW), ZoneOffset.UTC);
+        // EmailSendAttempt.sentAt 은 KST LocalDateTime 으로 저장됨
+        LocalDateTime since = LocalDateTime.ofInstant(now.minus(WINDOW), ZoneId.of("Asia/Seoul"));
 
         long totalSent = repository.countSentSince(since);
         long failedCount = repository.countByStatusSince(since, FAILED_STATUSES);

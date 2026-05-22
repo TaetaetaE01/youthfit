@@ -4,8 +4,7 @@ import com.youthfit.admin.application.dashboard.DashboardSeverity;
 import com.youthfit.admin.application.dashboard.DashboardSignal;
 import com.youthfit.admin.application.dashboard.DashboardSignalResult;
 import com.youthfit.admin.application.dashboard.DashboardThresholds;
-import com.youthfit.policy.application.dto.result.EnrichmentReviewSummaryResult;
-import com.youthfit.policy.application.service.AdminEnrichmentQueryService;
+import com.youthfit.admin.application.port.EnrichmentBacklogReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +21,7 @@ public class EnrichmentBacklogSignal implements DashboardSignal {
     private static final String CODE = "ENRICHMENT_BACKLOG";
     private static final String DEEPLINK = "/admin/enrichment";
 
-    private final AdminEnrichmentQueryService queryService;
+    private final EnrichmentBacklogReader reader;
     private final DashboardThresholds thresholds;
 
     @Override
@@ -32,8 +31,7 @@ public class EnrichmentBacklogSignal implements DashboardSignal {
 
     @Override
     public Optional<DashboardSignalResult> evaluate(Instant now) {
-        EnrichmentReviewSummaryResult summary = queryService.findReviewSummary();
-        long count = summary.needsReview();
+        long count = reader.countNeedsReview();
         int threshold = thresholds.getEnrichment().getBacklogWarn();
         if (count < threshold) {
             return Optional.empty();

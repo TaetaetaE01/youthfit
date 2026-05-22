@@ -3,7 +3,7 @@ package com.youthfit.admin.application.dashboard.signals;
 import com.youthfit.admin.application.dashboard.DashboardSeverity;
 import com.youthfit.admin.application.dashboard.DashboardSignalResult;
 import com.youthfit.admin.application.dashboard.DashboardThresholds;
-import com.youthfit.admin.infrastructure.persistence.DashboardPolicyQueryRepository;
+import com.youthfit.admin.application.port.PolicyIntakeStatsReader;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 
 class PolicyIntakeStallSignalTest {
 
-    private final DashboardPolicyQueryRepository repo = mock(DashboardPolicyQueryRepository.class);
+    private final PolicyIntakeStatsReader repo = mock(PolicyIntakeStatsReader.class);
     private final DashboardThresholds thresholds = new DashboardThresholds(
             new DashboardThresholds.Llm(BigDecimal.ZERO, BigDecimal.ZERO),
             new DashboardThresholds.Ingestion(7),
@@ -32,7 +32,7 @@ class PolicyIntakeStallSignalTest {
     @Test
     void empty_when_today_meets_baseline() {
         // 오늘 5, 직전 7일 70 → 일평균 10. 5 / 10 = 0.5 >= 0.3 → 정상
-        when(repo.countPolicyCreatedBetween(any(), any()))
+        when(repo.countCreatedBetween(any(), any()))
                 .thenReturn(5L)    // 오늘
                 .thenReturn(70L);  // 직전 7일
         assertThat(signal.evaluate(Instant.parse("2026-05-22T05:00:00Z"))).isEmpty();
@@ -41,7 +41,7 @@ class PolicyIntakeStallSignalTest {
     @Test
     void medium_when_today_below_ratio() {
         // 오늘 2, 직전 7일 70 → 일평균 10. 2/10=0.2 < 0.3
-        when(repo.countPolicyCreatedBetween(any(), any()))
+        when(repo.countCreatedBetween(any(), any()))
                 .thenReturn(2L)
                 .thenReturn(70L);
         Optional<DashboardSignalResult> r = signal.evaluate(Instant.parse("2026-05-22T05:00:00Z"));
@@ -55,7 +55,7 @@ class PolicyIntakeStallSignalTest {
     @Test
     void empty_when_no_baseline() {
         // 직전 7일 0이면 비교 불가 → 정상으로 간주
-        when(repo.countPolicyCreatedBetween(any(), any()))
+        when(repo.countCreatedBetween(any(), any()))
                 .thenReturn(0L)
                 .thenReturn(0L);
         assertThat(signal.evaluate(Instant.now())).isEmpty();

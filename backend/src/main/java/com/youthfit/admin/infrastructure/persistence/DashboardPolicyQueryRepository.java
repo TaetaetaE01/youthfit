@@ -1,5 +1,6 @@
 package com.youthfit.admin.infrastructure.persistence;
 
+import com.youthfit.admin.application.port.PolicyIntakeStatsReader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -14,7 +15,7 @@ import java.time.Instant;
  * repository 로 분리한다. 트랜잭션은 호출하는 application 레이어에 위임한다.</p>
  */
 @Repository
-public class DashboardPolicyQueryRepository {
+public class DashboardPolicyQueryRepository implements PolicyIntakeStatsReader {
 
     private final JdbcTemplate jdbc;
 
@@ -28,7 +29,8 @@ public class DashboardPolicyQueryRepository {
      * <p>{@code java.sql.Timestamp.from(Instant)} 를 사용해 JDBC 드라이버에
      * UTC 시점을 그대로 전달한다. 타임존 추론을 드라이버에 맡기지 않는다.</p>
      */
-    public long countPolicyCreatedBetween(Instant from, Instant to) {
+    @Override
+    public long countCreatedBetween(Instant from, Instant to) {
         Long n = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM policy WHERE created_at >= ? AND created_at < ?",
                 Long.class,

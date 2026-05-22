@@ -40,9 +40,12 @@ public class EnrichmentJobRepositoryImpl implements EnrichmentJobRepository {
         return jpa.countByPolicyIdAndRequestedAtAfter(policyId, since);
     }
 
+    /**
+     * EnrichmentJob.finishedAt 컬럼은 KST 기준 LocalDateTime 으로 저장되므로 KST 로 변환한다.
+     */
     @Override
     public long countFailedSince(Instant since) {
-        LocalDateTime sinceLdt = LocalDateTime.ofInstant(since, ZoneId.systemDefault());
+        LocalDateTime sinceLdt = LocalDateTime.ofInstant(since, ZoneId.of("Asia/Seoul"));
         return jpa.countFailedSince(sinceLdt);
     }
 }

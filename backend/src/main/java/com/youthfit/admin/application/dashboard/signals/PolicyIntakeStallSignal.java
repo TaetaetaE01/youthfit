@@ -4,7 +4,7 @@ import com.youthfit.admin.application.dashboard.DashboardSeverity;
 import com.youthfit.admin.application.dashboard.DashboardSignal;
 import com.youthfit.admin.application.dashboard.DashboardSignalResult;
 import com.youthfit.admin.application.dashboard.DashboardThresholds;
-import com.youthfit.admin.infrastructure.persistence.DashboardPolicyQueryRepository;
+import com.youthfit.admin.application.port.PolicyIntakeStatsReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +30,7 @@ public class PolicyIntakeStallSignal implements DashboardSignal {
     private static final String DEEPLINK = "/admin/ingestion";
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-    private final DashboardPolicyQueryRepository repo;
+    private final PolicyIntakeStatsReader repo;
     private final DashboardThresholds thresholds;
 
     @Override
@@ -46,8 +46,8 @@ public class PolicyIntakeStallSignal implements DashboardSignal {
         Instant tomorrowStart = today.plusDays(1).atStartOfDay(KST).toInstant();
         Instant sevenDaysAgo = today.minusDays(7).atStartOfDay(KST).toInstant();
 
-        long todayCount = repo.countPolicyCreatedBetween(todayStart, tomorrowStart);
-        long priorWeek = repo.countPolicyCreatedBetween(sevenDaysAgo, todayStart);
+        long todayCount = repo.countCreatedBetween(todayStart, tomorrowStart);
+        long priorWeek = repo.countCreatedBetween(sevenDaysAgo, todayStart);
 
         if (priorWeek == 0L) {
             return Optional.empty();
