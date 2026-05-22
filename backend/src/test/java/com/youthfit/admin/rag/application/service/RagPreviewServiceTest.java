@@ -58,7 +58,7 @@ class RagPreviewServiceTest {
         RagPreviewCommand cmd = new RagPreviewCommand(42L, 1L, "주거",
                 new HybridOverrideCommand(null, null, 30, null, null, null));
 
-        RagPreviewResult result = service.preview(cmd);
+        RagPreviewResult result = service.comparePreview(cmd);
 
         verify(embeddingProvider, times(1)).embed("주거");
         verify(ragSearchService, times(2)).searchRelevantChunksWithTrace(any(), eq(emb), any());
@@ -76,7 +76,7 @@ class RagPreviewServiceTest {
         given(rankChangeCalculator.compute(any(), any())).willReturn(List.of());
 
         HybridOverrideCommand candidate = new HybridOverrideCommand(null, null, 30, null, null, 7);
-        service.preview(new RagPreviewCommand(42L, 1L, "주거", candidate));
+        service.comparePreview(new RagPreviewCommand(42L, 1L, "주거", candidate));
 
         // baseline → null
         verify(ragSearchService).searchRelevantChunksWithTrace(any(), any(), eq((HybridSearchOverrides) null));
@@ -93,7 +93,7 @@ class RagPreviewServiceTest {
         RagPreviewCommand cmd = new RagPreviewCommand(42L, 1L, "주거",
                 new HybridOverrideCommand(null, null, null, null, null, null));
 
-        assertThatThrownBy(() -> service.preview(cmd))
+        assertThatThrownBy(() -> service.comparePreview(cmd))
                 .isInstanceOf(RagPreviewRateLimitException.class);
         verify(embeddingProvider, times(0)).embed(any());
     }

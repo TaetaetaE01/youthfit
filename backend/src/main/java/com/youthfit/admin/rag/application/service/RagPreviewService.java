@@ -30,7 +30,7 @@ public class RagPreviewService {
     private final RagPreviewRateLimiter rateLimiter;
 
     @Transactional(readOnly = true)
-    public RagPreviewResult preview(RagPreviewCommand cmd) {
+    public RagPreviewResult comparePreview(RagPreviewCommand cmd) {
         if (!rateLimiter.tryAcquire(cmd.userId())) {
             throw new RagPreviewRateLimitException();
         }

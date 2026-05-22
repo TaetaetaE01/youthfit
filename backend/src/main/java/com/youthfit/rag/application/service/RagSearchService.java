@@ -6,6 +6,7 @@ import com.youthfit.rag.application.dto.result.EffectiveConfig;
 import com.youthfit.rag.application.dto.result.MergedChunk;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
 import com.youthfit.rag.application.dto.result.RagSearchTrace;
+import com.youthfit.rag.application.dto.result.SimilarChunkResult;
 import com.youthfit.rag.application.port.EmbeddingProvider;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
@@ -63,7 +64,32 @@ public class RagSearchService {
                 : List.of();
 
         if (hybridSearchProperties.enabled()) {
-            return hybridSearch(command, precomputedEmbedding, keywords);
+            // Delegate to the shared hybrid algorithm. The trace's merged list is the
+            // authoritative result; if it's empty, apply production keyword fallback.
+            // Build EffectiveConfig directly from properties (no override for production path).
+            EffectiveConfig config = new EffectiveConfig(
+                    hybridSearchProperties.enabled(),
+                    hybridSearchProperties.topNPerSearch(),
+                    hybridSearchProperties.rrfK(),
+                    hybridSearchProperties.trigramThreshold(),
+                    keywordBoostProperties.enabled(),
+                    keywordBoostProperties.maxKeywords());
+            RagSearchTrace trace = runHybridSearchInternal(command, precomputedEmbedding, config, keywords);
+            if (trace.merged().isEmpty()) {
+                log.info("hybrid 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
+                return fallbackKeywordSearch(command);
+            }
+            if (log.isInfoEnabled()) {
+                log.info("hybrid 검색: policyId={}, vector_top{}={}, trigram_top{}={}, merged_top{}={}",
+                        command.policyId(),
+                        trace.vectorTopN().size(), summarizeResults(trace.vectorTopN()),
+                        trace.trigramTopN().size(), summarizeResults(trace.trigramTopN()),
+                        trace.merged().size(), summarizeMerged(trace.merged()));
+            }
+            return trace.merged().stream()
+                    .map(c -> new PolicyDocumentChunkResult(
+                            c.chunkId(), null, c.chunkIndex(), c.preview(), c.distance(), null, null, null))
+                    .toList();
         }
 
         if (log.isInfoEnabled()) {
@@ -92,54 +118,12 @@ public class RagSearchService {
                 .toList();
     }
 
-    // ⚠ 알고리즘 동기화: searchRelevantChunksWithTrace 의 hybrid 분기와 1:1 대응해야 한다.
-    private List<PolicyDocumentChunkResult> hybridSearch(
-            SearchChunksCommand command, float[] embedding, List<String> keywords
-    ) {
-        int topN = hybridSearchProperties.topNPerSearch();
-        int k = hybridSearchProperties.rrfK();
-        double threshold = hybridSearchProperties.trigramThreshold();
-
-        List<SimilarChunk> vec = policyDocumentRepository.findSimilarByEmbedding(
-                command.policyId(), embedding, keywords, topN);
-
-        List<SimilarChunk> tri;
-        try {
-            tri = policyDocumentRepository.findTopByTrigram(
-                    command.policyId(), command.query(), threshold, topN);
-        } catch (RuntimeException e) {
-            log.warn("trigram 쿼리 실패, vector 결과로 폴백: policyId={}, error={}",
-                    command.policyId(), e.toString());
-            tri = List.of();
-        }
-
-        if (vec.isEmpty() && tri.isEmpty()) {
-            log.info("hybrid 검색 결과 없음, 키워드 폴백 수행: policyId={}", command.policyId());
-            return fallbackKeywordSearch(command);
-        }
-
-        // 한쪽 단독 케이스도 RRF 통과 — DEFAULT_TOP_K 컷이 일관되게 적용됨
-        List<SimilarChunk> merged =
-                reciprocalRankFusion.merge(vec, tri, k, DEFAULT_TOP_K);
-
-        if (log.isInfoEnabled()) {
-            log.info("hybrid 검색: policyId={}, vector_top{}={}, trigram_top{}={}, merged_top{}={}",
-                    command.policyId(),
-                    vec.size(), summarize(vec),
-                    tri.size(), summarize(tri),
-                    merged.size(), summarize(merged));
-        }
-
-        return merged.stream().map(PolicyDocumentChunkResult::from).toList();
-    }
-
     @Transactional(readOnly = true)
     public RagSearchTrace searchRelevantChunksWithTrace(
             SearchChunksCommand command,
             float[] precomputedEmbedding,
             @Nullable HybridSearchOverrides overrides
     ) {
-        long start = System.currentTimeMillis();
         EffectiveConfig effective = effectiveConfigFactory.baseline(overrides);
 
         List<String> keywords = effective.keywordBoostEnabled()
@@ -148,21 +132,42 @@ public class RagSearchService {
 
         if (!effective.hybridEnabled()) {
             // vector-only 경로 — DEFAULT_TOP_K 컷
+            long start = System.currentTimeMillis();
             List<SimilarChunk> vec = policyDocumentRepository.findSimilarByEmbedding(
                     command.policyId(), precomputedEmbedding, keywords, DEFAULT_TOP_K);
+            List<SimilarChunkResult> vecResults = vec.stream().map(SimilarChunkResult::from).toList();
             List<MergedChunk> merged = toMergedChunksFromVectorOnly(vec);
-            return new RagSearchTrace(effective, vec, List.of(), merged, keywords,
+            return new RagSearchTrace(effective, vecResults, List.of(), merged, keywords,
                     System.currentTimeMillis() - start);
         }
 
-        // ⚠ 알고리즘 동기화: 아래 로직은 hybridSearch(...) 와 1:1 대응해야 한다.
-        //   둘을 합치지 않는 이유는 운영은 SimilarChunk 컷, 어드민은 MergedChunk 트레이스가 필요하기 때문.
-        int topN = effective.topNPerSearch();
-        int k = effective.rrfK();
-        double threshold = effective.trigramThreshold();
+        // Delegate to the shared hybrid algorithm — no fallback for admin (shows raw empty-result reality).
+        return runHybridSearchInternal(command, precomputedEmbedding, effective, keywords);
+    }
+
+    /**
+     * Core hybrid search algorithm shared by both the production path and the admin trace path.
+     *
+     * <p>Drift guarantee: vector + trigram fetch, trigram-failure handling, and RRF merge
+     * are all in this single method. Neither public method duplicates this logic.</p>
+     *
+     * <p>Design note: production gets a keyword fallback on empty merged result (UX),
+     * admin sees the raw empty-result reality (tuning truth). The fallback decision
+     * is intentionally left to each caller.</p>
+     */
+    private RagSearchTrace runHybridSearchInternal(
+            SearchChunksCommand command,
+            float[] embedding,
+            EffectiveConfig config,
+            List<String> keywords
+    ) {
+        long start = System.currentTimeMillis();
+        int topN = config.topNPerSearch();
+        int k = config.rrfK();
+        double threshold = config.trigramThreshold();
 
         List<SimilarChunk> vec = policyDocumentRepository.findSimilarByEmbedding(
-                command.policyId(), precomputedEmbedding, keywords, topN);
+                command.policyId(), embedding, keywords, topN);
 
         List<SimilarChunk> tri;
         try {
@@ -178,7 +183,10 @@ public class RagSearchService {
                 reciprocalRankFusion.merge(vec, tri, k, DEFAULT_TOP_K);
         List<MergedChunk> merged = toMergedChunks(mergedSimilar);
 
-        return new RagSearchTrace(effective, vec, tri, merged, keywords,
+        List<SimilarChunkResult> vecResults = vec.stream().map(SimilarChunkResult::from).toList();
+        List<SimilarChunkResult> triResults = tri.stream().map(SimilarChunkResult::from).toList();
+
+        return new RagSearchTrace(config, vecResults, triResults, merged, keywords,
                 System.currentTimeMillis() - start);
     }
 
@@ -203,7 +211,14 @@ public class RagSearchService {
         return s.length() <= max ? s : s.substring(0, max);
     }
 
-    private String summarize(List<SimilarChunk> chunks) {
+    private String summarizeResults(List<SimilarChunkResult> chunks) {
+        return chunks.stream()
+                .map(c -> String.format("%.3f", c.distance()))
+                .toList()
+                .toString();
+    }
+
+    private String summarizeMerged(List<MergedChunk> chunks) {
         return chunks.stream()
                 .map(c -> String.format("%.3f", c.distance()))
                 .toList()

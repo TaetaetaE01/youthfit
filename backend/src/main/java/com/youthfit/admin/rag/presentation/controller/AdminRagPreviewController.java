@@ -31,6 +31,6 @@ public class AdminRagPreviewController implements AdminRagPreviewApi {
         }
         long userId = Long.parseLong(authentication.getName());
         return ResponseEntity.ok(RagPreviewResponse.from(
-                service.preview(request.toCommand(userId))));
+                service.comparePreview(request.toCommand(userId))));
     }
 }

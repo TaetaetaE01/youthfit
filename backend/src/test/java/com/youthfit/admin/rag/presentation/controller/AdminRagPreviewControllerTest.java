@@ -97,7 +97,7 @@ class AdminRagPreviewControllerTest {
     @Test
     @DisplayName("admin 정상 요청 → 200")
     void admin_ok() throws Exception {
-        given(previewService.preview(any())).willReturn(okResult());
+        given(previewService.comparePreview(any())).willReturn(okResult());
 
         String body = om.writeValueAsString(Map.of(
                 "policyId", 1,
@@ -185,7 +185,7 @@ class AdminRagPreviewControllerTest {
     @Test
     @DisplayName("rate limit 초과 → 429 + Retry-After")
     void rateLimitExceeded_429() throws Exception {
-        given(previewService.preview(any())).willThrow(new RagPreviewRateLimitException());
+        given(previewService.comparePreview(any())).willThrow(new RagPreviewRateLimitException());
 
         String body = om.writeValueAsString(Map.of(
                 "policyId", 1, "query", "주거", "candidate", Map.of()));
