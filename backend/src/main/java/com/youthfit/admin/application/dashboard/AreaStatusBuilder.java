@@ -22,7 +22,8 @@ public class AreaStatusBuilder {
     private static final List<AreaKey> AREAS = List.of(
             new AreaKey("ingestion", "Ingestion", "/admin/ingestion",
                     List.of("INGESTION_FAILURE", "INGESTION_STALE")),
-            new AreaKey("enrichment", "Enrichment", "/admin/enrichment",
+            // TODO: /admin/enrichment dedicated page 가 생기면 직접 링크로 교체 예정
+            new AreaKey("enrichment", "Enrichment", "/admin/ingestion?tab=enrichment",
                     List.of("ENRICHMENT_FAILURE", "ENRICHMENT_BACKLOG")),
             new AreaKey("llm-cost", "LLM 비용", "/admin/llm-cost",
                     List.of("LLM_COST_SPIKE", "LLM_WEEKLY_BUDGET")),

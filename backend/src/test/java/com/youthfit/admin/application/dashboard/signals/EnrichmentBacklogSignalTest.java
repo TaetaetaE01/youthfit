@@ -51,7 +51,7 @@ class EnrichmentBacklogSignalTest {
         assertThat(result.code()).isEqualTo("ENRICHMENT_BACKLOG");
         assertThat(result.severity()).isEqualTo(DashboardSeverity.MEDIUM);
         assertThat(result.title()).contains("20");
-        assertThat(result.deeplink()).isEqualTo("/admin/enrichment");
+        assertThat(result.deeplink()).isEqualTo("/admin/ingestion?tab=enrichment");
         assertThat(result.detectedAt()).isEqualTo(now);
     }
 
