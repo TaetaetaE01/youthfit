@@ -20,7 +20,8 @@ public class EnrichmentFailureSignal implements DashboardSignal {
 
     private static final String CODE = "ENRICHMENT_FAILURE";
     private static final Duration WINDOW = Duration.ofHours(24);
-    private static final String DEEPLINK = "/admin/enrichment?filter=failed";
+    // TODO: /admin/enrichment dedicated page 가 생기면 직접 링크로 교체 예정
+    private static final String DEEPLINK = "/admin/ingestion?tab=enrichment";
 
     private final EnrichmentJobRepository repository;
 

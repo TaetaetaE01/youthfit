@@ -44,6 +44,28 @@ describe('AdminRagPreviewPage', () => {
     expect(screen.getByText('NEW')).toBeInTheDocument();
   });
 
+  it('candidate 설정 변경 시 dirty 배지 노출', async () => {
+    vi.spyOn(api, 'ragPreview').mockResolvedValue(mockResp);
+
+    render(wrap(<AdminRagPreviewPage />));
+    fireEvent.change(screen.getByLabelText('정책 ID'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('쿼리'), { target: { value: '주거' } });
+    fireEvent.click(screen.getByText(/비교 실행/));
+
+    await waitFor(() => expect(screen.getByText('c1')).toBeInTheDocument());
+
+    // 첫 실행 직후에는 dirty 가 아님
+    expect(screen.queryByTestId('candidate-dirty-badge')).not.toBeInTheDocument();
+
+    // candidate 설정(topNPerSearch) 을 baseline 과 다른 값으로 변경
+    const topNInput = document.getElementById('cand-topNPerSearch') as HTMLInputElement;
+    fireEvent.change(topNInput, { target: { value: '99' } });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('candidate-dirty-badge')).toBeInTheDocument()
+    );
+  });
+
   it('500 응답 시 에러 노출', async () => {
     vi.spyOn(api, 'ragPreview').mockRejectedValue(new Error('서버 오류'));
 

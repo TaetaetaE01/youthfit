@@ -127,10 +127,10 @@ class AdminRagPreviewIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.baseline.config.rrfK").value(60))
-                .andExpect(jsonPath("$.candidate.config.rrfK").value(30))
-                .andExpect(jsonPath("$.baseline.merged").isArray())
-                .andExpect(jsonPath("$.candidate.merged").isArray());
+                .andExpect(jsonPath("$.data.baseline.config.rrfK").value(60))
+                .andExpect(jsonPath("$.data.candidate.config.rrfK").value(30))
+                .andExpect(jsonPath("$.data.baseline.merged").isArray())
+                .andExpect(jsonPath("$.data.candidate.merged").isArray());
     }
 
     // ──────────────────────────── helpers ────────────────────────────

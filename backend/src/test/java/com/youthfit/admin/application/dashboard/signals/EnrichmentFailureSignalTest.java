@@ -41,7 +41,7 @@ class EnrichmentFailureSignalTest {
         assertThat(result.code()).isEqualTo("ENRICHMENT_FAILURE");
         assertThat(result.severity()).isEqualTo(DashboardSeverity.HIGH);
         assertThat(result.title()).contains("2");
-        assertThat(result.deeplink()).isEqualTo("/admin/enrichment?filter=failed");
+        assertThat(result.deeplink()).isEqualTo("/admin/ingestion?tab=enrichment");
         assertThat(result.detectedAt()).isEqualTo(now);
     }
 }

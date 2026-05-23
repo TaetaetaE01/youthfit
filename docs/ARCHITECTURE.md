@@ -63,6 +63,9 @@ com.youthfit/
 ├── rag/            # 임베딩, 청크 분할, 벡터 조회
 ├── qna/            # 정책 Q&A, SSE 스트리밍 응답
 ├── ingestion/      # n8n 외부 수집 파이프라인 수신
+├── admin/          # 운영 대시보드 신호 집계, RAG 파라미터 미리보기
+├── metrics/        # LLM 비용 추적 및 사용량 집계
+├── region/         # 지역 정보 조회 및 매핑
 └── common/         # 공통 설정, 예외, 유틸
 ```
 
@@ -241,6 +244,34 @@ n8n 워크플로우에서 수집한 정책 데이터를 수신하는 내부 API�
 | `ErrorCode` | 에러 코드 Enum |
 | `GlobalExceptionHandler` | 전역 예외 핸들링 |
 | `DateTimeUtil` | 날짜/시간 유틸리티 |
+
+### 4.10 admin
+
+운영 대시보드 신호 집계, RAG 파라미터 미리보기, 어드민용 read-only 도구들을 제공한다. **다른 모듈 도메인에 대한 변경(mutation)은 수행하지 않는다.**
+
+| 레이어 | 주요 클래스 | 역할 |
+|--------|------------|------|
+| Presentation | `AdminDashboardController`, `AdminRagPreviewController` | 대시보드 신호 조회, RAG 파라미터 비교 실행 |
+| Application | `DashboardSignalService` | 신호 집계·임계치 평가, severity 판정 |
+| Application | `RagPreviewService` | baseline vs candidate 파라미터 비교 실행 |
+| Application Port | `EnrichmentBacklogPort` | policy 모듈의 enrich 백로그 조회 (읽기 전용 포트) |
+| Infrastructure | `EnrichmentBacklogAdapter` | `policy` 모듈 데이터를 admin port 로 연결하는 어댑터 |
+| Infrastructure | `DashboardPolicyQueryRepository` | policy 도메인 직접 조회 — admin read-only |
+| Infrastructure AOP | `ScheduledTaskRunRecorder` | `@Scheduled` 메서드를 전 모듈에서 wrapping, `ScheduledTaskRun` 실행 이력 기록 |
+| Domain | `ScheduledTaskRun` | 스케줄 작업 실행 이력 엔티티 (작업명, 실행 시각, 소요 시간, 결과) |
+
+**크로스 모듈 경계 원칙**:
+- `EnrichmentBacklogAdapter`를 통해 policy 모듈 데이터를 읽는다 (직접 service 호출 금지).
+- `ScheduledTaskRunRecorder` AOP는 `@Scheduled` 어노테이션이 붙은 전 모듈 빈을 wrapping하여 실행 이력을 `scheduled_task_run` 테이블에 저장한다.
+- admin 모듈은 다른 모듈의 도메인 상태를 변경하지 않는다 (read-only 설계).
+
+### 4.11 metrics
+
+LLM API 호출 비용 추적과 사용량 집계를 담당한다. OpenAI 호출 시 토큰 사용량과 예상 비용을 기록하며, 운영 대시보드(admin 모듈)에 집계 데이터를 제공한다.
+
+### 4.12 region
+
+정책의 지역 조건 매핑과 지역 정보 조회를 담당한다. 시/도 및 시/군/구 코드 기반으로 정책 필터링과 사용자 관심 지역 매칭을 지원한다.
 
 ---
 

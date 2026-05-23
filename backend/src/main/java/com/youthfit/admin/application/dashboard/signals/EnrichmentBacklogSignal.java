@@ -19,7 +19,8 @@ import java.util.Optional;
 public class EnrichmentBacklogSignal implements DashboardSignal {
 
     private static final String CODE = "ENRICHMENT_BACKLOG";
-    private static final String DEEPLINK = "/admin/enrichment";
+    // TODO: /admin/enrichment dedicated page 가 생기면 직접 링크로 교체 예정
+    private static final String DEEPLINK = "/admin/ingestion?tab=enrichment";
 
     private final EnrichmentBacklogReader reader;
     private final DashboardThresholds thresholds;

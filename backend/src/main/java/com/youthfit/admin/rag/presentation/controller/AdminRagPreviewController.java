@@ -5,6 +5,7 @@ import com.youthfit.admin.rag.presentation.dto.request.RagPreviewRequest;
 import com.youthfit.admin.rag.presentation.dto.response.RagPreviewResponse;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +24,14 @@ public class AdminRagPreviewController implements AdminRagPreviewApi {
 
     @Override
     @PostMapping("/preview")
-    public ResponseEntity<RagPreviewResponse> preview(
+    public ResponseEntity<ApiResponse<RagPreviewResponse>> preview(
             @Valid @RequestBody RagPreviewRequest request,
             Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new YouthFitException(ErrorCode.UNAUTHORIZED);
         }
         long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(RagPreviewResponse.from(
-                service.preview(request.toCommand(userId))));
+        return ResponseEntity.ok(ApiResponse.ok(RagPreviewResponse.from(
+                service.preview(request.toCommand(userId)))));
     }
 }
