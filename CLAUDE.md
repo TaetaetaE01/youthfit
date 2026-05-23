@@ -41,6 +41,7 @@ youthfit/
 ## 모듈 경계
 
 ### 백엔드 모듈
+- `admin`: 어드민 도구 (정책 enrichment 리뷰, RAG 미리보기, 이메일 로그, Q&A 캐시, LLM 비용, ingestion 헬스, 지통실 대시보드)
 - `ingestion`: n8n 및 외부 수집 파이프라인에서 원천 데이터를 수신
 - `policy`: 정책 도메인, 정규화, 중복 제거
 - `rag`: 임베딩, 청크 분할, 벡터 조회
