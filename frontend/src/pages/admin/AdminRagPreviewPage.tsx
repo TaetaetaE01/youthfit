@@ -15,14 +15,19 @@ function deltaMap(changes: RankChange[]): Map<number, string> {
 export default function AdminRagPreviewPage() {
   const mutation = useRagPreview();
   const [candidate, setCandidate] = useState<HybridOverride>({});
+  const [lastSubmittedCandidate, setLastSubmittedCandidate] = useState<HybridOverride>({});
 
   const onSubmit = (policyId: number, query: string) => {
     mutation.mutate({ policyId, query, candidate });
+    setLastSubmittedCandidate(candidate);
   };
 
   const data = mutation.data;
   const baselineConfig = data?.baseline.config;
   const deltas = data ? deltaMap(data.diff.rankChanges) : new Map<number, string>();
+  const isDirty =
+    data !== undefined &&
+    JSON.stringify(candidate) !== JSON.stringify(lastSubmittedCandidate);
 
   return (
     <div className="hidden p-6 md:block">
@@ -55,12 +60,23 @@ export default function AdminRagPreviewPage() {
             </section>
 
             <section className="rounded border p-4">
-              <h2 className="mb-2 font-medium">Candidate — {data.candidate.tookMs} ms</h2>
+              <div className="mb-2 flex items-center gap-2">
+                <h2 className="font-medium">Candidate — {data.candidate.tookMs} ms</h2>
+                {isDirty && (
+                  <span
+                    data-testid="candidate-dirty-badge"
+                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200"
+                    title="candidate 설정이 변경되었습니다. ▶ 비교 실행 을 다시 눌러주세요."
+                  >
+                    ⚠ 변경됨 — 다시 실행하세요
+                  </span>
+                )}
+              </div>
               <CandidateConfigForm
                 baseline={baselineConfig}
                 onChange={setCandidate}
               />
-              <div className="mt-4">
+              <div className={`mt-4 transition-opacity ${isDirty ? 'opacity-50' : ''}`}>
                 <ResultTabs side={data.candidate} rankByChunkId={deltas} />
               </div>
             </section>
