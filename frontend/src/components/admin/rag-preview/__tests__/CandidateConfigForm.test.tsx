@@ -14,6 +14,11 @@ describe('CandidateConfigForm', () => {
     expect(screen.getByDisplayValue('60')).toBeInTheDocument();   // rrfK
   });
 
+  it('한글 라벨이 표시된다', () => {
+    render(<CandidateConfigForm baseline={baseline} onChange={() => {}} />);
+    expect(screen.getByText('하이브리드 검색')).toBeInTheDocument();
+  });
+
   it('rrfK 변경 시 onChange 가 그 필드만 포함해 호출된다', async () => {
     const onChange = vi.fn();
     render(<CandidateConfigForm baseline={baseline} onChange={onChange} />);

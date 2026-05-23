@@ -36,4 +36,9 @@ describe('ResultTabs', () => {
     fireEvent.click(screen.getByText('trigram'));
     expect(screen.getByText(/hybrid 비활성/)).toBeInTheDocument();
   });
+
+  it('merged 탭 활성 시 RRF 융합 후 최종 순위 안내가 보인다', () => {
+    render(<ResultTabs side={side} />);
+    expect(screen.getByText('벡터 + 키워드 결과를 RRF 융합 후 최종 순위')).toBeInTheDocument();
+  });
 });

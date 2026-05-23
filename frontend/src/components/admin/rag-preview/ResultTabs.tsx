@@ -9,6 +9,12 @@ interface Props {
   rankByChunkId?: Map<number, string>;   // merged 탭에서 사용할 delta
 }
 
+const TAB_HINTS: Record<Tab, string> = {
+  merged: '벡터 + 키워드 결과를 RRF 융합 후 최종 순위',
+  vector: '벡터 검색만의 raw 결과 (의미 기반)',
+  trigram: 'pg_trgm 키워드 검색만의 raw 결과 (문자열 유사도)',
+};
+
 export function ResultTabs({ side, rankByChunkId }: Props) {
   const [tab, setTab] = useState<Tab>('merged');
 
@@ -21,6 +27,10 @@ export function ResultTabs({ side, rankByChunkId }: Props) {
 
   return (
     <div>
+      <p className="mb-2 text-xs text-neutral-500">
+        각 검색기 별 raw 결과를 비교할 수 있습니다.{' '}
+        <span className="font-medium text-neutral-700">merged</span> 가 RRF 융합 후 최종 순위입니다.
+      </p>
       <div className="mb-2 flex gap-1 border-b">
         {(['merged', 'vector', 'trigram'] as Tab[]).map((t) => (
           <button
@@ -33,6 +43,7 @@ export function ResultTabs({ side, rankByChunkId }: Props) {
           </button>
         ))}
       </div>
+      <p className="text-xs text-neutral-400 mb-2">{TAB_HINTS[tab]}</p>
       {tab === 'trigram' && !side.config.hybridEnabled && (
         <div className="text-sm text-neutral-400">hybrid 비활성 — trigram 검색이 실행되지 않음</div>
       )}

@@ -16,4 +16,10 @@ describe('ChunkRow', () => {
     expect(screen.getByText('d=0.500')).toBeInTheDocument();
     expect(screen.getByText('rrf=0.0321')).toBeInTheDocument();
   });
+
+  it('카드 컨테이너에 rounded-md 클래스가 적용된다', () => {
+    const { container } = render(<ChunkRow rank={1} chunkId={1} preview="hello" />);
+    const card = container.firstChild as HTMLElement;
+    expect(card.className).toMatch(/rounded-md/);
+  });
 });
