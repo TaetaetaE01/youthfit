@@ -110,10 +110,10 @@ class AdminRagPreviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.policyId").value(1))
-                .andExpect(jsonPath("$.baseline").exists())
-                .andExpect(jsonPath("$.candidate").exists())
-                .andExpect(jsonPath("$.diff.rankChanges").isArray());
+                .andExpect(jsonPath("$.data.policyId").value(1))
+                .andExpect(jsonPath("$.data.baseline").exists())
+                .andExpect(jsonPath("$.data.candidate").exists())
+                .andExpect(jsonPath("$.data.diff.rankChanges").isArray());
     }
 
     @Test

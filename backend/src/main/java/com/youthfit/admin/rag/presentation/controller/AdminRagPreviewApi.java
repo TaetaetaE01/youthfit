@@ -2,6 +2,7 @@ package com.youthfit.admin.rag.presentation.controller;
 
 import com.youthfit.admin.rag.presentation.dto.request.RagPreviewRequest;
 import com.youthfit.admin.rag.presentation.dto.response.RagPreviewResponse;
+import com.youthfit.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +24,7 @@ public interface AdminRagPreviewApi {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "정책 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "레이트 리밋 초과 (Retry-After: 60)")
     })
-    ResponseEntity<RagPreviewResponse> preview(
+    ResponseEntity<ApiResponse<RagPreviewResponse>> preview(
             @Valid @RequestBody RagPreviewRequest request,
             Authentication authentication);
 }
