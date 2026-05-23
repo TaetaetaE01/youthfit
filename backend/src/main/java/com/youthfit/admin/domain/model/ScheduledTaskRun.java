@@ -61,6 +61,21 @@ public class ScheduledTaskRun {
         return new ScheduledTaskRun(taskName, at);
     }
 
+    /**
+     * 단일 INSERT 전략용 팩토리: 시작·종료·성공 여부를 한 번에 채워 생성한다.
+     * {@link com.youthfit.admin.infrastructure.aop.ScheduledTaskRunRecorder} 가
+     * 메모리에서 시작 시각을 관리하고 종료 시점에 한 번만 저장할 때 사용한다.
+     */
+    public static ScheduledTaskRun completed(String taskName, Instant startedAt,
+                                             Instant finishedAt, boolean success,
+                                             String errorMessage) {
+        ScheduledTaskRun run = new ScheduledTaskRun(taskName, startedAt);
+        run.finishedAt = finishedAt;
+        run.success = success;
+        run.errorMessage = truncate(errorMessage, 1000);
+        return run;
+    }
+
     public void markSucceeded(Instant at) {
         this.finishedAt = at;
         this.success = true;
