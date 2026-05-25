@@ -348,6 +348,218 @@ S3 / DynamoDB        $0.03
 
 ---
 
+## AWS 서비스별 상세 단가 & 계산
+
+> 2026-05 기준 서울 리전 (`ap-northeast-2`) on-demand 표준 요금. 1개월 = 730시간.
+> AWS 가격은 자주 바뀌지 않지만 정확한 청구는 항상 [AWS Pricing Calculator](https://calculator.aws/) / Billing 대시보드로 확인.
+
+### 1. EC2 (Elastic Compute Cloud)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| `t3.small` Linux on-demand | $0.0260/시간 | 1대 × 730h | **$18.98** |
+| 데이터 전송 (Outbound to Internet) | $0/GB (첫 100GB 무료) → $0.126/GB | 현재 0 | $0 |
+
+- **CPU 크레딧**: t3 burstable. 평균 CPU < 20% 면 무료, 초과 시 $0.05/vCPU-시간
+- **Free tier**: t2.micro/t3.micro 만 12개월 무료. **t3.small 은 ❌**
+- **변동 요인**: 인스턴스 끄면 즉시 과금 중지. 단 EBS 는 계속 청구
+
+### 2. EBS (Elastic Block Store)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| gp3 storage | $0.0960/GB-월 | 30GB (EC2 root) | **$2.88** |
+| gp3 IOPS (3000 기본 무료) | $0.0048/IOPS-월 | 0 추가 | $0 |
+| gp3 throughput (125 MB/s 기본 무료) | $0.0384/MB/s-월 | 0 추가 | $0 |
+| Snapshot | $0.05/GB-월 | 현재 0 | $0 |
+
+- **Free tier**: 30GB gp2/gp3 12개월 무료
+- 인스턴스 삭제해도 EBS 는 별도 — `delete_on_termination=true` 로 설정해뒀음
+
+### 3. RDS (Relational Database Service)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| `db.t3.micro` Postgres Single-AZ | $0.0260/시간 | 1대 × 730h | **$18.98** |
+| gp3 storage | $0.1145/GB-월 | 20GB | **$2.29** |
+| 자동 백업 (DB 크기까지 무료) | $0.095/GB-월 (초과분) | 현재 ~0.1GB | $0 |
+| 데이터 전송 (in-VPC) | $0 | EC2↔RDS 만 | $0 |
+
+- **Free tier**: db.t3.micro 750h/월 12개월 + 20GB gp2 (gp3 는 ❌)
+- **Multi-AZ 전환 시**: +100% (×2 instance fee)
+- **db.t3.small 업그레이드**: +$19/월 (= $0.052/시간)
+
+### 4. EIP (Elastic IP)
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| attached (instance 부착) | $0 | 1개 attached | **$0** |
+| idle (미부착) | $0.005/시간 | 0 | $0 |
+
+- ⚠️ EC2 정지 시 EIP 가 attached 상태여도 과금됨 (인스턴스가 running 이어야 무료)
+- 우리: EC2 24/7 가동 + EIP 부착 → 항상 무료
+
+### 5. S3 (Simple Storage Service)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| Standard storage | $0.025/GB-월 (첫 50TB) | state ~0.05MB + web 0B | ~$0.001 |
+| PUT/COPY/POST/LIST 요청 | $0.0055/1000 | terraform apply 시 ~50 ops | <$0.001 |
+| GET/SELECT 요청 | $0.00044/1000 | ~10 ops | <$0.001 |
+| Data transfer out (Internet) | $0.126/GB | 0 (CloudFront 가 cache) | $0 |
+
+- **버킷 2개**: `youthfit-tfstate-prod` (state), `youthfit-web-prod` (Vite build 대기)
+- **Free tier**: 5GB + 20K GET + 2K PUT 첫 12개월
+- **버전 관리**: 옛 버전 저장도 storage 비용 카운트
+
+### 6. CloudFront
+
+| 항목 | 단가 (글로벌, Asia tier) | 우리 사용 | 월 비용 |
+|------|--------------------------|-----------|--------:|
+| Data transfer out (Asia) | $0.085/GB (첫 10TB) | 현재 0 | $0 |
+| HTTPS 요청 | $0.0075/10,000 (Asia) | 현재 0 | $0 |
+| Invalidation (첫 1000 path/월) | 무료, 초과분 $0.005/path | 0 | $0 |
+
+- **Free tier**: 1TB outbound + 10M requests + 2M Function invocations 12개월
+- **PriceClass_200 적용**: 남미/아프리카 edge 제외, ~10-15% 절감
+- **변동 요인**: 사용자 트래픽 비례. 50GB/월 = ~$4.25, 200GB/월 = ~$17, 1TB/월 = ~$85
+
+### 7. Route 53
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| Hosted zone (첫 25개) | $0.50/월/zone | 1 zone | **$0.50** |
+| Hosted zone (25개 초과) | $0.10/월/zone | 0 | $0 |
+| Standard queries (첫 10억) | $0.40/M | 현재 ~0 | <$0.01 |
+| Alias query to AWS (CloudFront, EIP, ALB) | **무료** | apex/www/api alias | $0 |
+| Latency-based queries | $0.60/M | 미사용 | $0 |
+| Health checks | $0.50~$0.75/check-월 | 미사용 (Plan F) | $0 |
+
+- Alias 가 무료라는 게 큰 이점 — apex/www/api 모두 alias, 따라서 일반 쿼리 비용은 거의 0
+- **변동 요인**: 트래픽이 늘면 standard query 비용 발생 (50K 도메인 lookup/일 = ~$0.60/월)
+
+### 8. ACM (Certificate Manager)
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| Public 인증서 (AWS 서비스에 attach) | **무료** | 1개 (CloudFront) | $0 |
+| Private CA | $400/월 | 미사용 | $0 |
+
+- 와일드카드 / SAN / 자동 갱신 모두 무료
+- 단, AWS 서비스에 attach 되지 않은 인증서는 ACM 자체 무료지만 갱신 안 됨
+
+### 9. ECR (Elastic Container Registry)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| Storage | $0.10/GB-월 | 현재 0 이미지 | $0 |
+| Data transfer in | 무료 | (push 시) | $0 |
+| Data transfer out (같은 region EC2) | 무료 | EC2 가 pull | $0 |
+| Data transfer out (다른 region) | $0.09/GB | 0 | $0 |
+| Vulnerability scanning (basic) | 무료 | scan_on_push | $0 |
+| Enhanced scanning (Inspector) | $0.09/image-월 | 미사용 | $0 |
+
+- **Free tier**: 500MB private storage 12개월
+- **변동 요인**: 이미지 10개 × 400MB = 4GB → $0.40/월
+- Spring Boot fat jar + JRE 베이스 = 보통 250-400MB 압축
+
+### 10. SSM Parameter Store
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| Standard tier (10K 슬롯, 4KB/슬롯, 표준 처리량) | **무료** | 10 슬롯 | $0 |
+| Advanced tier | $0.05/슬롯-월 + $0.05/10K API calls | 미사용 | $0 |
+| API throughput tier (40 → 1000 ops/s) | $0.05/M ops | Standard 한도 내 | $0 |
+
+- 우리는 Standard 한도 안: 10 슬롯 << 10K 한도
+- SecureString 의 KMS 호출은 별도 (다음 항목)
+
+### 11. KMS (Key Management Service)
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| Customer-managed CMK | $1/키-월 | 0 (AWS-managed 사용) | $0 |
+| AWS-managed key (`aws/ssm`, `aws/s3`, `aws/rds` 등) | **무료** | 사용 중 | $0 |
+| Encrypt/Decrypt API calls (첫 20K 무료) | $0.03/10K | <100 ops | <$0.01 |
+
+- 우리는 명시적 CMK 안 만들고 `aws/ssm`, `aws/rds`, `aws/ebs` (default) 사용 → 비용 없음
+- ⚠️ 명시적 CMK 만들면 키 하나당 월 $1 부과
+
+### 12. DynamoDB (Terraform state lock)
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| PAY_PER_REQUEST write | $1.25/M | ~10-20/세션 | <$0.001 |
+| PAY_PER_REQUEST read | $0.25/M | 비슷 | <$0.001 |
+| Storage | $0.25/GB-월 | <1KB | $0 |
+
+- **Free tier**: 25GB + 25 WCU/RCU 영구 무료 (PAY_PER_REQUEST 도 어느 정도 cover)
+- 단순 lock 용도라 실질 비용 $0
+
+### 13. CloudWatch
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| 기본 메트릭 (5분 간격) | 무료 | EC2/RDS/CloudFront 기본 | $0 |
+| Custom 메트릭 | $0.30/메트릭-월 (첫 10K) | 0 | $0 |
+| Logs ingestion | $0.50/GB | 0 (Plan F 에서 backend log 전송 검토) | $0 |
+| Logs storage | $0.03/GB-월 | 0 | $0 |
+| Logs Insights query | $0.005/GB scanned | 0 | $0 |
+| Alarms (첫 10개 무료) | $0.10/alarm-월 (초과분) | 0 (Plan F) | $0 |
+
+- **Plan F 도입 시**: CPU/RDS disk/5xx 알람 3-5개 → 무료 한도 내
+
+### 14. IAM / STS
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| 모든 IAM 리소스 (user, role, policy) | **무료** | 1 user + 1 role + policies | $0 |
+| STS API | 무료 | EC2 가 assume role | $0 |
+
+### 15. VPC / Network 기초
+
+| 항목 | 단가 | 우리 사용 | 월 비용 |
+|------|------|-----------|--------:|
+| VPC, Subnet, Route Table, IGW | **무료** | 1 VPC + 4 subnets + 1 IGW | $0 |
+| Security Group, NACL | **무료** | 2 SGs | $0 |
+| NAT Gateway | $0.062/시간 + $0.045/GB | **없음 (의도적 회피)** | **$0** |
+| VPC Endpoint (Interface) | $0.014/시간 + $0.01/GB | 0 | $0 |
+| VPC Endpoint (Gateway, S3/DynamoDB) | 무료 | 0 | $0 |
+| VPC Peering | 0.01/GB (cross-AZ) | 0 | $0 |
+| Transit Gateway | $0.07/시간 + $0.02/GB | 0 | $0 |
+
+- NAT Gateway 회피 = 월 ~$32 절감 (NAT 의 시간당 비용만으로도 $45/월)
+- private subnet 의 RDS 는 인터넷 접근 불필요해서 NAT 안 둠
+
+### 16. 데이터 전송 (Cross-AZ / Cross-Region / Internet)
+
+| 항목 | 단가 (Seoul) | 우리 사용 | 월 비용 |
+|------|-------------|-----------|--------:|
+| EC2 ↔ RDS (같은 AZ) | $0 | 모두 같은 region | $0 |
+| EC2 ↔ RDS (cross-AZ in VPC) | $0.01/GB 양방향 | 가능성 (RDS subnet group 이 2 AZ) | <$0.10 |
+| EC2 → Internet (첫 100GB) | $0 | <100GB | $0 |
+| EC2 → Internet (100GB 초과) | $0.126/GB | 거의 0 | $0 |
+| RDS → Internet | $0.126/GB | 미사용 (private subnet) | $0 |
+
+- RDS 가 EC2 와 같은 AZ 면 cross-AZ 비용도 0. 우리 RDS subnet group 은 2a/2c 둘 다 포함이라 RDS 가 어디 launch 됐는지에 따라 다름 (사전 확인 어렵). 실 사용량 적어 영향 미미.
+
+---
+
+## 청구 총합 재확인
+
+```
+EC2 t3.small         $18.98
+RDS db.t3.micro      $18.98
+EBS gp3 30GB         $2.88
+RDS gp3 20GB         $2.29
+Route 53 zone        $0.50
+S3 / DynamoDB        $0.03
+─────────────────────────
+합계                  $43.66  (현재 idle)
+```
+
+---
+
 ## 비용 최적화 메모
 
 - ✅ **NAT Gateway 없음**: 월 ~$45 절감 (RDS 가 인터넷 불필요, EC2 는 public subnet 직접)
