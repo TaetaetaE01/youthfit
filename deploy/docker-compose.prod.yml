@@ -1,0 +1,61 @@
+# YouthFit prod compose
+#
+# Includes: backend + caddy + redis
+# Excluded (deferred):
+#   - n8n: local E2E test pending. Add in separate plan after validation.
+#   - postgres: RDS managed externally.
+#
+# .env file is generated at boot by /etc/youthfit/fetch-secrets.sh from SSM.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: youthfit-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+    networks:
+      - youthfit
+
+  redis:
+    image: redis:7-alpine
+    container_name: youthfit-redis
+    restart: unless-stopped
+    # 외부 노출 없음. 같은 compose 네트워크 내에서만 접근.
+    volumes:
+      - redis-data:/data
+    networks:
+      - youthfit
+
+  backend:
+    image: ${ECR_BACKEND_URL}:${IMAGE_TAG:-latest}
+    container_name: youthfit-backend
+    restart: unless-stopped
+    env_file:
+      - /etc/youthfit/.env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    networks:
+      - youthfit
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  caddy-data:
+  caddy-config:
+  redis-data:
+
+networks:
+  youthfit:
+    driver: bridge

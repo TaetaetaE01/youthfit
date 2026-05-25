@@ -1,0 +1,42 @@
+# YouthFit Caddy config
+#
+# Routes:
+#   api.youthfit.xyz  → backend:8080
+#
+# Excluded (deferred):
+#   n8n.youthfit.xyz: n8n service not deployed yet. Add when n8n image is pushed to ECR.
+#
+# TLS: Let's Encrypt HTTP-01 challenge (port 80 inbound required in SG).
+
+{
+    # Email for Let's Encrypt notifications. Replace with admin email after first boot.
+    email admin@youthfit.xyz
+}
+
+api.youthfit.xyz {
+    reverse_proxy backend:8080 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    encode gzip zstd
+
+    log {
+        output file /data/access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+        format json
+    }
+
+    # Health endpoint for external monitoring (not auth-required)
+    handle /actuator/health {
+        reverse_proxy backend:8080
+    }
+}
+
+# Default — anything else gets a friendly 404. Plan D 의 frontend 는 CloudFront 가 받음.
+:80 {
+    respond /healthz "ok" 200
+    respond * "Not Found" 404
+}

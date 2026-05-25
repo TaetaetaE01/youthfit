@@ -1,0 +1,28 @@
+[Unit]
+Description=YouthFit backend via docker compose
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/youthfit/deploy
+
+# 1) SSM 에서 시크릿 fetch
+ExecStartPre=/opt/youthfit/deploy/fetch-secrets.sh
+
+# 2) ECR login
+ExecStartPre=/bin/bash -c 'aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.ap-northeast-2.amazonaws.com'
+
+# 3) 이미지 pull + compose up
+ExecStartPre=/usr/bin/docker compose -f docker-compose.prod.yml --env-file /etc/youthfit/.env pull
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file /etc/youthfit/.env up -d
+
+# 정지 시 compose down (volumes 보존)
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
+
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
