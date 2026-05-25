@@ -55,3 +55,8 @@ output "ssh_command" {
   value       = "ssh -i ~/.ssh/youthfit_prod_ed25519 ec2-user@${aws_eip.web.public_ip}"
   description = "SSH 명령 (EIP 가 attach 된 후 사용)"
 }
+
+output "acm_certificate_arn" {
+  value       = aws_acm_certificate_validation.cloudfront.certificate_arn
+  description = "us-east-1 ACM 인증서 ARN (CloudFront 용)"
+}
