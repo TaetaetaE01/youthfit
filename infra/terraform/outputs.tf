@@ -60,3 +60,12 @@ output "acm_certificate_arn" {
   value       = aws_acm_certificate_validation.cloudfront.certificate_arn
   description = "us-east-1 ACM 인증서 ARN (CloudFront 용)"
 }
+
+output "s3_web_bucket" {
+  value       = aws_s3_bucket.web.id
+  description = "프론트엔드 정적 자산 버킷 (Vite build sync 대상)"
+}
+
+output "s3_web_bucket_arn" {
+  value = aws_s3_bucket.web.arn
+}
