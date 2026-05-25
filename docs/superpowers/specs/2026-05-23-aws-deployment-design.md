@@ -22,7 +22,9 @@
 |------|------|
 | 가비아 도메인 `youthfit.xyz` | ✅ 구매 완료 |
 | Route 53 호스팅 영역 | ✅ 생성, 가비아 NS 변경 완료 (`NS-604.AWSDNS-11.NET` 외 3개) |
-| AWS 계정 | ✅ `596776566549` |
+| AWS 계정 (deploy target) | ✅ `379197597410` (별도 계정, 운영용) |
+| Route 53 호스팅 영역 ID | ✅ `Z05811777WNU2LJAW6QF` |
+| (참고) 기존 계정 `596776566549` | SES/S3 (BF-rest-S3) 실험용 — prod 배포에는 미사용 |
 | 기존 사용 중인 AWS 서비스 | SES (도메인 미검증), S3 (`BF-rest-S3` 키로 첨부파일 업로드) |
 | Spring Boot 백엔드 | docker-compose 로컬 가동 중 |
 | Vite + React 프론트엔드 | 로컬 `npm run dev` 가동 중 |
