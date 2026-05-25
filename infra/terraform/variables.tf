@@ -51,8 +51,8 @@ variable "db_name" {
 
 variable "db_engine_version" {
   type        = string
-  default     = "17.2"
-  description = "RDS Postgres 엔진 버전. aws rds describe-db-engine-versions 로 사용 가능 버전 확인."
+  default     = "17.10"
+  description = "RDS Postgres 엔진 버전. 2026-05-25 기준 17.2~17.10 사용 가능. 보안 패치 위해 최신 마이너 기본값."
 }
 
 variable "route53_zone_id" {
