@@ -1,0 +1,8 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored.
+
+aws_region      = "ap-northeast-2"
+aws_profile     = "youthfit-deploy"
+admin_ssh_cidr  = "203.0.113.5/32"          # 본인 공인 IP/32
+db_password     = "REPLACE_WITH_STRONG_16+_CHAR_PASSWORD"
+route53_zone_id = "Z05811777WNU2LJAW6QF"    # youthfit.xyz hosted zone (Plan A 검증 결과)

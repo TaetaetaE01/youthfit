@@ -1,0 +1,20 @@
+# Terraform working directory
+.terraform/
+.terraform.tfstate.lock.info
+
+# State files (S3 backend used, but local copies may appear briefly)
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+
+# Variable files containing secrets
+terraform.tfvars
+*.tfvars
+!terraform.tfvars.example
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Saved plan outputs
+*.tfplan
