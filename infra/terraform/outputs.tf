@@ -84,3 +84,15 @@ output "cloudfront_hosted_zone_id" {
   value       = aws_cloudfront_distribution.web.hosted_zone_id
   description = "Route 53 Alias 의 zone_id (CloudFront 전역 상수 Z2FDTNDATAQYW2)"
 }
+
+output "frontend_url" {
+  value = "https://youthfit.xyz"
+}
+
+output "frontend_www_url" {
+  value = "https://www.youthfit.xyz"
+}
+
+output "api_url" {
+  value = "https://api.youthfit.xyz"
+}
