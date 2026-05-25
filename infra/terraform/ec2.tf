@@ -110,6 +110,10 @@ resource "aws_instance" "web" {
     ignore_changes = [
       ami,        # AMI 갱신은 explicit 작업으로
       user_data,  # user-data 변경은 새 인스턴스 만들 때만 (Plan F)
+      # AWS 가 public subnet 의 인스턴스에 자동 public IP 를 붙이고 그 위에 EIP 가
+      # 덮어쓰는 형태로 state 에 true 로 잡힘. config 의 false 와 영구 drift 라
+      # 무시. EIP association 으로만 public 접근 제어.
+      associate_public_ip_address,
     ]
   }
 }
