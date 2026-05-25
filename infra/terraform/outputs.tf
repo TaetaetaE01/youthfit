@@ -32,3 +32,8 @@ output "rds_address" {
   value       = aws_db_instance.main.address
   description = "host only"
 }
+
+output "ecr_backend_url" {
+  value       = aws_ecr_repository.backend.repository_url
+  description = "ECR 레포 전체 URL (e.g. 379197597410.dkr.ecr.ap-northeast-2.amazonaws.com/youthfit-backend)"
+}
