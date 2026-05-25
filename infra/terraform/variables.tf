@@ -59,3 +59,21 @@ variable "route53_zone_id" {
   type        = string
   description = "youthfit.xyz Route 53 호스팅 영역 ID. 예: Z05811777WNU2LJAW6QF"
 }
+
+variable "ssh_public_key" {
+  type        = string
+  description = "SSH ed25519 public key contents (one line). cat ~/.ssh/youthfit_prod_ed25519.pub"
+  sensitive   = false
+}
+
+variable "github_owner" {
+  type        = string
+  default     = "TaetaetaE01"
+  description = "GitHub user/org owning the youthfit repo (for user-data git clone)."
+}
+
+variable "github_repo" {
+  type        = string
+  default     = "youthfit"
+  description = "GitHub repo name. Public read access required for user-data clone."
+}

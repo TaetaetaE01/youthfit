@@ -63,3 +63,15 @@ resource "aws_ssm_parameter" "db_username" {
     Name = "youthfit-prod-db-username"
   }
 }
+
+# fetch-secrets.sh 가 ECR URL 을 SSM 에서 읽도록 함 (variable 의존성 줄임)
+resource "aws_ssm_parameter" "meta_ecr_backend_url" {
+  name        = "/youthfit/prod/_meta/ecr-backend-url"
+  type        = "String"
+  value       = aws_ecr_repository.backend.repository_url
+  description = "ECR backend repo URL. Auto-populated."
+
+  tags = {
+    Name = "youthfit-prod-meta-ecr-backend-url"
+  }
+}

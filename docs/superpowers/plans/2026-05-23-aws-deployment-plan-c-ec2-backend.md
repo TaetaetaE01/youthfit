@@ -1027,6 +1027,10 @@ data "aws_ami" "al2023" {
 # ──────────── User data (cloud-init) ────────────
 
 locals {
+  # user-data 는 EC2 의 시스템 환경(Docker + 디렉터리) 만 준비한다.
+  # deploy/ 자산(docker-compose.prod.yml, Caddyfile, fetch-secrets.sh,
+  # youthfit.service)과 컨테이너 이미지 push 는 Plan E 의 GitHub Actions
+  # 가 SSH/scp 로 EC2 에 전달하는 표준 CI/CD 패턴을 사용한다.
   user_data = <<-USERDATA
     #!/bin/bash
     set -euxo pipefail
@@ -1047,26 +1051,13 @@ locals {
       -o $DOCKER_CONFIG/cli-plugins/docker-compose
     chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
-    # 4. youthfit 디렉터리
+    # 4. youthfit 디렉터리 (deploy 자산은 Plan E 의 CI/CD 가 scp 로 도착시킴)
     mkdir -p /opt/youthfit
     mkdir -p /etc/youthfit
     chmod 700 /etc/youthfit
+    chown ec2-user:ec2-user /opt/youthfit
 
-    # 5. deploy 자산 git clone (public repo 가정)
-    git clone --depth 1 https://github.com/${var.github_owner}/${var.github_repo}.git /opt/youthfit-src
-    cp -r /opt/youthfit-src/deploy /opt/youthfit/
-    chmod +x /opt/youthfit/deploy/fetch-secrets.sh
-
-    # 6. systemd unit
-    cp /opt/youthfit/deploy/youthfit.service /etc/systemd/system/youthfit.service
-    systemctl daemon-reload
-
-    # 첫 부팅 시점에는 backend image 가 아직 ECR 에 없을 수 있음.
-    # Task 7 에서 이미지 푸시 후 수동으로 systemctl start youthfit.
-    # (자동 enable 만 해두고 start 는 안 함)
-    systemctl enable youthfit.service
-
-    echo "Bootstrap complete. Backend image push and 'systemctl start youthfit' required."
+    echo "Bootstrap complete. Docker ready. deploy/ assets pending CI delivery."
   USERDATA
 }
 
@@ -1532,6 +1523,23 @@ Expected: backend 가 사용하는 테이블 목록 (없으면 backend 의 ddl-a
 ### Task 9: EC2 에서 docker compose up + health check
 
 **Files:** (없음 — EC2 운영)
+
+> Plan C 의 user-data 는 docker 환경만 준비. deploy/ 자산은 이 Task 의 Step 0 에서 manual scp 로 보낸다. Plan E (GitHub Actions) 부터는 동일 작업이 자동화된다.
+
+- [ ] **Step 0: deploy/ 자산을 EC2 로 전송 (manual scp)**
+
+Run (로컬에서):
+
+```bash
+scp -i ~/.ssh/youthfit_prod_ed25519 -r \
+  /Users/taetaetae/IdeaProjects/youthfit/deploy \
+  ec2-user@13.124.202.15:/opt/youthfit/
+
+ssh -i ~/.ssh/youthfit_prod_ed25519 ec2-user@13.124.202.15 \
+  'chmod +x /opt/youthfit/deploy/fetch-secrets.sh && sudo cp /opt/youthfit/deploy/youthfit.service /etc/systemd/system/youthfit.service && sudo systemctl daemon-reload && sudo systemctl enable youthfit.service'
+```
+
+Expected: scp 성공, ssh 명령에서 권한 / systemd reload / enable 성공.
 
 - [ ] **Step 1: user-data 가 잘 완료됐는지 확인**
 
