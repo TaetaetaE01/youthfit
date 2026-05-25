@@ -192,7 +192,7 @@ n8n 은 자체 BasicAuth 도 켜져 있으나, Caddy 단에서도 한 번 더 �
 - **Single-AZ** (Multi-AZ 는 v1 이후)
 - **Subnet group**: 프라이빗 서브넷 2개로 구성
 - **Security group**: `youthfit-db-sg` (5432 from `youthfit-web-sg` only)
-- **Parameter group**: 커스텀 (`shared_preload_libraries=pgvector` 명시)
+- **Parameter group**: 커스텀 (`log_min_duration_statement=500`). pgvector 는 RDS trusted extension 이라 preload 불필요
 - **pgvector 확장**: 인스턴스 생성 후 `CREATE EXTENSION vector;` 수동 실행
 - **백업**: 자동 7일 보관, 매일 03:00 KST
 - **스키마 초기화**: 기존 docker-compose 의 `./db/init` 디렉터리 SQL 을 RDS 에 1회 수동 적용 (Flyway 미사용 정책 유지)
