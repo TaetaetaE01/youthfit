@@ -1482,7 +1482,9 @@ scp -i ~/.ssh/youthfit_prod_ed25519 \
   ec2-user@13.124.202.15:/tmp/ 2>/dev/null || true
 ```
 
-- [ ] **Step 7: 순서대로 적용**
+> ⚠️ **부분 적용 가능성**: YouthFit 의 init SQL 중 다수는 `policy`, `users`, `eligibility_rule`, `notification_setting`, `policy_document` 등의 **base table 위에 ALTER / CREATE INDEX / COMMENT 를 추가하는 마이그레이션**이다. base table 들은 `Flyway 미사용` 정책에 따라 JPA Hibernate 의 ddl-auto 가 backend 첫 부팅 시 만든다. 즉 backend 부팅 **전에** init SQL 을 적용하면 base table 미존재로 절반 정도가 fail 한다. 이 상태도 정상 — `ON_ERROR_STOP=1` 없이 progress 하면 self-contained SQL (예: `email_send_attempt`, `ingestion_run_log`, `qna_question_cache` 등 신규 테이블 생성과 pgvector 사용 인덱스) 은 적용되고, ALTER 의존 SQL 은 skip 된다. backend 가 한 번 부팅한 뒤 (Plan E) 같은 SQL 들을 다시 실행하면 idempotent / IF NOT EXISTS 로 잘 정리된다.
+
+- [ ] **Step 7: 순서대로 적용 (`ON_ERROR_STOP=0` — base-table 의존은 skip 되도록)**
 
 Run:
 
@@ -1812,3 +1814,17 @@ Plan D, E 가 추가하는 항목 (CloudFront, ACM, SES, Route 53 쿼리) 은 �
 **옵션 C**: 두 옵션 병행 (Plan D 진행 + 사용자 로컬에서 n8n 검증)
 
 권장: **옵션 C**. Plan D 는 프론트엔드 트래픽 받기 시작, n8n 은 백오피스용이라 직교 작업.
+
+---
+
+## 실행 후기 (2026-05-26 종료 시점)
+
+**완료**: Task 1~6 + Task 8 부분. 인프라 (ECR · SSM · IAM · EC2 · EIP · pgvector · self-contained init SQL) 까지 모두 prod 에 떠 있는 상태.
+
+**Plan E 로 미룬 항목** (사용자 의도: "클라우드만 띄우고 컨테이너는 GitHub CI/CD 로"):
+- Task 7 (로컬 docker build + ECR push) → GitHub Actions build job 으로 통합
+- Task 9 (deploy 자산 scp + systemctl start) → GitHub Actions deploy job 으로 통합
+- Task 10 (최종 검증) → Plan E end-to-end smoke 로 통합
+- Task 8 의 base-table 의존 init SQL 재적용 → Plan E 의 backend 첫 부팅 직후 step 으로 통합 ([[db-schema-init-order]])
+
+**user-data 단순화 결정**: EC2 가 GitHub repo 를 직접 clone 하는 패턴은 private repo 인증 / 갱신 복잡도가 커져서, docker 환경 준비까지만 cloud-init 으로 처리. deploy 자산 전달은 CI/CD 표준 패턴 (scp/rsync from runner) 으로.
