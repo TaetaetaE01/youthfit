@@ -3,7 +3,7 @@
 **기준일**: 2026-05-26
 **리전**: `ap-northeast-2` (서울) — ACM(us-east-1) / CloudFront / Route 53 만 글로벌
 **AWS 계정**: `379197597410`
-**상태**: Plan A+B+C(인프라)+D 완료, Plan E (CI/CD) 대기 — 트래픽 미발생 idle 상태
+**상태**: Plan A+B+C(인프라)+D 완료, Plan E (CI/CD + 서비스 가동) 대기 — 트래픽 미발생 idle 상태
 
 > 가격은 2026-05 기준 서울 리전 on-demand 표준 요금. 1개월 = 730시간(연 평균) 환산.
 > Free tier 효과는 포함하지 않은 풀가격 — 새 AWS 계정의 첫 12개월에 일부 항목 추가 절감 가능 (RDS db.t3.micro 750시간/월, S3 5GB 등).
@@ -36,7 +36,7 @@
 | 10 | Private subnet | 2개 (ap-northeast-2a/2c) | RDS subnet group |
 | 11 | Internet Gateway | 1개 | public 라우팅 |
 | 12 | Security Groups | web (22/80/443), db (5432 from web) | `sg-0bb16d435e9d3f271`, `sg-0e3edcbe2c57a58e1` |
-| 13 | NAT Gateway | **없음** (의도적 비용 절약 — 월 ~$32 절감) | n/a |
+| 13 | NAT Gateway | **없음** (의도적 비용 절약 — 시간당만으로도 월 ~$45 절감, 데이터 처리비 별도) | n/a |
 
 ## 4. 프론트엔드 / CDN
 
@@ -77,8 +77,8 @@
 | EC2 t3.small (1대) | $0.02600 | $0.624 | $4.368 | $18.98 |
 | EBS gp3 30GB | $0.00395 | $0.095 | $0.663 | $2.88 |
 | RDS db.t3.micro | $0.02600 | $0.624 | $4.368 | $18.98 |
-| RDS gp3 storage 20GB | $0.00315 | $0.076 | $0.529 | $2.30 |
-| RDS 백업 (~1GB 내 무료) | $0.00000 | $0.000 | $0.000 | $0.00 |
+| RDS gp3 storage 20GB | $0.00315 | $0.076 | $0.529 | $2.29 |
+| RDS 백업 (DB 크기 20GB까지 무료) | $0.00000 | $0.000 | $0.000 | $0.00 |
 | Elastic IP (attached) | $0.00000 | $0.000 | $0.000 | $0.00 |
 | S3 (state + web, < 1GB) | $0.00003 | $0.001 | $0.005 | $0.025 |
 | DynamoDB (idle) | $0.00001 | $0.000 | $0.001 | $0.005 |
@@ -90,9 +90,11 @@
 | SSM Standard tier | $0.00000 | $0.000 | $0.000 | $0.00 |
 | CloudWatch 기본 메트릭 | $0.00000 | $0.000 | $0.000 | $0.00 |
 | IAM | $0.00000 | $0.000 | $0.000 | $0.00 |
-| **합계 (idle)** | **~$0.0599** | **~$1.44** | **~$10.05** | **~$43.67** |
+| **합계 (idle)** | **~$0.0599** | **~$1.44** | **~$10.05** | **~$43.66** |
 
-> 참고: Plan B 종료 시 시간당 ~$0.029(월 ~$21) → Plan C 후 ~$0.056(월 ~$40) → **Plan D 후 ~$0.060(월 ~$44)**.
+> 라인별 4-5자리 반올림 누적으로 `시간당 × 730` 과 `월 합계` 사이에 ±$0.10 정도 오차가 날 수 있다. 청구 정확치는 항상 Billing 대시보드 기준.
+>
+> 참고: Plan B 종료 시 시간당 ~$0.029(월 ~$21) → Plan C 후 ~$0.054(월 ~$43) → **Plan D 후 ~$0.060(월 ~$44)**.
 
 ---
 
@@ -108,7 +110,7 @@
 | S3 web bucket (Vite build ~50MB + 버전) | 정적 자산 | ~$0.005 |
 | ECR storage (이미지 3-5GB) | backend 이미지 보관 | ~$0.40 |
 | Route 53 쿼리 (~1M/월) | DNS lookup | ~$0.40 |
-| RDS 백업 초과분 (~2GB) | 누적 후 무료 한도 초과 시 | ~$0.20 |
+| RDS 백업 (DB 가 20GB 초과 시) | 누적 후 무료 한도 초과 시 | ~$0 (현재 < 1GB, 한참 여유) |
 | EC2 outbound (작음) | API 응답 | ~$0.50 |
 | **합계 (시나리오 A)** | | **~$49.42** |
 
@@ -130,7 +132,7 @@
 - RDS db.t3.micro CPU credit 고갈 → `db.t3.small` 또는 Multi-AZ 검토 (+$20-40/월)
 - EC2 단일 인스턴스 SPoF 우려 → ALB + 2nd EC2 (+$25/월 ALB)
 
-> MVP 단계는 시나리오 A 가 목표. 시나리오 B 도달 시 모니터링 강화 (Plan F), C 도달 시 아키텍처 재검토 (spec `docs/superpowers/specs/2026-05-23-aws-deployment-design.md` 의 §9 확장 경로).
+> MVP 단계는 시나리오 A 가 목표. 시나리오 B 도달 시 모니터링 강화 (Plan F), C 도달 시 아키텍처 재검토 (관련 설계 spec 은 후속 PR 에서 합류).
 
 ---
 
@@ -314,7 +316,7 @@
 | VPC Peering | 0.01/GB (cross-AZ) | 0 | $0 |
 | Transit Gateway | $0.07/시간 + $0.02/GB | 0 | $0 |
 
-- NAT Gateway 회피 = 월 ~$32 절감 (NAT 의 시간당 비용만으로도 $45/월)
+- NAT Gateway 회피 = 월 ~$45 절감 (시간당 $0.062 × 730h = $45.26, 데이터 처리비 $0.045/GB 별도)
 - private subnet 의 RDS 는 인터넷 접근 불필요해서 NAT 안 둠
 
 ### 16. 데이터 전송 (Cross-AZ / Cross-Region / Internet)
@@ -348,7 +350,7 @@ S3 / DynamoDB        $0.03
 
 ## 비용 최적화 메모
 
-- ✅ **NAT Gateway 없음**: 월 ~$32 절감 (RDS 가 인터넷 불필요, EC2 는 public subnet 직접)
+- ✅ **NAT Gateway 없음**: 월 ~$45 절감 (RDS 가 인터넷 불필요, EC2 는 public subnet 직접)
 - ✅ **CloudFront PriceClass_200**: 남미/아프리카 제외, ~10-15% 절감
 - ✅ **RDS Single-AZ**: Multi-AZ 대비 50% 절감 (~$15/월). MVP 단계 허용
 - ✅ **ALB 없음**: Caddy on EC2 로 TLS 직접 처리, 월 ~$20 절감
@@ -375,19 +377,24 @@ S3 / DynamoDB        $0.03
 | 일자 | 변경 | 시간당 변화 | 월 변화 |
 |------|------|------------:|--------:|
 | 2026-05-23 | Plan A 종료 (인프라 자원 없음) | $0 | $0 |
-| 2026-05-23 | Plan B 종료 (VPC + RDS) | +$0.029 | +$21 |
-| 2026-05-26 | Plan C 종료 (EC2 추가) | +$0.027 | +$19 |
-| **2026-05-26** | **Plan D 종료 (S3/CF/Route53/ACM)** | **+$0.004** | **+$3** |
-| (예정) | Plan E 종료 (서비스 가동) | +$5-10 트래픽 따라 | +$5-25 |
+| 2026-05-23 | Plan B 종료 (VPC + RDS + storage) | +$0.0291 | +$21.27 |
+| 2026-05-26 | Plan C 종료 (EC2 + EBS root 30GB 추가) | +$0.0300 | +$21.86 |
+| **2026-05-26** | **Plan D 종료 (S3/CF/Route53/ACM)** | **+$0.0008** | **+$0.53** |
+| (예정) | Plan E 종료 (CI/CD + 서비스 가동) | +$5-10 트래픽 따라 | +$5-25 |
 
 ---
 
 ## 관련 문서
 
-- 인프라 설계: [`docs/superpowers/specs/2026-05-23-aws-deployment-design.md`](../superpowers/specs/2026-05-23-aws-deployment-design.md)
-- Plan A: prereqs (manual)
-- Plan B: [`docs/superpowers/plans/2026-05-23-aws-deployment-plan-b-network-db.md`](../superpowers/plans/2026-05-23-aws-deployment-plan-b-network-db.md)
-- Plan C: [`docs/superpowers/plans/2026-05-23-aws-deployment-plan-c-ec2-backend.md`](../superpowers/plans/2026-05-23-aws-deployment-plan-c-ec2-backend.md)
-- Plan D: [`docs/superpowers/plans/2026-05-23-aws-deployment-plan-d-frontend-domain.md`](../superpowers/plans/2026-05-23-aws-deployment-plan-d-frontend-domain.md)
+> 다음 문서들은 후속 PR 에서 같은 저장소에 합류 예정. 현재 main 에는 아직 없음.
+>
+> - 인프라 설계 spec: `docs/superpowers/specs/2026-05-23-aws-deployment-design.md` _(후속 PR)_
+> - Plan A (prereqs, manual): n/a
+> - Plan B (VPC + RDS): `docs/superpowers/plans/2026-05-23-aws-deployment-plan-b-network-db.md` _(후속 PR)_
+> - Plan C (EC2 + Caddy + ECR + SSM): `docs/superpowers/plans/2026-05-23-aws-deployment-plan-c-ec2-backend.md` _(후속 PR)_
+> - Plan D (S3 + CloudFront + ACM + Route 53): `docs/superpowers/plans/2026-05-23-aws-deployment-plan-d-frontend-domain.md` _(후속 PR)_
+> - Terraform code: `infra/terraform/` _(후속 PR)_
+
+이미 main 에 있는 참조 문서:
 - 운영 환경 변수: [`docs/OPS.md`](../OPS.md)
-- Terraform code: [`infra/terraform/`](../../infra/terraform/)
+- 아키텍처: [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
