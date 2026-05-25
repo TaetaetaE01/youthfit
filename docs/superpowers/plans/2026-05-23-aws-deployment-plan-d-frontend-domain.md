@@ -869,3 +869,25 @@ Plan D 추가 비용: 월 ~$2 (CloudFront + Route 53 쿼리 대부분).
 **옵션 B**: 사용자가 로컬 n8n E2E 테스트 → 별도 Plan C-bis 로 n8n 만 prod 에 추가 ([[n8n-deployment-deferred]])
 
 **옵션 C**: 두 옵션 병행
+
+---
+
+## 실행 후기 (2026-05-26 종료 시점)
+
+**완료**: Task 1~6 전부. 인프라 5종 (ACM cert + S3 + CloudFront + bucket policy + Route 53) 모두 prod 에 배포.
+
+**핵심 식별자**:
+- ACM ARN: `arn:aws:acm:us-east-1:379197597410:certificate/ffc1b511-ded9-465f-9370-df7cb071cf69` (ISSUED, 만료 2026-12-09)
+- S3 bucket: `youthfit-web-prod`
+- CloudFront: `E117R7JX6SV3LC` (`d1z1wyrsupsvug.cloudfront.net`)
+- Frontend URL: https://youthfit.xyz, https://www.youthfit.xyz (S3 비어있어 403 응답 — 라우팅 정상)
+- API DNS: api.youthfit.xyz → 13.124.202.15 (Caddy TLS 발급은 backend 가동 후, Plan E)
+
+**중간 발생 이슈**: EC2 의 `associate_public_ip_address` drift. ec2.tf 가 `false` 인데 actual state 가 `true`. AWS 가 public subnet 의 인스턴스에 자동 public IP 를 붙이고 EIP 로 덮어쓰는 형태가 영구 drift 로 잡힘. `lifecycle.ignore_changes` 에 추가해 해소 (commit `02eab43`).
+
+**Plan E 로 미룬 항목**:
+- Vite build artifact 를 S3 sync + CloudFront invalidation → GitHub Actions frontend-deploy job
+- backend 이미지 build/push, deploy 자산 scp, systemctl start → GitHub Actions backend-deploy job
+- backend 첫 부팅 후 base-table 의존 init SQL 재적용 ([[db-schema-init-order]])
+- SES `mail.youthfit.xyz` 도메인 검증 + sandbox 해제 신청
+- Caddy 가 Let's Encrypt 로 `api.youthfit.xyz` 인증서 자동 발급 (DNS 가 이미 EIP 가리키므로 backend 가동 시 자동 통과)
