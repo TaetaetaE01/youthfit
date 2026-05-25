@@ -43,3 +43,31 @@ resource "aws_s3_bucket_ownership_controls" "web" {
     object_ownership = "BucketOwnerEnforced"
   }
 }
+
+# ──────────── Bucket policy: CloudFront OAC GetObject 만 허용 ────────────
+
+data "aws_iam_policy_document" "web_oac" {
+  statement {
+    sid     = "AllowCloudFrontOACRead"
+    effect  = "Allow"
+    actions = ["s3:GetObject"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    resources = ["${aws_s3_bucket.web.arn}/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.web.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "web" {
+  bucket = aws_s3_bucket.web.id
+  policy = data.aws_iam_policy_document.web_oac.json
+}
