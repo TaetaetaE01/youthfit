@@ -204,15 +204,11 @@ resilience4j:
       openai-chat:
         max-attempts: 3
         wait-duration: 2s
-        exponential-backoff-multiplier: 2.0
-        randomized-wait-factor: 0.5
         retry-exceptions:
           - com.youthfit.common.exception.RetryableOpenAiException
       openai-embedding:
         max-attempts: 3
         wait-duration: 2s
-        exponential-backoff-multiplier: 2.0
-        randomized-wait-factor: 0.5
         retry-exceptions:
           - com.youthfit.common.exception.RetryableOpenAiException
 

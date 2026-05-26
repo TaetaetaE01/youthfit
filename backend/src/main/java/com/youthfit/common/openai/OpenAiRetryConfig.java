@@ -2,7 +2,7 @@ package com.youthfit.common.openai;
 
 import io.github.resilience4j.common.retry.configuration.RetryConfigCustomizer;
 import io.github.resilience4j.core.IntervalBiFunction;
-import io.github.resilience4j.core.functions.Either;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,24 +13,26 @@ import org.springframework.context.annotation.Configuration;
  * Resilience4j 의 RetryConfigCustomizer 로 instance 별 커스터마이즈.
  */
 @Configuration
+@RequiredArgsConstructor
 public class OpenAiRetryConfig {
 
-    @Bean
-    public RetryConfigCustomizer openAiChatRetryCustomizer(RetryAfterIntervalFunction fn) {
-        IntervalBiFunction<Object> intervalFn = buildIntervalFn(fn);
-        return RetryConfigCustomizer.of("openai-chat", builder -> builder.intervalBiFunction(intervalFn));
-    }
+    private final RetryAfterIntervalFunction fn;
 
     @Bean
-    public RetryConfigCustomizer openAiEmbeddingRetryCustomizer(RetryAfterIntervalFunction fn) {
-        IntervalBiFunction<Object> intervalFn = buildIntervalFn(fn);
-        return RetryConfigCustomizer.of("openai-embedding", builder -> builder.intervalBiFunction(intervalFn));
-    }
-
     @SuppressWarnings("unchecked")
-    private IntervalBiFunction<Object> buildIntervalFn(RetryAfterIntervalFunction fn) {
-        return (attempt, eitherResultOrException) -> {
-            Throwable t = ((Either<Throwable, Object>) eitherResultOrException).getLeft();
+    public RetryConfigCustomizer openAiChatRetryCustomizer() {
+        return RetryConfigCustomizer.of("openai-chat", builder -> builder.intervalBiFunction(buildIntervalFn()));
+    }
+
+    @Bean
+    @SuppressWarnings("unchecked")
+    public RetryConfigCustomizer openAiEmbeddingRetryCustomizer() {
+        return RetryConfigCustomizer.of("openai-embedding", builder -> builder.intervalBiFunction(buildIntervalFn()));
+    }
+
+    private IntervalBiFunction<Object> buildIntervalFn() {
+        return (attempt, either) -> {
+            Throwable t = either.isLeft() ? either.getLeft() : null;
             return fn.apply(attempt, t);
         };
     }
