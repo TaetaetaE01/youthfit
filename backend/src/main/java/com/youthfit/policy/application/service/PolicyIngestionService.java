@@ -1,10 +1,13 @@
 package com.youthfit.policy.application.service;
 
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyApplyMethod;
 import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.model.PolicyReferenceSite;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.SourceType;
@@ -143,6 +146,13 @@ public class PolicyIngestionService {
         policySourceRepository.save(policySource);
 
         return PolicyIngestionResult.registered(savedPolicy.getId());
+    }
+
+    public void applyEnrichment(Long policyId, PolicyEnrichment enrichment) {
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "정책을 찾을 수 없습니다: " + policyId));
+        policy.replaceEnrichment(enrichment);
+        policyRepository.save(policy);
     }
 
     private List<PolicyAttachment> toAttachments(List<RegisterPolicyCommand.Attachment> attachments) {

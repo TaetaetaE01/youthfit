@@ -1,9 +1,12 @@
 package com.youthfit.policy.application.service;
 
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.EnrichmentStatus;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
@@ -23,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -130,6 +134,38 @@ class PolicyIngestionServiceTest {
 
             assertThat(result.outcome()).isEqualTo(PolicyIngestionResult.Outcome.SKIPPED_DUPLICATE);
             assertThat(result.policyId()).isEqualTo(22L);
+        }
+    }
+
+    @Nested
+    @DisplayName("applyEnrichment — force-enrich 결과 반영")
+    class ApplyEnrichment {
+
+        @Test
+        @DisplayName("존재하는 정책의 enrichment 를 교체하고 저장한다")
+        void replacesEnrichmentAndSaves() {
+            Policy policy = org.mockito.Mockito.mock(Policy.class);
+            given(policyRepository.findById(101L)).willReturn(Optional.of(policy));
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    "https://example.com/source", null, "test-extractor",
+                    0.8, EnrichmentStatus.OK, null, null, null);
+
+            policyIngestionService.applyEnrichment(101L, enrichment);
+
+            verify(policy).replaceEnrichment(enrichment);
+            verify(policyRepository).save(policy);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 정책이면 YouthFitException 을 던지고 저장하지 않는다")
+        void throwsWhenPolicyMissing() {
+            given(policyRepository.findById(999L)).willReturn(Optional.empty());
+            PolicyEnrichment enrichment = new PolicyEnrichment(
+                    null, null, null, null, null, null, null, null);
+
+            assertThatThrownBy(() -> policyIngestionService.applyEnrichment(999L, enrichment))
+                    .isInstanceOf(YouthFitException.class);
+            verify(policyRepository, never()).save(any());
         }
     }
 
