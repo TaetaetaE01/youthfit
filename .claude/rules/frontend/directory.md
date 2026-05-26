@@ -14,7 +14,9 @@ src/
 │   ├── ui/         # shadcn/ui 원자 컴포넌트
 │   └── {domain}/   # 도메인별 컴포넌트 그룹
 ├── types/          # TypeScript 타입 (도메인별 파일)
-└── lib/            # 유틸리티 (cn, constants, format, token)
+├── lib/            # 유틸리티 (cn, constants, format, token)
+├── assets/         # 이미지·폰트 등 정적 자원
+└── test/           # 테스트 셋업·헬퍼
 ```
 
 ## 컴포넌트 규칙

@@ -29,9 +29,11 @@ youthfit/
 - `eligibility` 규칙 기반 적합도 판정
 - `guide` 구조화된 AI 가이드 콘텐츠 생성
 - `ingestion` n8n·외부 수집 파이프라인 수신
+- `metrics` LLM API 호출 비용 추적·사용량 집계
 - `policy` 정책 도메인·정규화·중복 제거
 - `qna` 정책 Q&A·스트리밍 응답
 - `rag` 임베딩·청크 분할·벡터 조회
+- `region` 지역 조건 매핑·지역 정보 조회
 - `user` 프로필·북마크·알림
 
 ### 프론트엔드 주요 영역

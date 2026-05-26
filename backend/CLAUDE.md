@@ -27,8 +27,9 @@ cd backend
 - `admin` 어드민 도구 / `auth` 카카오 로그인+JWT
 - `common` 공통 / `eligibility` 적합도 판정
 - `guide` AI 가이드 / `ingestion` 외부 수집 수신
-- `policy` 정책 도메인 / `qna` Q&A 스트리밍
-- `rag` 임베딩·청크 / `user` 프로필·북마크·알림
+- `metrics` LLM 비용·사용량 / `policy` 정책 도메인
+- `qna` Q&A 스트리밍 / `rag` 임베딩·청크
+- `region` 지역 매핑·조회 / `user` 프로필·북마크·알림
 
 ## 모듈 내부 레이어 구조
 ```
