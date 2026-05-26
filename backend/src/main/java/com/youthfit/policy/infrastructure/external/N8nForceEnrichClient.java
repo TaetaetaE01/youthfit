@@ -2,6 +2,7 @@ package com.youthfit.policy.infrastructure.external;
 
 import com.youthfit.policy.application.port.ForceEnrichTrigger;
 import com.youthfit.policy.domain.model.PolicyReferenceSite;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -20,6 +21,7 @@ public class N8nForceEnrichClient implements ForceEnrichTrigger {
     private final String webhookUrl;
     private final String apiKey;
 
+    @Autowired
     public N8nForceEnrichClient(@Value("${n8n.force-enrich-webhook-url}") String webhookUrl,
                                 @Value("${youthfit.internal.api-key}") String apiKey,
                                 @Value("${n8n.force-enrich.connect-timeout-seconds:5}") int connectTimeoutSeconds,
