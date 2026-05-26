@@ -2,7 +2,7 @@
 
 > **버전**: v0 (MVP)
 > **최종 갱신**: 2026-04-13
-> **작성 기준**: `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/OPS.md` 및 구현 코드
+> **작성 기준**: `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `.claude/rules/backend/`, `docs/OPS.md` 및 구현 코드
 
 ---
 
@@ -1013,7 +1013,7 @@ Content-Type: application/json
 |------|------|------|
 | 제품 전략 | `docs/PRODUCT.md` | 제품 목표, 타겟, 적합도·Q&A 원칙 |
 | 아키텍처 | `docs/ARCHITECTURE.md` | 모듈 경계, 레이어 규칙, 외부 연동 |
-| 코드 컨벤션 | `docs/CONVENTIONS.md` | 네이밍, DTO, 예외 처리 규칙 |
+| 코드 컨벤션 | `.claude/rules/backend/` | 네이밍, DTO, 예외 처리 규칙 |
 | 운영 가이드 | `docs/OPS.md` | 환경 변수, 배포, 비용 방어 |
 
 ### 기술 스택
