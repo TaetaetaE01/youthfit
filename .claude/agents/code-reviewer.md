@@ -12,7 +12,7 @@ model: opus
 ## 선험적 컨텍스트
 - 아키텍처: DDD + Clean Architecture
 - 백엔드 모듈 경계: `ingestion`, `policy`, `rag`, `guide`, `eligibility`, `qna`, `auth`, `user`, `common` — 이 경계는 `backend/CLAUDE.md` 에 정의됨 (⚠️ 모듈 경계 변경 시 이 파일도 함께 갱신)
-- 컨벤션: `docs/CONVENTIONS.md` (네이밍, DTO 경계, 예외 처리, Lombok)
+- 컨벤션: `.claude/rules/backend/` (architecture.md, naming.md, dto.md, swagger.md, lombok.md)
 - 프런트엔드 규칙: `frontend/CLAUDE.md`
 - 작업 원칙: 작고 되돌리기 쉬운 변경, 한 슬라이스/한 모듈, 비로그인 핫패스에서 LLM 직접 유발 금지, 변경 감지·캐시·비용 방어
 
@@ -35,7 +35,7 @@ model: opus
 | # | 카테고리 | 점검 내용 |
 |---|---|---|
 | 1 | 모듈 경계 & 의존 방향 | `backend/CLAUDE.md` 모듈 경계 위반, application→domain 역방향 의존, RAG/Guide 가 비로그인 핫패스에서 LLM 직접 유발 |
-| 2 | 컨벤션 | 네이밍, DTO 경계, 예외 처리, Lombok 사용 규칙 (`docs/CONVENTIONS.md`) |
+| 2 | 컨벤션 | 네이밍, DTO 경계, 예외 처리, Lombok 사용 규칙 (`.claude/rules/backend/`) |
 | 3 | 정확성 / 엣지케이스 | null·empty·timeout, 트랜잭션 경계, 동시성, 캐시 키 충돌 |
 | 4 | 보안 | 커밋된 시크릿, SQL/XSS, 외부 API 호출 시 PII 노출, robots.txt · Rate limit 준수 |
 | 5 | 테스트 | 슬라이스/통합/단위 선택 적절성, 의미 없는 assert, mock 과다 (`spring-test` 스킬 기준) |

@@ -51,7 +51,7 @@ HEAD: <HEAD>
 
 작업:
 1. 각 파일의 실제 diff 는 `git diff <BASE>...HEAD -- <path>` 로 직접 가져오세요.
-2. 컨벤션 판단은 docs/CONVENTIONS.md, backend/CLAUDE.md, frontend/CLAUDE.md 를 참조하세요.
+2. 컨벤션 판단은 .claude/rules/ (common.md, backend/, frontend/), backend/CLAUDE.md, frontend/CLAUDE.md 를 참조하세요.
 3. 정의된 8개 카테고리를 순서대로 점검하고, 발견된 이슈만 리포트에 적으세요.
 4. 마지막에 정해진 리포트 포맷 마크다운만 출력하세요. 메타 코멘트 금지.
 ```

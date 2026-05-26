@@ -32,7 +32,7 @@
 ## 토큰 비용 가드 (cost-guard) — 🚨 local 활성 중
 - **현재 상태**: local profile 에 `POLICY_ALLOWLIST=7,30` default. 정책 7·30 외 ingestion 자동 LLM/임베딩 호출 모두 skip.
 - **prod 영향**: 0 (prod default 빈 값 = 전체 허용).
-- **해제 절차 + 체크리스트**: `docs/superpowers/operations/2026-04-29-cost-guard-active.md`
+- **해제 절차 + 체크리스트**: `docs/runbooks/2026-04-29-cost-guard-active.md`
 - 환경변수 override: `POLICY_ALLOWLIST=` (빈 값 → 전체 허용) 또는 `POLICY_ALLOWLIST=7,30,42` (추가).
 
 ## 수집 운영 원칙

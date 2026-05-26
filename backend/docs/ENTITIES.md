@@ -285,5 +285,5 @@ LegalDong  ◄── Policy.regionCode
 
 ## 10. 참고
 - 모듈 경계·의존 방향: `docs/ARCHITECTURE.md`
-- DTO/Controller/Service 컨벤션: `docs/CONVENTIONS.md`, `backend/CLAUDE.md`
+- DTO/Controller/Service 컨벤션: `.claude/rules/backend/` (dto.md, swagger.md, lombok.md), `backend/CLAUDE.md`
 - 제품 관점의 필드 의미(특히 적합도 프로필 필드): `docs/PRODUCT.md`, `docs/PRD.md`

@@ -64,7 +64,6 @@ com.youthfit/
 ├── rag/            # 임베딩, 청크 분할, 벡터 조회
 ├── qna/            # 정책 Q&A, SSE 스트리밍 응답
 ├── ingestion/      # n8n 외부 수집 파이프라인 수신
-├── admin/          # 운영 대시보드 신호 집계, RAG 파라미터 미리보기
 ├── metrics/        # LLM 비용 추적 및 사용량 집계
 ├── region/         # 지역 정보 조회 및 매핑
 └── common/         # 공통 설정, 예외, 유틸

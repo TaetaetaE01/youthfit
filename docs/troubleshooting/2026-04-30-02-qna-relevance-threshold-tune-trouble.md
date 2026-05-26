@@ -95,7 +95,7 @@
   → 0.4 였다면 0건, 0.7 에서는 4건 채택. 임계값 결정 근거 로그로 잡힘.
 - 회귀 위험:
   - 0.7 이 너무 관대하면 무관한 청크가 답변에 섞일 가능성 → 답변 품질 모니터링이 필요.
-  - 운영 메트릭 도입은 후속(`docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` §4
+  - 운영 메트릭 도입은 후속(`docs/runbooks/2026-04-30-qna-v0-ready-runbook.md` §4
     참조).
 
 ## 7. 후속 / 미결 (Follow-ups)
@@ -109,5 +109,5 @@
 ## 8. 참고 (References)
 
 - 관련 spec: `docs/superpowers/specs/DONE_2026-04-30-qna-v0-ready-design.md` §4.6 ("운영 데이터로 조정")
-- 관련 운영 노트: `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` §4
+- 관련 운영 노트: `docs/runbooks/2026-04-30-qna-v0-ready-runbook.md` §4
 - 임베딩 모델: OpenAI `text-embedding-3-small` (한국어), pgvector cosine distance

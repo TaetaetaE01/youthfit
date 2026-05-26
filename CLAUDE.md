@@ -2,98 +2,73 @@
 
 ## 프로젝트
 - **이름**: YouthFit
-- **목표**: 흩어진 청년 정책 정보를 한곳에 모으고, 쉬운 설명·가벼운 적합도 판정·출처 기반 Q&A를 통해 사용자가 자격 요건, 준비사항, 다음 행동을 이해할 수 있도록 돕는다.
-- **포지셔닝**: YouthFit은 공식 정책 포털을 대체하지 않는다. 정책을 더 쉽게 찾고 이해하도록 돕고, 최종 신청은 공식 신청 채널로 연결하는 보완형 서비스다.
+- **목표**: 흩어진 청년 정책 정보를 한곳에 모으고, 쉬운 설명·가벼운 적합도 판정·출처 기반 Q&A 를 통해 사용자가 자격 요건, 준비사항, 다음 행동을 이해할 수 있도록 돕는다.
+- **포지셔닝**: YouthFit 은 공식 정책 포털을 대체하지 않는다. 정책을 더 쉽게 찾고 이해하도록 돕고, 최종 신청은 공식 신청 채널로 연결하는 보완형 서비스다.
 
-## MVP 범위
-### v0에 포함
-- 정책 목록 / 상세 / 키워드 검색
-- 카카오 소셜 로그인
-- 사용자 프로필 관리
-- 적합도 판정
-- RAG 기반 정책 Q&A
-- 북마크
-- 이메일 알림 (북마크 정책 마감일 + 적합도 기반 맞춤 정책 추천)
-
-### v0에서 제외
-- 커뮤니티, 댓글, 평점
-- 모바일 앱 및 푸시 알림
-- 관리자 대시보드
-- 하이브리드 검색
-- 이벤트 드리븐 아키텍처
-- 초기 크롤링 파이프라인을 제외한 외부 공개 API 연동
+## MVP (v0) 범위
+**포함**: 정책 목록·상세·검색, 카카오 로그인, 프로필, 적합도 판정, RAG Q&A, 북마크, 이메일 알림
+**제외**: 커뮤니티·평점, 모바일 앱·푸시, 관리자 대시보드, 하이브리드 검색, 이벤트 드리븐 아키텍처, 외부 공개 API 연동 (초기 크롤링 제외)
 
 ## 프로젝트 구조
 ```
 youthfit/
-├── CLAUDE.md              # 공통 규칙 (이 파일)
-├── backend/               # Spring Boot 백엔드
-│   ├── CLAUDE.md          # 백엔드 전용 규칙
-│   └── src/
-├── frontend/              # React 프론트엔드
-│   ├── CLAUDE.md          # 프론트엔드 전용 규칙
-│   └── src/
-├── docs/                  # 프로젝트 문서
-├── docker-compose.yml
+├── CLAUDE.md              # 공통 지침 (이 파일)
+├── .claude/rules/         # 컨벤션 (공통 + backend/ + frontend/)
+├── backend/               # Spring Boot — backend/CLAUDE.md, backend/docs/
+├── frontend/              # React — frontend/CLAUDE.md, frontend/docs/
+├── docs/                  # 공통 제품·아키텍처 문서
 └── n8n/                   # 워크플로우 설정
 ```
 
 ## 모듈 경계
 
 ### 백엔드 모듈
-- `admin`: 어드민 도구 (정책 enrichment 리뷰, RAG 미리보기, 이메일 로그, Q&A 캐시, LLM 비용, ingestion 헬스, 지통실 대시보드)
-- `ingestion`: n8n 및 외부 수집 파이프라인에서 원천 데이터를 수신
-- `policy`: 정책 도메인, 정규화, 중복 제거
-- `rag`: 임베딩, 청크 분할, 벡터 조회
-- `guide`: 구조화된 AI 가이드 콘텐츠 생성
-- `eligibility`: 규칙 기반 적합도 판정
-- `qna`: 정책 Q&A, 스트리밍 응답
-- `auth`: 소셜 로그인, JWT 발급·갱신·검증
-- `user`: 프로필, 북마크, 알림
-- `common`: 공통 유틸과 횡단 관심사
+- `admin` 어드민 도구 (정책 enrichment 리뷰, RAG 미리보기, 이메일 로그, Q&A 캐시, LLM 비용, ingestion 헬스, 대시보드)
+- `auth` 카카오 OAuth + JWT
+- `common` 공통 유틸·횡단 관심사
+- `eligibility` 규칙 기반 적합도 판정
+- `guide` 구조화된 AI 가이드 콘텐츠 생성
+- `ingestion` n8n·외부 수집 파이프라인 수신
+- `metrics` LLM API 호출 비용 추적·사용량 집계
+- `policy` 정책 도메인·정규화·중복 제거
+- `qna` 정책 Q&A·스트리밍 응답
+- `rag` 임베딩·청크 분할·벡터 조회
+- `region` 지역 조건 매핑·지역 정보 조회
+- `user` 프로필·북마크·알림
 
 ### 프론트엔드 주요 영역
-- 정책 탐색 (목록, 상세, 검색)
-- 인증 (카카오 로그인, 토큰 관리)
-- 사용자 (프로필, 북마크, 알림 설정)
-- 적합도 판정 UI
-- Q&A 스트리밍 UI
+- 정책 탐색 (목록·상세·검색) / 인증 (카카오·토큰) / 사용자 (프로필·북마크·알림) / 적합도 판정 UI / Q&A 스트리밍 UI
 
-## 연동 규칙
-- n8n은 여러 도메인 엔드포인트를 직접 호출하지 말고, 작은 내부 수신 표면만 통해 백엔드와 통신한다.
-- LLM 및 임베딩 호출에는 변경 감지, 캐시, 비용 방어 장치를 둔다.
-- 비로그인 사용자 핫패스에서 비싼 LLM 생성을 직접 유발하지 않는다.
-- 비밀값은 절대 커밋하지 않는다.
+## 컨벤션 (반드시 따른다)
+@.claude/rules/common.md
 
-## 크롤링 및 소스 처리
-- 가능한 범위에서 `robots.txt` 및 출처 정책을 준수한다.
-- 식별 가능한 User-Agent를 사용한다.
-- Rate limit을 적용하고 보수적으로 수집한다.
-- 요약이나 인용으로 충분한 경우 원문 전체를 그대로 노출하지 않는다.
-
-## 작업 방식
-- 작고 되돌리기 쉬운 변경을 선호한다.
-- 한 번에 하나의 기능 슬라이스 또는 하나의 모듈 경계만 수정한다.
-- 여러 모듈에 걸치는 변경이면 먼저 아키텍처 문서를 갱신한다.
-- 요구사항이 불명확하면 가정을 명시한다.
-- **각 작업(태스크)이 완료되면 반드시 빌드/타입체크 확인 후 커밋한다.** 커밋 메시지는 Conventional Commits 형식(`feat:`, `fix:`, `refactor:`, `chore:`, `docs:` 등)을 따른다.
+- 백엔드 코드 수정 전 → `backend/CLAUDE.md` (모듈 진입 시 자동 로드, `.claude/rules/backend/` 5 개 파일을 `@` 참조함)
+- 프론트엔드 코드 수정 전 → `frontend/CLAUDE.md` (모듈 진입 시 자동 로드, `.claude/rules/frontend/` 3 개 파일을 `@` 참조함)
 
 ## 문서 맵
-- `docs/PRODUCT.md`: 제품 목표, 타겟 사용자, MVP 범위, 정책 해석 원칙
-- `docs/ARCHITECTURE.md`: 모듈 경계, 레이어 규칙, 데이터 흐름, 인프라 설계
-- `docs/CONVENTIONS.md`: 네이밍, DTO 경계, 예외 처리, Lombok 및 코드 스타일 규칙
-- `docs/OPS.md`: 환경 변수, 배포 노트, 시크릿 관리, 운영 안전장치
-- `docs/PRD.md`: 상세 기능 요구사항
-- `backend/CLAUDE.md`: 백엔드 전용 아키텍처 및 코드 규칙
-- `frontend/CLAUDE.md`: 프론트엔드 전용 기술 스택 및 코드 규칙
+| 위치 | 내용 |
+|------|------|
+| `docs/PRODUCT.md` | 제품 목표·타겟·정책 해석 원칙 |
+| `docs/ARCHITECTURE.md` | 모듈 경계·레이어·데이터 흐름·인프라 |
+| `docs/PRD.md` | 상세 기능 요구사항 (통합본) |
+| `docs/prd/` | 도메인별 PRD (분할판, 활성화 시점에 사용) |
+| `docs/OPS.md` | 환경변수·배포·시크릿·운영 안전장치 |
+| `docs/ops/cost-snapshot.md` | AWS prod 인프라 비용 스냅샷 |
+| `docs/runbooks/` | 배포 전 절차·운영 활성 상태 메모 |
+| `docs/troubleshooting/` | 백/프/인프라 디버깅 회고 |
+| `docs/superpowers/` | brainstorming → spec → plan 사이클 산출물 |
+| `backend/docs/ENTITIES.md` | JPA 엔티티·스키마 레퍼런스 |
+| `backend/docs/INGESTION_PIPELINE.md` | n8n → DB 적재 파이프라인 |
+| `backend/docs/CONTENT_GENERATION_FLOW.md` | 가이드·룰·RAG·Q&A 이벤트 흐름 |
+| `frontend/docs/DESIGN.md` | 디자인 토큰 (컬러·타이포·간격) |
 
 ## 수정 전에 읽기
-- 패키지 구조, 서비스 경계, 의존 방향을 바꾸기 전에는 `docs/ARCHITECTURE.md`를 읽는다.
-- Controller, DTO, Service, Entity를 추가하기 전에는 `docs/CONVENTIONS.md`와 `backend/CLAUDE.md`를 읽는다.
-- 프론트엔드 컴포넌트, 페이지, API 연동을 추가하기 전에는 `frontend/CLAUDE.md`를 읽는다.
-- 적합도 로직이나 사용자에게 보이는 해석 방식을 바꾸기 전에는 `docs/PRODUCT.md`와 `docs/ARCHITECTURE.md`를 읽는다.
-- 크롤링, 배포, 시크릿 관련 설정을 바꾸기 전에는 `docs/OPS.md`를 읽는다.
-- 기능을 구현하기 전에는 `docs/PRD.md`를 읽는다.
+- 모듈 경계·의존 방향 변경 → `docs/ARCHITECTURE.md`
+- 새 기능 구현 → `docs/PRD.md` (또는 활성화된 경우 `docs/prd/0X-<domain>.md`)
+- 사용자 해석 방식 변경 → `docs/PRODUCT.md`
+- 크롤링·배포·시크릿 → `docs/OPS.md`
+- 백엔드 코드 → `backend/CLAUDE.md` + 관련 `backend/docs/*`
+- 프론트엔드 코드 → `frontend/CLAUDE.md` + `frontend/docs/DESIGN.md`
 
 ## Claude Code 기능 관련 메모
 - **Plan Mode** 는 큰 리팩토링이나 위험한 변경 전에 읽기 중심으로 범위를 파악하고 계획을 세울 때 유용하다.
