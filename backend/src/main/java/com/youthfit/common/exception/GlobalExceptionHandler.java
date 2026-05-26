@@ -26,6 +26,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(code.getCode(), e.getMessage()));
     }
 
+    @ExceptionHandler(RetryableOpenAiException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRetryableOpenAi(RetryableOpenAiException e) {
+        log.warn("RetryableOpenAiException: retries exhausted", e.getCause());
+        ErrorCode code = ErrorCode.OPENAI_TRANSIENT_FAILURE;
+        return ResponseEntity.status(code.getStatus())
+                .body(ApiResponse.error(code.getCode(), code.getMessage()));
+    }
+
     @ExceptionHandler(YouthFitException.class)
     public ResponseEntity<ApiResponse<Void>> handleYouthFitException(
             YouthFitException e, HttpServletRequest request) {

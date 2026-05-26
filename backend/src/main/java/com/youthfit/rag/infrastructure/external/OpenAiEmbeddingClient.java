@@ -13,6 +13,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import com.youthfit.common.openai.OpenAiErrorClassifier;
+import io.github.resilience4j.retry.annotation.Retry;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,15 +32,18 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
 
     private final OpenAiEmbeddingProperties properties;
     private final ApplicationEventPublisher eventPublisher;
+    private final OpenAiErrorClassifier errorClassifier;
     private final RestClient restClient = RestClient.create();
 
     @Override
+    @Retry(name = "openai-embedding")
     public float[] embed(String text) {
         List<float[]> results = embedBatch(List.of(text));
         return results.get(0);
     }
 
     @Override
+    @Retry(name = "openai-embedding")
     public List<float[]> embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
             return List.of();
@@ -48,13 +55,21 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
                 "dimensions", properties.getDimensions()
         );
 
-        JsonNode response = restClient.post()
-                .uri(EMBEDDINGS_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + properties.getApiKey())
-                .body(requestBody)
-                .retrieve()
-                .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = restClient.post()
+                    .uri(EMBEDDINGS_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + properties.getApiKey())
+                    .body(requestBody)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientException e) {
+            log.warn("OpenAI Embedding API 호출 실패 (분류 → retry 판정): status={}, msg={}",
+                    e instanceof RestClientResponseException rce ? rce.getStatusCode() : "n/a",
+                    e.getMessage());
+            throw errorClassifier.classify(e);
+        }
 
         if (response == null || !response.has("data")) {
             log.error("OpenAI 임베딩 API 호출 실패");

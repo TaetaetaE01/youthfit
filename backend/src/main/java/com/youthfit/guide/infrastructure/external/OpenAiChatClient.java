@@ -24,6 +24,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import com.youthfit.common.openai.OpenAiErrorClassifier;
+import io.github.resilience4j.retry.annotation.Retry;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -292,6 +296,7 @@ public class OpenAiChatClient implements GuideLlmProvider {
     private final OpenAiChatProperties properties;
     private final ApplicationEventPublisher eventPublisher;
     private final TokenCounter tokenCounter;
+    private final OpenAiErrorClassifier errorClassifier;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -299,16 +304,19 @@ public class OpenAiChatClient implements GuideLlmProvider {
     private int mergeCapTokens;
 
     @Override
+    @Retry(name = "openai-chat")
     public GuideContent generateGuide(GuideGenerationInput input) {
         return callChatCompletion(SYSTEM_PROMPT, buildUserMessage(input), input.policyId());
     }
 
     @Override
+    @Retry(name = "openai-chat")
     public GuideContent regenerateWithFeedback(GuideGenerationInput input, List<String> feedbackMessages) {
         return callChatCompletion(SYSTEM_PROMPT, buildUserMessageWithFeedback(input, feedbackMessages), input.policyId());
     }
 
     @Override
+    @Retry(name = "openai-chat")
     public GuideContent generatePartialGuide(GuideGenerationInput input) {
         return callChatCompletion(
                 PARTIAL_SYSTEM_PROMPT_PREFIX + SYSTEM_PROMPT,
@@ -318,6 +326,7 @@ public class OpenAiChatClient implements GuideLlmProvider {
     }
 
     @Override
+    @Retry(name = "openai-chat")
     public GuideContent mergePartialGuides(GuideGenerationInput input, List<GuideContent> partials) {
         String userMessage = buildMergeUserMessage(input, partials);
         int total = tokenCounter.countTokens(MERGE_SYSTEM_PROMPT + userMessage, properties.getModel());
@@ -341,13 +350,22 @@ public class OpenAiChatClient implements GuideLlmProvider {
                 "response_format", buildResponseFormat()
         );
 
-        JsonNode response = restClient.post()
-                .uri(CHAT_COMPLETIONS_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + properties.getApiKey())
-                .body(requestBody)
-                .retrieve()
-                .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = restClient.post()
+                    .uri(CHAT_COMPLETIONS_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + properties.getApiKey())
+                    .body(requestBody)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientException e) {
+            log.warn("OpenAI Chat API 호출 실패 (분류 → retry 판정): policyId={}, status={}, msg={}",
+                    policyId,
+                    e instanceof RestClientResponseException rce ? rce.getStatusCode() : "n/a",
+                    e.getMessage());
+            throw errorClassifier.classify(e);
+        }
 
         if (response == null || !response.has("choices") || response.get("choices").isEmpty()) {
             log.error("OpenAI Chat API 호출 실패: policyId={}", policyId);

@@ -1,5 +1,6 @@
 package com.youthfit.rag.infrastructure.external;
 
+import com.youthfit.common.openai.OpenAiErrorClassifier;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class OpenAiEmbeddingClientMetricTest {
     void publisher_는_정상_주입된다() {
         OpenAiEmbeddingProperties props = mock(OpenAiEmbeddingProperties.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
-        OpenAiEmbeddingClient client = new OpenAiEmbeddingClient(props, publisher);
+        OpenAiEmbeddingClient client = new OpenAiEmbeddingClient(props, publisher, mock(OpenAiErrorClassifier.class));
         assertThat(client).isNotNull();
     }
 }
