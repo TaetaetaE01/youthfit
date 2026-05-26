@@ -2,6 +2,7 @@ package com.youthfit.guide.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.common.util.TokenCounter;
 import com.youthfit.guide.application.dto.command.GuideGenerationInput;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.GuideContent;
@@ -16,6 +17,7 @@ import com.youthfit.metrics.domain.model.LlmModule;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -289,8 +291,12 @@ public class OpenAiChatClient implements GuideLlmProvider {
 
     private final OpenAiChatProperties properties;
     private final ApplicationEventPublisher eventPublisher;
+    private final TokenCounter tokenCounter;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${guide.map-reduce.merge-cap-tokens:100000}")
+    private int mergeCapTokens;
 
     @Override
     public GuideContent generateGuide(GuideGenerationInput input) {
@@ -314,6 +320,13 @@ public class OpenAiChatClient implements GuideLlmProvider {
     @Override
     public GuideContent mergePartialGuides(GuideGenerationInput input, List<GuideContent> partials) {
         String userMessage = buildMergeUserMessage(input, partials);
+        int total = tokenCounter.countTokens(MERGE_SYSTEM_PROMPT + userMessage, properties.getModel());
+        if (total > mergeCapTokens) {
+            log.error("merge 호출 prompt 한도 초과: policyId={}, tokens={}, cap={}, partials={}",
+                    input.policyId(), total, mergeCapTokens, partials.size());
+            throw new YouthFitException(ErrorCode.INTERNAL_ERROR,
+                    "merge 호출 prompt 가 token cap 을 초과: policyId=" + input.policyId() + ", tokens=" + total);
+        }
         return callChatCompletion(MERGE_SYSTEM_PROMPT, userMessage, input.policyId());
     }
 
@@ -364,7 +377,10 @@ public class OpenAiChatClient implements GuideLlmProvider {
             try {
                 sb.append(objectMapper.writeValueAsString(partials.get(i))).append("\n\n");
             } catch (Exception e) {
-                log.warn("부분 가이드 직렬화 실패 (skip): policyId={}, partialIndex={}", input.policyId(), i, e);
+                log.error("부분 가이드 직렬화 실패: policyId={}, partialIndex={}",
+                        input.policyId(), i, e);
+                throw new YouthFitException(ErrorCode.INTERNAL_ERROR,
+                        "부분 가이드 직렬화 실패: policyId=" + input.policyId() + ", partialIndex=" + i);
             }
         }
         return sb.toString();
