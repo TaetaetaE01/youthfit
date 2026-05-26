@@ -29,12 +29,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, metrics
   endpoint:
     health:
       probes:
         enabled: true
       show-details: never
+  metrics:
+    distribution:
+      percentiles-histogram:
+        resilience4j.retry.calls: true
 
 jwt:
   secret: ${JWT_SECRET:default-secret-key-for-local-dev-minimum-32-bytes!!}
@@ -193,6 +197,24 @@ attachment:
   scheduler:
     fixed-delay-ms: ${ATTACHMENT_SCHEDULER_FIXED_DELAY_MS:60000}
     batch-size: ${ATTACHMENT_SCHEDULER_BATCH_SIZE:20}
+
+resilience4j:
+  retry:
+    instances:
+      openai-chat:
+        max-attempts: 3
+        wait-duration: 2s
+        exponential-backoff-multiplier: 2.0
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - com.youthfit.common.exception.RetryableOpenAiException
+      openai-embedding:
+        max-attempts: 3
+        wait-duration: 2s
+        exponential-backoff-multiplier: 2.0
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - com.youthfit.common.exception.RetryableOpenAiException
 
 ---
 spring:
