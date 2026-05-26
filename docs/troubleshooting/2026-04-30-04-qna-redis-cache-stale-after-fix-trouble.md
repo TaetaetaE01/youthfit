@@ -111,7 +111,7 @@
 
 ## 8. 참고 (References)
 
-- 운영 노트: `docs/superpowers/operations/2026-04-30-qna-v0-ready-runbook.md` §2
+- 운영 노트: `docs/runbooks/2026-04-30-qna-v0-ready-runbook.md` §2
   (Redis 캐시 무효화)
 - 같은 세션에서 함께 다룬 빈 박스 디버깅 흐름:
   - `2026-04-30-01-qna-securitycontext-virtual-thread-trouble.md`
