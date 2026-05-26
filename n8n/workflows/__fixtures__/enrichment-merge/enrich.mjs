@@ -93,6 +93,44 @@ export function absUrl(href, pageUrl) {
   return origin + '/' + href.replace(/^\.?\//, '');
 }
 
+// onclick 기반 다운로드 사이트의 진짜 GET URL 재구성 룰.
+// 같은 페이지의 모든 첨부 a 태그가 href="#" 인 경우, absUrl fallback 으로는
+// 모두 동일 URL 이 되어 seen-dedup 으로 1개만 살아남는다.
+// host 별 onclick 함수 호출 패턴을 인식해 인자로부터 GET URL 을 재구성한다.
+const ONCLICK_DOWNLOAD_RULES = [
+  {
+    host: /(^|\.)kofpi\.or\.kr$/i,
+    fnName: 'fnNotiDownload',
+    buildUrl: (origin, seq) => `${origin}/noti/download.do?fileSeq=${encodeURIComponent(seq)}`,
+  },
+];
+
+function isDummyHref(href) {
+  if (!href) return true;
+  const trimmed = href.trim();
+  return trimmed === '' || trimmed === '#' || /^javascript:/i.test(trimmed);
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function resolveOnclickUrl(onclick, pageUrl) {
+  if (!onclick) return null;
+  const m = pageUrl.match(/^(https?:\/\/([^/]+))/);
+  if (!m) return null;
+  const origin = m[1];
+  const host = m[2];
+  for (const rule of ONCLICK_DOWNLOAD_RULES) {
+    if (!rule.host.test(host)) continue;
+    const fnRe = new RegExp('\\b' + escapeRegExp(rule.fnName) + "\\s*\\(\\s*['\"]([^'\"]+)['\"]\\s*\\)");
+    const am = onclick.match(fnRe);
+    if (!am) continue;
+    return rule.buildUrl(origin, am[1]);
+  }
+  return null;
+}
+
 export async function extractCleanedAndAttachments(rawHtml, pageUrl) {
   const cheerio = await getCheerio();
   if (!cheerio) {
@@ -113,6 +151,7 @@ export async function extractCleanedAndAttachments(rawHtml, pageUrl) {
   $('a[href]').each((_, el) => {
     const $a = $(el);
     const href = $a.attr('href') || '';
+    const onclick = $a.attr('onclick') || '';
     const text = $a.text().trim();
     const imgAlt = $a.find('img').first().attr('alt') || '';
     const lowerHref = href.toLowerCase();
@@ -123,7 +162,11 @@ export async function extractCleanedAndAttachments(rawHtml, pageUrl) {
     const hrefHasDownloadKw = /(download|filedown|attach)/i.test(lowerHref);
     const looksLikeFile = hasExt || textHasExt || imgIsFile || (hrefHasDownloadKw && text.length > 0 && text.length < 200);
     if (!looksLikeFile) return;
-    const url = absUrl(href, pageUrl);
+    let url = absUrl(href, pageUrl);
+    if (isDummyHref(href)) {
+      const reconstructed = resolveOnclickUrl(onclick, pageUrl);
+      if (reconstructed) url = reconstructed;
+    }
     if (seen.has(url)) return;
     seen.add(url);
     let name = text;
