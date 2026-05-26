@@ -9,9 +9,10 @@ docs/superpowers/
 ├── README.md           # 이 파일 — 네이밍/관리 규칙
 ├── specs/              # 설계 문서 (요구사항, 결정 로그, 비범위)
 ├── plans/              # 구현 플랜 (Task 단위, TDD 흐름, 검증 명령)
-├── operations/         # 운영 런북 (배포, 모니터링, 트러블슈팅)
 └── *-next-steps.md     # 세션 핸드오프 메모 (선택)
 ```
+
+# 운영 런북은 docs/runbooks/ 에 둔다.
 
 ## 파일 네이밍 규칙
 
@@ -20,7 +21,7 @@ docs/superpowers/
 ```
 YYYY-MM-DD-<slug>[-design].md       # specs
 YYYY-MM-DD-<slug>.md                # plans
-YYYY-MM-DD-<slug>-runbook.md        # operations (런북)
+YYYY-MM-DD-<slug>-runbook.md        # docs/runbooks/ 에 위치
 YYYY-MM-DD-next-steps.md            # 핸드오프 메모
 ```
 
@@ -39,7 +40,7 @@ TODO_<원래파일명>     # 미진행 (specs/next/ 의 backlog 등)
 
 - prefix 는 본문 내용·참조 경로에도 함께 반영한다 (`grep` 후 일괄 갱신).
 - 부분 적용·후속 미결 항목이 남아도 본체 작업이 PR 로 머지됐다면 `DONE_` 로 분류한다 (후속은 plan 의 "후속/미결" 섹션 또는 `next-steps.md` 에 기록).
-- 운영 메모(`operations/`)는 활성/비활성 의미가 따로라 prefix 를 붙이지 않는다.
+- 운영 메모(`docs/runbooks/`) 는 활성/비활성 의미가 따로라 prefix 를 붙이지 않는다.
 
 ### 같은 날짜에 여러 작업이 시작될 때 — 넘버링 규칙
 
@@ -80,7 +81,7 @@ YYYY-MM-DD-NN-<slug>[-design].md
 2. **spec** (`specs/YYYY-MM-DD-NN-<slug>-design.md`) — 결정 로그, 도메인 변경, 비범위, 위험 명시
 3. **plan** (`plans/YYYY-MM-DD-NN-<slug>.md`) — Task 단위 구현 절차, 테스트 전략, 검증 커맨드
 4. **구현** — plan 의 Task 를 따라 PR 단위로 분할 (가능하면 PR 분할 제안 섹션 참고)
-5. **operations** (`operations/YYYY-MM-DD-NN-<slug>-runbook.md`) — 운영 항목 있을 때만 (환경변수, 모니터링, 트러블슈팅)
+5. **runbook** (`docs/runbooks/YYYY-MM-DD-NN-<slug>-runbook.md`) — 운영 항목 있을 때만 (환경변수, 모니터링, 트러블슈팅)
 
 ## next-steps 메모
 
