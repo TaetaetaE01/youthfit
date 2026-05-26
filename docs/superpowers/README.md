@@ -12,7 +12,7 @@ docs/superpowers/
 └── *-next-steps.md     # 세션 핸드오프 메모 (선택)
 ```
 
-# 운영 런북은 docs/runbooks/ 에 둔다.
+> **운영 런북은 `docs/runbooks/` 에 둔다.**
 
 ## 파일 네이밍 규칙
 
