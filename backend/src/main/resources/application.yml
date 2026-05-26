@@ -219,8 +219,8 @@ attachment:
 
 youthfit:
   cost-guard:
-    # local 기본: 토큰 절약을 위해 정책 7·30 만 LLM/임베딩 호출 허용. shell 또는 .env 의 POLICY_ALLOWLIST 로 override 가능.
-    policy-allowlist: ${POLICY_ALLOWLIST:7,30}
+    # local 기본: 빈 값 = 전체 허용 (prod 와 동일). 토큰 절약 필요 시 .env 에 POLICY_ALLOWLIST=7,30 식으로 명시.
+    policy-allowlist: ${POLICY_ALLOWLIST:}
   email:
     transport: ${EMAIL_TRANSPORT:logging}
 
