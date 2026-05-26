@@ -15,9 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import com.youthfit.common.openai.OpenAiErrorClassifier;
 import io.github.resilience4j.retry.annotation.Retry;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,13 +36,14 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
     private final RestClient restClient = RestClient.create();
 
     @Override
+    @Retry(name = "openai-embedding")
     public float[] embed(String text) {
         List<float[]> results = embedBatch(List.of(text));
         return results.get(0);
     }
 
-    @Retry(name = "openai-embedding")
     @Override
+    @Retry(name = "openai-embedding")
     public List<float[]> embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
             return List.of();
@@ -64,10 +64,9 @@ public class OpenAiEmbeddingClient implements EmbeddingProvider {
                     .body(requestBody)
                     .retrieve()
                     .body(JsonNode.class);
-        } catch (HttpClientErrorException | HttpServerErrorException | ResourceAccessException e) {
+        } catch (RestClientException e) {
             log.warn("OpenAI Embedding API 호출 실패 (분류 → retry 판정): status={}, msg={}",
-                    e instanceof org.springframework.web.client.RestClientResponseException rce
-                            ? rce.getStatusCode() : "n/a",
+                    e instanceof RestClientResponseException rce ? rce.getStatusCode() : "n/a",
                     e.getMessage());
             throw errorClassifier.classify(e);
         }
