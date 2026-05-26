@@ -37,32 +37,36 @@ public class S3AttachmentStorage implements AttachmentStorage {
     @Value("${attachment.storage.s3.bucket}")
     private String bucket;
 
+    @Value("${attachment.storage.s3.key-prefix:}")
+    private String keyPrefix;
+
     @Override
     public StorageReference put(InputStream content, String key, String mediaType) {
+        String fullKey = withPrefix(key);
         try {
             byte[] bytes = content.readAllBytes();
             String hex = sha256Hex(bytes);
             s3.putObject(PutObjectRequest.builder()
                             .bucket(bucket)
-                            .key(key)
+                            .key(fullKey)
                             .contentType(mediaType)
                             .build(),
                     RequestBody.fromBytes(bytes));
             return new StorageReference(key, bytes.length, hex);
         } catch (IOException e) {
-            throw new IllegalStateException("s3 put failed: " + key, e);
+            throw new IllegalStateException("s3 put failed: " + fullKey, e);
         }
     }
 
     @Override
     public InputStream get(String key) {
-        return s3.getObject(GetObjectRequest.builder().bucket(bucket).key(key).build());
+        return s3.getObject(GetObjectRequest.builder().bucket(bucket).key(withPrefix(key)).build());
     }
 
     @Override
     public boolean exists(String key) {
         try {
-            s3.headObject(HeadObjectRequest.builder().bucket(bucket).key(key).build());
+            s3.headObject(HeadObjectRequest.builder().bucket(bucket).key(withPrefix(key)).build());
             return true;
         } catch (NoSuchKeyException e) {
             return false;
@@ -74,7 +78,7 @@ public class S3AttachmentStorage implements AttachmentStorage {
         try {
             GetObjectRequest getReq = GetObjectRequest.builder()
                     .bucket(bucket)
-                    .key(key)
+                    .key(withPrefix(key))
                     .build();
             GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
                     .signatureDuration(ttl)
@@ -86,6 +90,14 @@ public class S3AttachmentStorage implements AttachmentStorage {
             log.warn("presign failed: key={}, err={}", key, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private String withPrefix(String key) {
+        if (keyPrefix == null || keyPrefix.isBlank()) {
+            return key;
+        }
+        String trimmed = keyPrefix.endsWith("/") ? keyPrefix.substring(0, keyPrefix.length() - 1) : keyPrefix;
+        return trimmed + "/" + key;
     }
 
     private String sha256Hex(byte[] bytes) {

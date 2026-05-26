@@ -179,6 +179,8 @@ attachment:
       region: ${S3_REGION:ap-northeast-2}
       access-key-id: ${S3_ACCESS_KEY_ID:}
       secret-access-key: ${S3_SECRET_ACCESS_KEY:}
+      # 환경별 키 격리용 prefix. 예: local, dev, prod. 빈 값이면 기존 키 패턴 그대로.
+      key-prefix: ${S3_KEY_PREFIX:}
   download:
     connect-timeout-seconds: ${ATTACHMENT_DOWNLOAD_CONNECT_TIMEOUT_SECONDS:10}
     read-timeout-seconds: ${ATTACHMENT_DOWNLOAD_READ_TIMEOUT_SECONDS:60}
