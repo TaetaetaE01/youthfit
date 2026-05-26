@@ -39,8 +39,9 @@ youthfit/
 
 ## 컨벤션 (반드시 따른다)
 @.claude/rules/common.md
-백엔드 코드 수정 전: @.claude/rules/backend/
-프론트엔드 코드 수정 전: @.claude/rules/frontend/
+
+- 백엔드 코드 수정 전 → `backend/CLAUDE.md` (모듈 진입 시 자동 로드, `.claude/rules/backend/` 5 개 파일을 `@` 참조함)
+- 프론트엔드 코드 수정 전 → `frontend/CLAUDE.md` (모듈 진입 시 자동 로드, `.claude/rules/frontend/` 3 개 파일을 `@` 참조함)
 
 ## 문서 맵
 | 위치 | 내용 |
