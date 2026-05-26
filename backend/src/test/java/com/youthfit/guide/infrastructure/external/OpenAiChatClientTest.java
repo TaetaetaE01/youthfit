@@ -43,7 +43,7 @@ class OpenAiChatClientTest {
                   ]
                 }
                 """;
-        GuideContent content = client.parseResponse(json);
+        GuideContent content = client.parseGuideContent(json);
         assertThat(content.oneLineSummary()).isEqualTo("만 19~34세 청년 월세 지원");
         assertThat(content.target().groups()).hasSize(1);
         assertThat(content.target().groups().get(0).label()).isNull();
@@ -85,7 +85,7 @@ class OpenAiChatClientTest {
                   "pitfalls": []
                 }
                 """;
-        GuideContent content = client.parseResponse(json);
+        GuideContent content = client.parseGuideContent(json);
         assertThat(content.criteria().groups()).hasSize(2);
         assertThat(content.criteria().groups().get(0).label()).isEqualTo("일반공급 - 소득 기준");
         assertThat(content.criteria().groups().get(0).items()).containsExactly("a", "b");

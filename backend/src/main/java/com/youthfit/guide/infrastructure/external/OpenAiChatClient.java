@@ -35,6 +35,29 @@ public class OpenAiChatClient implements GuideLlmProvider {
     private static final Logger log = LoggerFactory.getLogger(OpenAiChatClient.class);
     private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
+    static final String PARTIAL_SYSTEM_PROMPT_PREFIX = """
+            [부분 가이드 호출 안내]
+            이 호출은 정책 전체가 아니라 청크 그룹 하나만으로 작성하는 부분 가이드다.
+            다른 부분 가이드들과 추후 통합 호출에서 병합된다.
+            보이는 청크 내용 + 정책 메타에 한해서만 응답하라.
+            누락된 정보를 추측하지 마라. 다른 청크 그룹에 있을 법한 내용을 가정하지 마라.
+
+            """;
+
+    static final String MERGE_SYSTEM_PROMPT = """
+            너는 한국 청년 정책 가이드 통합 편집자다. 입력으로 정책 메타와 여러 부분 가이드(JSON) 들이 주어진다.
+            목표는 부분들을 합쳐 중복을 제거하고 우선순위가 높은 항목을 보존한 최종 가이드를 작성하는 것이다.
+
+            [통합 원칙]
+            1. 정보 통제: 부분 가이드와 정책 메타에 명시된 내용만 사용한다. 추가 정보를 만들어내지 마라.
+            2. 중복 제거: 의미가 동일한 highlight/pitfall 은 하나로 합치되 더 구체적인 표현을 우선한다.
+            3. 출처 보존: sourceField 와 attachmentRef 는 가능한 보존한다.
+            4. 어조/품질: 기존 가이드 작성 원칙(단정형 어미, 친근체 금지, 수치 보존) 을 동일하게 적용한다.
+            5. 분류 키워드 분리: 차상위/일반공급/특별공급 등 분류가 다른 항목은 다른 group 으로 유지한다.
+
+            출력 schema 는 단일 호출 가이드와 동일하다.
+            """;
+
     static final String SYSTEM_PROMPT = """
             너는 한국 청년 정책 가이드 작성 전문가다. 대상 독자는 정책 용어를 처음 접하는 20대 일반 청년이다.
             가장 중요한 임무는 복잡한 행정·법률 용어를 독자가 즉시 자신의 상황에 대입할 수 있는 직관적인 일상어로 번역하는 것이다.
@@ -271,44 +294,36 @@ public class OpenAiChatClient implements GuideLlmProvider {
 
     @Override
     public GuideContent generateGuide(GuideGenerationInput input) {
-        Map<String, Object> requestBody = Map.of(
-                "model", properties.getModel(),
-                "max_tokens", properties.getMaxTokens(),
-                "messages", List.of(
-                        Map.of("role", "system", "content", SYSTEM_PROMPT),
-                        Map.of("role", "user", "content", buildUserMessage(input))
-                ),
-                "response_format", buildResponseFormat()
-        );
-
-        JsonNode response = restClient.post()
-                .uri(CHAT_COMPLETIONS_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + properties.getApiKey())
-                .body(requestBody)
-                .retrieve()
-                .body(JsonNode.class);
-
-        if (response == null || !response.has("choices") || response.get("choices").isEmpty()) {
-            log.error("OpenAI Chat API 호출 실패: policyId={}", input.policyId());
-            throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 생성에 실패했습니다");
-        }
-
-        emitMetric(response);   // ← 추가
-
-        String json = response.get("choices").get(0).get("message").get("content").asText();
-        log.info("가이드 생성 완료: policyId={}, 응답 길이={}", input.policyId(), json.length());
-        return parseResponse(json);
+        return callChatCompletion(SYSTEM_PROMPT, buildUserMessage(input), input.policyId());
     }
 
     @Override
     public GuideContent regenerateWithFeedback(GuideGenerationInput input, List<String> feedbackMessages) {
+        return callChatCompletion(SYSTEM_PROMPT, buildUserMessageWithFeedback(input, feedbackMessages), input.policyId());
+    }
+
+    @Override
+    public GuideContent generatePartialGuide(GuideGenerationInput input) {
+        return callChatCompletion(
+                PARTIAL_SYSTEM_PROMPT_PREFIX + SYSTEM_PROMPT,
+                buildUserMessage(input),
+                input.policyId()
+        );
+    }
+
+    @Override
+    public GuideContent mergePartialGuides(GuideGenerationInput input, List<GuideContent> partials) {
+        String userMessage = buildMergeUserMessage(input, partials);
+        return callChatCompletion(MERGE_SYSTEM_PROMPT, userMessage, input.policyId());
+    }
+
+    private GuideContent callChatCompletion(String systemPrompt, String userMessage, Long policyId) {
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getModel(),
                 "max_tokens", properties.getMaxTokens(),
                 "messages", List.of(
-                        Map.of("role", "system", "content", SYSTEM_PROMPT),
-                        Map.of("role", "user", "content", buildUserMessageWithFeedback(input, feedbackMessages))
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userMessage)
                 ),
                 "response_format", buildResponseFormat()
         );
@@ -322,15 +337,37 @@ public class OpenAiChatClient implements GuideLlmProvider {
                 .body(JsonNode.class);
 
         if (response == null || !response.has("choices") || response.get("choices").isEmpty()) {
-            log.error("OpenAI Chat API 재시도 실패: policyId={}", input.policyId());
-            throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 재생성 실패");
+            log.error("OpenAI Chat API 호출 실패: policyId={}", policyId);
+            throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "가이드 생성에 실패했습니다");
         }
 
-        emitMetric(response);   // ← 추가
+        emitMetric(response);
 
         String json = response.get("choices").get(0).get("message").get("content").asText();
-        log.info("가이드 재생성 완료: policyId={}, 응답 길이={}", input.policyId(), json.length());
-        return parseResponse(json);
+        log.info("가이드 생성 완료: policyId={}, 응답 길이={}", policyId, json.length());
+        return parseGuideContent(json);
+    }
+
+    private String buildMergeUserMessage(GuideGenerationInput input, List<GuideContent> partials) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[정책 메타]\n");
+        sb.append("title=").append(input.title()).append("\n");
+        if (input.summary() != null) sb.append("summary=").append(input.summary()).append("\n");
+        if (input.supportTarget() != null) sb.append("supportTarget=").append(input.supportTarget()).append("\n");
+        if (input.supportContent() != null) sb.append("supportContent=").append(input.supportContent()).append("\n");
+        if (input.organization() != null) sb.append("organization=").append(input.organization()).append("\n");
+        if (input.contact() != null) sb.append("contact=").append(input.contact()).append("\n");
+        sb.append("\n");
+
+        for (int i = 0; i < partials.size(); i++) {
+            sb.append("[부분 가이드 ").append(i + 1).append(" / ").append(partials.size()).append("]\n");
+            try {
+                sb.append(objectMapper.writeValueAsString(partials.get(i))).append("\n\n");
+            } catch (Exception e) {
+                log.warn("부분 가이드 직렬화 실패 (skip): policyId={}, partialIndex={}", input.policyId(), i, e);
+            }
+        }
+        return sb.toString();
     }
 
     private String buildUserMessageWithFeedback(GuideGenerationInput input, List<String> feedback) {
@@ -341,7 +378,7 @@ public class OpenAiChatClient implements GuideLlmProvider {
         return sb.toString();
     }
 
-    GuideContent parseResponse(String json) {
+    GuideContent parseGuideContent(String json) {
         try {
             JsonNode node = objectMapper.readTree(json);
             String oneLine = node.get("oneLineSummary").asText();
