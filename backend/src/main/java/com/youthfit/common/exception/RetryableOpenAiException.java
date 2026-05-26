@@ -19,7 +19,7 @@ public class RetryableOpenAiException extends RuntimeException {
         this.retryAfter = retryAfter;
     }
 
-    public Optional<Duration> retryAfter() {
+    public Optional<Duration> getRetryAfter() {
         return Optional.ofNullable(retryAfter);
     }
 }
