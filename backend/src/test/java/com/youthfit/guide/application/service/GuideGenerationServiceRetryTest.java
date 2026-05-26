@@ -3,8 +3,7 @@ package com.youthfit.guide.application.service;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
-
-
+import com.youthfit.guide.application.dto.command.GuideGenerationStrategy;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
 import com.youthfit.guide.domain.model.GuideContent;
@@ -40,6 +39,16 @@ class GuideGenerationServiceRetryTest {
         return new CostGuard(new CostGuardProperties(""));
     }
 
+    private static GuideStrategySelector singleCallSelector() {
+        GuideStrategySelector sel = mock(GuideStrategySelector.class);
+        when(sel.select(any())).thenReturn(GuideGenerationStrategy.SINGLE_CALL);
+        return sel;
+    }
+
+    private static MapReduceGuideOrchestrator noOpOrchestrator() {
+        return mock(MapReduceGuideOrchestrator.class);
+    }
+
 
     @Test
     void 일차_위반시_재시도_호출_이차_통과시_이차_저장() {
@@ -73,7 +82,8 @@ class GuideGenerationServiceRetryTest {
         when(llm.regenerateWithFeedback(any(), any())).thenReturn(secondResponse);
 
         GuideGenerationService service = new GuideGenerationService(
-                guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard());
+                guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard(),
+                singleCallSelector(), noOpOrchestrator());
 
         service.generateGuide(new GenerateGuideCommand(1L, "X", "x"));
 
@@ -112,7 +122,8 @@ class GuideGenerationServiceRetryTest {
         when(llm.generateGuide(any())).thenReturn(first);
         when(llm.regenerateWithFeedback(any(), any())).thenReturn(second);
 
-        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard())
+        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard(),
+                singleCallSelector(), noOpOrchestrator())
                 .generateGuide(new GenerateGuideCommand(1L, "X", "x"));
 
         ArgumentCaptor<Guide> savedCaptor = ArgumentCaptor.forClass(Guide.class);
@@ -149,7 +160,8 @@ class GuideGenerationServiceRetryTest {
         when(llm.generateGuide(any())).thenReturn(first);
         when(llm.regenerateWithFeedback(any(), any())).thenReturn(second);
 
-        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard())
+        new GuideGenerationService(guideRepo, policyRepo, docRepo, llm, new GuideValidator(), refLoader, annotator, allowAllCostGuard(),
+                singleCallSelector(), noOpOrchestrator())
                 .generateGuide(new GenerateGuideCommand(1L, "X", "x"));
 
         // retry 발생해도 annotate 는 finalResponse 에 대해 단 1회 호출되어야 함

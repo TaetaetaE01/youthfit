@@ -3,6 +3,7 @@ package com.youthfit.guide.application.service;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.dto.command.GuideGenerationStrategy;
 import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
 import com.youthfit.guide.domain.model.Guide;
@@ -19,6 +20,8 @@ import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,8 +57,15 @@ class GuideGenerationServiceTest {
     @Mock IncomeBracketReferenceLoader referenceLoader;
     @Mock IncomeBracketAnnotator incomeBracketAnnotator;
     @Spy CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
+    @Mock GuideStrategySelector strategySelector;
+    @Mock MapReduceGuideOrchestrator mapReduceOrchestrator;
 
     @InjectMocks GuideGenerationService service;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(strategySelector.select(any())).thenReturn(GuideGenerationStrategy.SINGLE_CALL);
+    }
 
     private IncomeBracketReference sampleReference() {
         return new IncomeBracketReference(
@@ -238,5 +250,51 @@ class GuideGenerationServiceTest {
 
     private Policy policyWithoutEnrichment() {
         return samplePolicy();
+    }
+
+    private void stubFullPipeline(Policy policy, GuideContent content) {
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(policyDocumentRepository.findByPolicyIdOrderByChunkIndex(1L)).thenReturn(List.of());
+        when(referenceLoader.findByYear(2025)).thenReturn(Optional.of(sampleReference()));
+        when(guideRepository.findByPolicyId(1L)).thenReturn(Optional.empty());
+        when(guideValidator.validate(any(), any()))
+                .thenReturn(new GuideValidator.ValidationReport(false, false, false, List.of()));
+        when(guideValidator.filterInvalidSourceFields(any(), any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(guideValidator.findMissingNumericTokens(any(), any())).thenReturn(List.of());
+        when(guideValidator.containsFriendlyTone(any())).thenReturn(false);
+        when(incomeBracketAnnotator.annotate(any(GuideContent.class), any(), anyLong()))
+                .thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    @Test
+    @DisplayName("strategy 가 MAP_REDUCE 이면 orchestrator.generate 위임, 단일 LLM 호출 안 함")
+    void mapReduceDelegates() {
+        Policy policy = samplePolicy();
+        GuideContent content = sampleContent();
+        stubFullPipeline(policy, content);
+        given(strategySelector.select(any())).willReturn(GuideGenerationStrategy.MAP_REDUCE);
+        given(mapReduceOrchestrator.generate(any())).willReturn(content);
+
+        service.generateGuide(new GenerateGuideCommand(1L, "청년 월세 지원", "x"));
+
+        verify(mapReduceOrchestrator, times(1)).generate(any());
+        verify(guideLlmProvider, times(0)).generateGuide(any());
+        verify(guideLlmProvider, times(0)).regenerateWithFeedback(any(), any());
+    }
+
+    @Test
+    @DisplayName("strategy 가 SINGLE_CALL 이면 기존 단일 호출 흐름 (회귀)")
+    void singleCallPreserved() {
+        Policy policy = samplePolicy();
+        GuideContent content = sampleContent();
+        stubFullPipeline(policy, content);
+        given(strategySelector.select(any())).willReturn(GuideGenerationStrategy.SINGLE_CALL);
+        given(guideLlmProvider.generateGuide(any())).willReturn(content);
+
+        service.generateGuide(new GenerateGuideCommand(1L, "청년 월세 지원", "x"));
+
+        verify(guideLlmProvider, times(1)).generateGuide(any());
+        verify(mapReduceOrchestrator, times(0)).generate(any());
     }
 }

@@ -3,6 +3,7 @@ package com.youthfit.guide.application.service;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.dto.command.GuideGenerationInput;
+import com.youthfit.guide.application.dto.command.GuideGenerationStrategy;
 import com.youthfit.guide.application.dto.result.GuideGenerationResult;
 import com.youthfit.guide.application.dto.result.GuideResult;
 import com.youthfit.guide.application.port.GuideLlmProvider;
@@ -54,6 +55,8 @@ public class GuideGenerationService {
     private final IncomeBracketReferenceLoader referenceLoader;
     private final IncomeBracketAnnotator incomeBracketAnnotator;
     private final CostGuard costGuard;
+    private final GuideStrategySelector strategySelector;
+    private final MapReduceGuideOrchestrator mapReduceOrchestrator;
 
     @Transactional(readOnly = true)
     public Optional<GuideResult> findGuideByPolicyId(Long policyId) {
@@ -86,11 +89,18 @@ public class GuideGenerationService {
         Set<Long> validAttachmentIds = policy.getAttachments().stream()
                 .map(PolicyAttachment::getId)
                 .collect(Collectors.toSet());
-        GuideContent firstResponse = guideLlmProvider.generateGuide(input);
+        GuideContent firstResponse;
+        GuideGenerationStrategy strategy = strategySelector.select(input);
+        if (strategy == GuideGenerationStrategy.MAP_REDUCE) {
+            log.info("map-reduce 분기 진입: policyId={}", command.policyId());
+            firstResponse = mapReduceOrchestrator.generate(input);
+        } else {
+            firstResponse = guideLlmProvider.generateGuide(input);
+        }
         GuideValidator.ValidationReport firstReport = guideValidator.validate(firstResponse, validAttachmentIds);
 
         GuideContent finalResponse;
-        if (firstReport.hasRetryTrigger()) {
+        if (firstReport.hasRetryTrigger() && strategy == GuideGenerationStrategy.SINGLE_CALL) {
             log.info("가이드 검증 위반으로 재시도: policyId={}, violations={}",
                     command.policyId(), firstReport.feedbackMessages());
             GuideContent secondResponse = guideLlmProvider.regenerateWithFeedback(input, firstReport.feedbackMessages());
@@ -259,7 +269,7 @@ public class GuideGenerationService {
 
     /** 테스트 노출용. computeHash는 주입된 의존성을 사용하지 않으므로 null 인자로 인스턴스 생성 안전. */
     static String computeHashForTest(Policy policy, List<PolicyDocument> chunks, IncomeBracketReference reference) {
-        return new GuideGenerationService(null, null, null, null, null, null, null, null)
+        return new GuideGenerationService(null, null, null, null, null, null, null, null, null, null)
                 .computeHash(policy, chunks, reference);
     }
 
