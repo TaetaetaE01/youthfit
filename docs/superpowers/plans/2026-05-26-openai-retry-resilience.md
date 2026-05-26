@@ -95,7 +95,7 @@ public class RetryableOpenAiException extends RuntimeException {
         this.retryAfter = retryAfter;
     }
 
-    public Optional<Duration> retryAfter() {
+    public Optional<Duration> getRetryAfter() {
         return Optional.ofNullable(retryAfter);
     }
 }
@@ -486,7 +486,7 @@ public class RetryAfterIntervalFunction implements BiFunction<Integer, Throwable
     @Override
     public Long apply(Integer attempt, Throwable lastException) {
         if (lastException instanceof RetryableOpenAiException ex) {
-            Duration override = ex.retryAfter().orElse(null);
+            Duration override = ex.getRetryAfter().orElse(null);
             if (override != null) {
                 return clamp(override.toMillis());
             }

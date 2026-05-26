@@ -27,7 +27,7 @@ public class OpenAiErrorClassifier {
 
     public RuntimeException classify(Throwable raw) {
         if (raw instanceof HttpClientErrorException httpClient) {
-            if (httpClient.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+            if (httpClient.getStatusCode().isSameCodeAs(HttpStatus.TOO_MANY_REQUESTS)) {
                 Duration retryAfter = parseRetryAfter(httpClient).orElse(null);
                 return new RetryableOpenAiException(
                         "OpenAI 429 Too Many Requests", httpClient, retryAfter);

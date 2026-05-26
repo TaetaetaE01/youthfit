@@ -15,6 +15,9 @@ import java.util.function.BiFunction;
  * exponential backoff + jitter 로 fallback.
  *
  * Note: 단일 wait 는 30초로 clamp 한다.
+ *
+ * 주의: 이 클래스는 Resilience4j 의 IntervalBiFunction 시그니처와 직접 호환되지 않는다.
+ * RetryConfigCustomizer 안에서 람다로 Either&lt;Throwable,?&gt;.getLeft() 를 풀어 호출하는 어댑터로 감싼다.
  */
 @Component
 public class RetryAfterIntervalFunction implements BiFunction<Integer, Throwable, Long> {
