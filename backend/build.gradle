@@ -42,8 +42,6 @@ dependencies {
     implementation 'kr.dogfoot:hwplib:1.1.8'
     implementation 'com.knuddels:jtokkit:1.1.0'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'
-    implementation 'io.github.resilience4j:resilience4j-micrometer:2.3.0'
-    implementation 'io.github.resilience4j:resilience4j-reactor:2.3.0'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
