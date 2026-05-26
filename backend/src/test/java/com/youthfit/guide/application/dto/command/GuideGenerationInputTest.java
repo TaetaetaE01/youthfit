@@ -1,5 +1,6 @@
 package com.youthfit.guide.application.dto.command;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -171,6 +172,28 @@ class GuideGenerationInputTest {
         assertThat(text).contains("[enrichment.supportContent]");
         assertThat(text).doesNotContain("[enrichment.supportTarget]");
         assertThat(text).doesNotContain("[enrichment.applyMethod]");
+    }
+
+    @Test
+    @DisplayName("withChunks 는 다른 모든 필드 보존하고 chunks 만 교체한다")
+    void withChunksReplacesOnlyChunks() {
+        ChunkInput c1 = new ChunkInput("c1", null, null, null, "BODY");
+        ChunkInput c2 = new ChunkInput("c2", null, null, null, "BODY");
+        GuideGenerationInput original = new GuideGenerationInput(
+                7L, "title", 2025, "summary", "body",
+                "target", "criteria", "content", "010-0", "org",
+                null, List.of(c1, c2), null
+        );
+
+        ChunkInput c3 = new ChunkInput("c3", null, null, null, "ATTACHMENT");
+        GuideGenerationInput replaced = original.withChunks(List.of(c3));
+
+        assertThat(replaced.policyId()).isEqualTo(7L);
+        assertThat(replaced.title()).isEqualTo("title");
+        assertThat(replaced.body()).isEqualTo("body");
+        assertThat(replaced.chunks()).containsExactly(c3);
+        // 원본은 불변
+        assertThat(original.chunks()).containsExactly(c1, c2);
     }
 
     private GuideGenerationInput inputWithChunks(List<ChunkInput> chunks) {

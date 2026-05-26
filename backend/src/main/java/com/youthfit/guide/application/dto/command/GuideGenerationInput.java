@@ -100,6 +100,14 @@ public record GuideGenerationInput(
         );
     }
 
+    public GuideGenerationInput withChunks(List<ChunkInput> newChunks) {
+        return new GuideGenerationInput(
+                policyId, title, referenceYear, summary, body,
+                supportTarget, selectionCriteria, supportContent, contact, organization,
+                enrichment, newChunks, referenceData
+        );
+    }
+
     public String combinedSourceText() {
         StringBuilder sb = new StringBuilder();
         appendSection(sb, "summary", summary);
