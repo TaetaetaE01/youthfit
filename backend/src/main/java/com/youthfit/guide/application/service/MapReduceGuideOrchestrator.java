@@ -37,7 +37,7 @@ public class MapReduceGuideOrchestrator {
     }
 
     public GuideContent generate(GuideGenerationInput input) {
-        List<List<ChunkInput>> groups = groupChunksByTokenBudget(input.chunks(), groupBudgetTokens);
+        List<List<ChunkInput>> groups = groupChunksByTokenBudget(input, groupBudgetTokens);
         log.info("map-reduce 진입: policyId={}, groups={}, totalChunks={}",
                 input.policyId(), groups.size(), input.chunks().size());
 
@@ -62,22 +62,35 @@ public class MapReduceGuideOrchestrator {
         return llmProvider.mergePartialGuides(input.withChunks(List.of()), partials);
     }
 
-    private List<List<ChunkInput>> groupChunksByTokenBudget(List<ChunkInput> chunks, int budget) {
+    private List<List<ChunkInput>> groupChunksByTokenBudget(GuideGenerationInput input, int budget) {
         List<List<ChunkInput>> groups = new ArrayList<>();
         List<ChunkInput> current = new ArrayList<>();
-        int currentTokens = 0;
-        for (ChunkInput c : chunks) {
-            int t = tokenCounter.countTokens(c.content(), model);
-            if (currentTokens + t > budget && !current.isEmpty()) {
+        for (ChunkInput c : input.chunks()) {
+            List<ChunkInput> candidate = new ArrayList<>(current);
+            candidate.add(c);
+            int candidateTokens = tokenCounter.countTokens(
+                    input.withChunks(candidate).combinedSourceText(), model);
+            if (candidateTokens > budget && !current.isEmpty()) {
                 groups.add(current);
                 current = new ArrayList<>();
-                currentTokens = 0;
+                current.add(c);
+            } else {
+                current = candidate;
             }
-            current.add(c);
-            currentTokens += t;
         }
         if (!current.isEmpty()) {
             groups.add(current);
+        }
+        // Warn on any group whose single-chunk input exceeds budget by itself
+        for (int i = 0; i < groups.size(); i++) {
+            if (groups.get(i).size() == 1) {
+                int tokens = tokenCounter.countTokens(
+                        input.withChunks(groups.get(i)).combinedSourceText(), model);
+                if (tokens > budget) {
+                    log.warn("partial 그룹의 단일 청크가 budget 초과: policyId={}, groupIndex={}, tokens={}, budget={}",
+                            input.policyId(), i, tokens, budget);
+                }
+            }
         }
         return groups;
     }

@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -53,7 +54,7 @@ class MapReduceGuideOrchestratorTest {
 
         assertThat(result).isEqualTo(dummy);
         // 적어도 2번 호출 (정확한 수는 토큰 측정에 따라 다를 수 있으나 2+ 보장)
-        verify(llmProvider, org.mockito.Mockito.atLeast(2)).generatePartialGuide(any());
+        verify(llmProvider, atLeast(2)).generatePartialGuide(any());
         verify(llmProvider, times(1)).mergePartialGuides(any(), any());
     }
 
@@ -74,9 +75,27 @@ class MapReduceGuideOrchestratorTest {
 
         assertThat(result).isEqualTo(ok);
         // partial 은 적어도 2번 호출 시도. 성공한 partial 만으로 merge.
-        verify(llmProvider, org.mockito.Mockito.atLeast(2)).generatePartialGuide(any());
+        verify(llmProvider, atLeast(2)).generatePartialGuide(any());
         verify(llmProvider, times(1)).mergePartialGuides(any(),
                 argThat(list -> list.size() >= 1 && list.size() < 2));
+    }
+
+    @Test
+    @DisplayName("단일 청크가 budget 초과해도 partial 호출은 시도되고 warn 이 찍힌다")
+    void singleOversizedChunkStillCalled() {
+        ChunkInput huge = new ChunkInput("가".repeat(2000), null, null, null, "BODY"); // ~1000 tokens
+        GuideGenerationInput input = buildInput(List.of(huge));
+
+        GuideContent ok = dummyContent();
+        given(llmProvider.generatePartialGuide(any())).willReturn(ok);
+        given(llmProvider.mergePartialGuides(any(), any())).willReturn(ok);
+
+        // budget 100 인 orchestrator 사용 (setUp 에서 이미 100 설정됨)
+        GuideContent result = orchestrator.generate(input);
+
+        assertThat(result).isEqualTo(ok);
+        verify(llmProvider, times(1)).generatePartialGuide(any());
+        verify(llmProvider, times(1)).mergePartialGuides(any(), any());
     }
 
     @Test
