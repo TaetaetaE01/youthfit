@@ -47,7 +47,7 @@ public class MapReduceGuideOrchestrator {
                 GuideContent partial = llmProvider.generatePartialGuide(input.withChunks(groups.get(i)));
                 partials.add(partial);
             } catch (Exception e) {
-                log.warn("부분 가이드 호출 실패 (skip): policyId={}, groupIndex={}, err={}",
+                log.warn("부분 가이드 호출 실패 (retry 소진 또는 영구 실패 - skip): policyId={}, groupIndex={}, err={}",
                         input.policyId(), i, e.getMessage());
             }
         }
