@@ -94,6 +94,9 @@ public final class PolicySpecification {
                     cb.isNotNull(applyEnd)
             ));
 
+            // 사실상 상시 정책은 캘린더 막대 표시에서 제외 (always-open 섹션으로 표시)
+            predicates.add(cb.not(effectivelyAlwaysOpenPredicate(root, cb)));
+
             // applyStart > applyEnd 인 데이터 오류 제외
             predicates.add(cb.or(
                     cb.isNull(applyStart),
@@ -135,33 +138,8 @@ public final class PolicySpecification {
                     cb.isNull(applyEnd)
             );
 
-            // 사실상 상시: end month=12, day=31 이고 (start null 이거나 span >= 270 일)
-            // PostgreSQL 호환: date_part('field', d) 는 double precision 반환
-            Expression<Double> endMonth = cb.function("date_part", Double.class, cb.literal("month"), applyEnd);
-            Expression<Double> endDay = cb.function("date_part", Double.class, cb.literal("day"), applyEnd);
-            Expression<Double> endYear = cb.function("date_part", Double.class, cb.literal("year"), applyEnd);
-            Expression<Double> startYear = cb.function("date_part", Double.class, cb.literal("year"), applyStart);
-            Expression<Double> endDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyEnd);
-            Expression<Double> startDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyStart);
-
-            Predicate endIsDec31 = cb.and(
-                    cb.equal(endMonth, 12.0),
-                    cb.equal(endDay, 31.0)
-            );
-
-            // 같은 해면 doy 차이 >= 270, 다른 해면 (start.year < end.year) 자동 만족
-            Predicate sameYearLongSpan = cb.and(
-                    cb.equal(startYear, endYear),
-                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), (double) Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS)
-            );
-            Predicate multiYear = cb.lessThan(startYear, endYear);
-            Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);
-
-            Predicate effectivelyAlwaysOpen = cb.and(
-                    cb.isNotNull(applyEnd),
-                    endIsDec31,
-                    cb.or(cb.isNull(applyStart), spanLongEnough)
-            );
+            // 사실상 상시: helper 로 위임
+            Predicate effectivelyAlwaysOpen = effectivelyAlwaysOpenPredicate(root, cb);
 
             predicates.add(cb.or(trueAlwaysOpen, effectivelyAlwaysOpen));
 
@@ -189,6 +167,44 @@ public final class PolicySpecification {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * 사실상 상시 조건 (도메인 메서드 Policy.isEffectivelyAlwaysOpen 의 SQL 표현).
+     * end month=12, day=31 이고 (start null 이거나 span >= EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS 일).
+     * PostgreSQL date_part 함수 사용 (Hibernate portable 함수 month/day/year/day_of_year 는 PostgreSQL 미지원).
+     */
+    private static Predicate effectivelyAlwaysOpenPredicate(Root<Policy> root, CriteriaBuilder cb) {
+        Path<LocalDate> applyStart = root.get("applyStart");
+        Path<LocalDate> applyEnd = root.get("applyEnd");
+
+        Expression<Double> endMonth = cb.function("date_part", Double.class, cb.literal("month"), applyEnd);
+        Expression<Double> endDay = cb.function("date_part", Double.class, cb.literal("day"), applyEnd);
+        Expression<Double> endYear = cb.function("date_part", Double.class, cb.literal("year"), applyEnd);
+        Expression<Double> startYear = cb.function("date_part", Double.class, cb.literal("year"), applyStart);
+        Expression<Double> endDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyEnd);
+        Expression<Double> startDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyStart);
+
+        Predicate endIsDec31 = cb.and(
+                cb.equal(endMonth, 12.0),
+                cb.equal(endDay, 31.0)
+        );
+
+        Predicate sameYearLongSpan = cb.and(
+                cb.equal(startYear, endYear),
+                cb.greaterThanOrEqualTo(
+                        cb.diff(endDoy, startDoy),
+                        (double) Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS
+                )
+        );
+        Predicate multiYear = cb.lessThan(startYear, endYear);
+        Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);
+
+        return cb.and(
+                cb.isNotNull(applyEnd),
+                endIsDec31,
+                cb.or(cb.isNull(applyStart), spanLongEnough)
+        );
     }
 
     private static Predicate regionPredicate(Root<Policy> root, CriteriaBuilder cb, RegionFilter f) {

@@ -258,38 +258,6 @@ class PolicyQueryServiceTest {
     }
 
     @Test
-    @DisplayName("findByDateRange — 사실상 상시 정책 (end=12-31, span≥270일) 은 결과에서 제외")
-    void findByDateRange_excludesEffectivelyAlwaysOpen() {
-        LocalDate from = LocalDate.of(2026, 3, 1);
-        LocalDate to = LocalDate.of(2026, 3, 31);
-
-        Policy normal = Policy.builder()
-                .title("3월 청년월세").summary("s")
-                .category(Category.HOUSING).regionCode("전국")
-                .applyStart(LocalDate.of(2026, 3, 10))
-                .applyEnd(LocalDate.of(2026, 3, 20))
-                .build();
-        ReflectionTestUtils.setField(normal, "id", 1L);
-
-        Policy effectivelyAlways = Policy.builder()
-                .title("연중 멘토링").summary("s")
-                .category(Category.EDUCATION).regionCode("전국")
-                .applyStart(LocalDate.of(2026, 1, 1))
-                .applyEnd(LocalDate.of(2026, 12, 31))
-                .build();
-        ReflectionTestUtils.setField(effectivelyAlways, "id", 2L);
-
-        when(policyRepository.findByCalendarRange(eq(from), eq(to), any(), eq(null)))
-                .thenReturn(List.of(normal, effectivelyAlways));
-
-        List<PolicyCalendarResult> result =
-                policyQueryService.findByDateRange(from, to, RegionFilter.of(null), null);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).id()).isEqualTo(1L);
-    }
-
-    @Test
     @DisplayName("findByDateRange — from > to 면 YouthFitException(YF-001)")
     void findByDateRange_invalidOrder() {
         LocalDate from = LocalDate.of(2026, 3, 31);
