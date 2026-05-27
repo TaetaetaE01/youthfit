@@ -8,9 +8,9 @@ import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 @Component
-@RequiredArgsConstructor
 public class OpenAiQnaClient implements QnaLlmProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiQnaClient.class);
@@ -75,8 +74,18 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private final OpenAiQnaProperties properties;
     private final ApplicationEventPublisher eventPublisher;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public OpenAiQnaClient(
+            OpenAiQnaProperties properties,
+            ApplicationEventPublisher eventPublisher,
+            @Qualifier("openAiRestClientBuilder") RestClient.Builder restClientBuilder
+    ) {
+        this.properties = properties;
+        this.eventPublisher = eventPublisher;
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     public String generateAnswer(String policyTitle, PolicyMetadata metadata, String context, String question, Consumer<String> chunkConsumer) {
