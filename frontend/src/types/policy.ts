@@ -357,6 +357,7 @@ export type PolicyCalendarItem = {
   applyStart: string | null;   // YYYY-MM-DD
   applyEnd: string | null;     // YYYY-MM-DD
   regionLabel: string;
+  deadlineYear: number | null;
 };
 
 export type PolicyCalendarResponse = {

@@ -94,6 +94,9 @@ public final class PolicySpecification {
                     cb.isNotNull(applyEnd)
             ));
 
+            // 사실상 상시 정책은 캘린더 막대 표시에서 제외 (always-open 섹션으로 표시)
+            predicates.add(cb.not(effectivelyAlwaysOpenPredicate(root, cb)));
+
             // applyStart > applyEnd 인 데이터 오류 제외
             predicates.add(cb.or(
                     cb.isNull(applyStart),
@@ -126,11 +129,21 @@ public final class PolicySpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            predicates.add(cb.isNull(root.get("applyStart")));
-            predicates.add(cb.isNull(root.get("applyEnd")));
+            Path<LocalDate> applyStart = root.get("applyStart");
+            Path<LocalDate> applyEnd = root.get("applyEnd");
+
+            // 진짜 상시
+            Predicate trueAlwaysOpen = cb.and(
+                    cb.isNull(applyStart),
+                    cb.isNull(applyEnd)
+            );
+
+            // 사실상 상시: helper 로 위임
+            Predicate effectivelyAlwaysOpen = effectivelyAlwaysOpenPredicate(root, cb);
+
+            predicates.add(cb.or(trueAlwaysOpen, effectivelyAlwaysOpen));
 
             // 만료된 정책 제외: referenceYear < currentYear 면 effective status 가 CLOSED.
-            // ingestion 단계에서 신청 기간이 누락된 과년도 정책이 상시로 잘못 노출되는 케이스 차단.
             int currentYear = LocalDate.now().getYear();
             Path<Integer> referenceYear = root.get("referenceYear");
             predicates.add(cb.or(
@@ -154,6 +167,44 @@ public final class PolicySpecification {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * 사실상 상시 조건 (도메인 메서드 Policy.isEffectivelyAlwaysOpen 의 SQL 표현).
+     * end month=12, day=31 이고 (start null 이거나 span >= EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS 일).
+     * PostgreSQL date_part 함수 사용 (Hibernate portable 함수 month/day/year/day_of_year 는 PostgreSQL 미지원).
+     */
+    private static Predicate effectivelyAlwaysOpenPredicate(Root<Policy> root, CriteriaBuilder cb) {
+        Path<LocalDate> applyStart = root.get("applyStart");
+        Path<LocalDate> applyEnd = root.get("applyEnd");
+
+        Expression<Double> endMonth = cb.function("date_part", Double.class, cb.literal("month"), applyEnd);
+        Expression<Double> endDay = cb.function("date_part", Double.class, cb.literal("day"), applyEnd);
+        Expression<Double> endYear = cb.function("date_part", Double.class, cb.literal("year"), applyEnd);
+        Expression<Double> startYear = cb.function("date_part", Double.class, cb.literal("year"), applyStart);
+        Expression<Double> endDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyEnd);
+        Expression<Double> startDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyStart);
+
+        Predicate endIsDec31 = cb.and(
+                cb.equal(endMonth, 12.0),
+                cb.equal(endDay, 31.0)
+        );
+
+        Predicate sameYearLongSpan = cb.and(
+                cb.equal(startYear, endYear),
+                cb.greaterThanOrEqualTo(
+                        cb.diff(endDoy, startDoy),
+                        (double) Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS
+                )
+        );
+        Predicate multiYear = cb.lessThan(startYear, endYear);
+        Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);
+
+        return cb.and(
+                cb.isNotNull(applyEnd),
+                endIsDec31,
+                cb.or(cb.isNull(applyStart), spanLongEnough)
+        );
     }
 
     private static Predicate regionPredicate(Root<Policy> root, CriteriaBuilder cb, RegionFilter f) {

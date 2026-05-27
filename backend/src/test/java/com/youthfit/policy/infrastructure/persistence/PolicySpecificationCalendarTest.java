@@ -93,9 +93,10 @@ class PolicySpecificationCalendarTest {
     }
 
     @Test
-    @DisplayName("조회 범위를 완전히 포함하는 정책")
+    @DisplayName("조회 범위를 완전히 포함하는 정책 (사실상 상시 아님)")
     void containsRange() {
-        Policy p = policyWithDates("포함", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31));
+        // end=9-30 이므로 사실상 상시(end=12-31) 조건에 해당하지 않아 캘린더에 포함됨
+        Policy p = policyWithDates("포함", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30));
         repository.save(p);
 
         List<Policy> result = repository.findAll(
@@ -153,7 +154,24 @@ class PolicySpecificationCalendarTest {
     }
 
     @Test
-    @DisplayName("alwaysOpen Specification 은 applyStart=null AND applyEnd=null 만 반환")
+    @DisplayName("withCalendarRange — 사실상 상시 정책 (end=12-31, span>=270일) 은 캘린더 막대에서 제외")
+    void withCalendarRangeExcludesEffectivelyAlwaysOpen() {
+        // 사실상 상시 (포함 안 됨)
+        repository.save(policyWithDates("연중1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("마감만", null, LocalDate.of(2026, 12, 31)));
+        // 일반 정책 (포함됨)
+        repository.save(policyWithDates("3월정책", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
+
+        List<Policy> result = repository.findAll(
+                PolicySpecification.withCalendarRange(FROM, TO, RegionFilter.of(null), null));
+
+        assertThat(result)
+                .extracting(Policy::getTitle)
+                .containsExactlyInAnyOrder("3월정책");
+    }
+
+    @Test
+    @DisplayName("alwaysOpen — 진짜 상시 (둘 다 null) 는 포함, 일반 기간 정책은 제외")
     void alwaysOpenReturnsOnlyBothNull() {
         repository.save(policyWithDates("상시1", null, null));
         repository.save(policyWithDates("상시2", null, null));
@@ -166,6 +184,29 @@ class PolicySpecificationCalendarTest {
         assertThat(result).hasSize(2)
                 .extracting(Policy::getTitle)
                 .containsExactlyInAnyOrder("상시1", "상시2");
+    }
+
+    @Test
+    @DisplayName("alwaysOpen — 사실상 상시: end=12-31 AND span>=270일 정책을 포함")
+    void alwaysOpenIncludesEffectivelyAlwaysOpen() {
+        // 진짜 상시
+        repository.save(policyWithDates("진짜상시", null, null));
+        // 사실상 상시 (다양한 경계)
+        repository.save(policyWithDates("연중1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("마감만", null, LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("멀티year", LocalDate.of(2025, 12, 31), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("정확히270일", LocalDate.of(2026, 12, 31).minusDays(270), LocalDate.of(2026, 12, 31)));
+        // 제외되어야 할 케이스
+        repository.save(policyWithDates("span269", LocalDate.of(2026, 12, 31).minusDays(269), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("end11-30", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 11, 30)));
+        repository.save(policyWithDates("3월모집", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
+
+        List<Policy> result = repository.findAll(
+                PolicySpecification.alwaysOpen(RegionFilter.of(null), null));
+
+        assertThat(result)
+                .extracting(Policy::getTitle)
+                .containsExactlyInAnyOrder("진짜상시", "연중1", "마감만", "멀티year", "정확히270일");
     }
 
     @Test
