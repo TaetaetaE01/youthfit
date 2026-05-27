@@ -87,6 +87,9 @@ openai:
       model: ${OPENAI_INGESTION_PERIOD_MODEL:gpt-4o-mini}
       max-tokens: ${OPENAI_INGESTION_PERIOD_MAX_TOKENS:128}
       max-body-chars: ${OPENAI_INGESTION_PERIOD_MAX_BODY_CHARS:3000}
+  http:
+    connect-timeout-seconds: ${OPENAI_HTTP_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${OPENAI_HTTP_READ_TIMEOUT_SECONDS:60}
 
 youthfit:
   ingestion:
