@@ -126,11 +126,45 @@ public final class PolicySpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            predicates.add(cb.isNull(root.get("applyStart")));
-            predicates.add(cb.isNull(root.get("applyEnd")));
+            Path<LocalDate> applyStart = root.get("applyStart");
+            Path<LocalDate> applyEnd = root.get("applyEnd");
+
+            // 진짜 상시
+            Predicate trueAlwaysOpen = cb.and(
+                    cb.isNull(applyStart),
+                    cb.isNull(applyEnd)
+            );
+
+            // 사실상 상시: end month=12, day=31 이고 (start null 이거나 span >= 270 일)
+            Expression<Integer> endMonth = cb.function("month", Integer.class, applyEnd);
+            Expression<Integer> endDay = cb.function("day_of_month", Integer.class, applyEnd);
+            Expression<Integer> endYear = cb.function("year", Integer.class, applyEnd);
+            Expression<Integer> startYear = cb.function("year", Integer.class, applyStart);
+            Expression<Integer> endDoy = cb.function("day_of_year", Integer.class, applyEnd);
+            Expression<Integer> startDoy = cb.function("day_of_year", Integer.class, applyStart);
+
+            Predicate endIsDec31 = cb.and(
+                    cb.equal(endMonth, 12),
+                    cb.equal(endDay, 31)
+            );
+
+            // 같은 해면 doy 차이 >= 270, 다른 해면 (start.year < end.year) 자동 만족
+            Predicate sameYearLongSpan = cb.and(
+                    cb.equal(startYear, endYear),
+                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), 270)
+            );
+            Predicate multiYear = cb.lessThan(startYear, endYear);
+            Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);
+
+            Predicate effectivelyAlwaysOpen = cb.and(
+                    cb.isNotNull(applyEnd),
+                    endIsDec31,
+                    cb.or(cb.isNull(applyStart), spanLongEnough)
+            );
+
+            predicates.add(cb.or(trueAlwaysOpen, effectivelyAlwaysOpen));
 
             // 만료된 정책 제외: referenceYear < currentYear 면 effective status 가 CLOSED.
-            // ingestion 단계에서 신청 기간이 누락된 과년도 정책이 상시로 잘못 노출되는 케이스 차단.
             int currentYear = LocalDate.now().getYear();
             Path<Integer> referenceYear = root.get("referenceYear");
             predicates.add(cb.or(
