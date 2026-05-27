@@ -135,6 +135,8 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
         }
 
+        // 스트림 open 이후 파싱 실패는 이미 청크가 클라이언트에 전송됐을 수 있으므로
+        // retry 하지 않고 즉시 실패 처리한다.
         try {
             return readStreamResponse(inputStream, chunkConsumer);
         } catch (Exception e) {
