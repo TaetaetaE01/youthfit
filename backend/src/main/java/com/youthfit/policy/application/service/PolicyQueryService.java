@@ -106,6 +106,7 @@ public class PolicyQueryService {
 
         return policyRepository.findByCalendarRange(from, to, regionFilter, category)
                 .stream()
+                .filter(p -> !p.isEffectivelyAlwaysOpen())
                 .map(p -> PolicyCalendarResult.from(p, resolveRegionLabel(p)))
                 .toList();
     }
