@@ -136,22 +136,23 @@ public final class PolicySpecification {
             );
 
             // 사실상 상시: end month=12, day=31 이고 (start null 이거나 span >= 270 일)
-            Expression<Integer> endMonth = cb.function("month", Integer.class, applyEnd);
-            Expression<Integer> endDay = cb.function("day_of_month", Integer.class, applyEnd);
-            Expression<Integer> endYear = cb.function("year", Integer.class, applyEnd);
-            Expression<Integer> startYear = cb.function("year", Integer.class, applyStart);
-            Expression<Integer> endDoy = cb.function("day_of_year", Integer.class, applyEnd);
-            Expression<Integer> startDoy = cb.function("day_of_year", Integer.class, applyStart);
+            // PostgreSQL 호환: date_part('field', d) 는 double precision 반환
+            Expression<Double> endMonth = cb.function("date_part", Double.class, cb.literal("month"), applyEnd);
+            Expression<Double> endDay = cb.function("date_part", Double.class, cb.literal("day"), applyEnd);
+            Expression<Double> endYear = cb.function("date_part", Double.class, cb.literal("year"), applyEnd);
+            Expression<Double> startYear = cb.function("date_part", Double.class, cb.literal("year"), applyStart);
+            Expression<Double> endDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyEnd);
+            Expression<Double> startDoy = cb.function("date_part", Double.class, cb.literal("doy"), applyStart);
 
             Predicate endIsDec31 = cb.and(
-                    cb.equal(endMonth, 12),
-                    cb.equal(endDay, 31)
+                    cb.equal(endMonth, 12.0),
+                    cb.equal(endDay, 31.0)
             );
 
             // 같은 해면 doy 차이 >= 270, 다른 해면 (start.year < end.year) 자동 만족
             Predicate sameYearLongSpan = cb.and(
                     cb.equal(startYear, endYear),
-                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS)
+                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), (double) Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS)
             );
             Predicate multiYear = cb.lessThan(startYear, endYear);
             Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);
