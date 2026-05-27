@@ -214,6 +214,11 @@ resilience4j:
         wait-duration: 2s
         retry-exceptions:
           - com.youthfit.common.exception.RetryableOpenAiException
+      openai-qna:
+        max-attempts: 3
+        wait-duration: 2s
+        retry-exceptions:
+          - com.youthfit.common.exception.RetryableOpenAiException
 
 ---
 spring:

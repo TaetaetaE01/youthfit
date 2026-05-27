@@ -2,10 +2,12 @@ package com.youthfit.qna.infrastructure.external;
 
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.common.openai.OpenAiErrorClassifier;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
 import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
+import io.github.resilience4j.retry.annotation.Retry;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -15,6 +17,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -74,20 +78,24 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
     private final OpenAiQnaProperties properties;
     private final ApplicationEventPublisher eventPublisher;
+    private final OpenAiErrorClassifier errorClassifier;
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OpenAiQnaClient(
             OpenAiQnaProperties properties,
             ApplicationEventPublisher eventPublisher,
+            OpenAiErrorClassifier errorClassifier,
             @Qualifier("openAiRestClientBuilder") RestClient.Builder restClientBuilder
     ) {
         this.properties = properties;
         this.eventPublisher = eventPublisher;
+        this.errorClassifier = errorClassifier;
         this.restClient = restClientBuilder.build();
     }
 
     @Override
+    @Retry(name = "openai-qna")
     public String generateAnswer(String policyTitle, PolicyMetadata metadata, String context, String question, Consumer<String> chunkConsumer) {
         String userMessage = buildUserMessage(policyTitle, metadata, context, question);
 
@@ -106,29 +114,37 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                 )
         );
 
+        InputStream inputStream;
         try {
-            InputStream inputStream = restClient.post()
+            inputStream = restClient.post()
                     .uri(CHAT_COMPLETIONS_URL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + properties.getApiKey())
                     .body(requestBody)
                     .retrieve()
                     .body(InputStream.class);
+        } catch (RestClientException e) {
+            log.warn("OpenAI Q&A 호출 실패 (분류 → retry 판정): policyTitle={}, status={}, msg={}",
+                    policyTitle,
+                    e instanceof RestClientResponseException rce ? rce.getStatusCode() : "n/a",
+                    e.getMessage());
+            throw errorClassifier.classify(e);
+        }
 
-            if (inputStream == null) {
-                throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
-            }
+        if (inputStream == null) {
+            throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
+        }
 
+        try {
             return readStreamResponse(inputStream, chunkConsumer);
-        } catch (YouthFitException e) {
-            throw e;
         } catch (Exception e) {
-            log.error("OpenAI Q&A 스트리밍 호출 실패: policyTitle={}", policyTitle, e);
+            log.error("OpenAI Q&A 스트리밍 응답 파싱 실패: policyTitle={}", policyTitle, e);
             throw new YouthFitException(ErrorCode.INTERNAL_ERROR, "Q&A 답변 생성에 실패했습니다");
         }
     }
 
     @Override
+    @Retry(name = "openai-qna")
     public List<String> generateFollowUpQuestions(String policyTitle, String question, String answer, String context) {
         String safeContext = (context == null || context.isBlank()) ? "(본문 컨텍스트 없음)" : context;
         String userMessage = "정책명: " + policyTitle
@@ -146,15 +162,24 @@ public class OpenAiQnaClient implements QnaLlmProvider {
                 )
         );
 
+        String responseBody;
         try {
-            String responseBody = restClient.post()
+            responseBody = restClient.post()
                     .uri(CHAT_COMPLETIONS_URL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + properties.getApiKey())
                     .body(requestBody)
                     .retrieve()
                     .body(String.class);
+        } catch (RestClientException e) {
+            log.warn("OpenAI follow-up 호출 실패 (분류 → retry 판정): policyTitle={}, status={}, msg={}",
+                    policyTitle,
+                    e instanceof RestClientResponseException rce ? rce.getStatusCode() : "n/a",
+                    e.getMessage());
+            throw errorClassifier.classify(e);
+        }
 
+        try {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode choices = root.get("choices");
             if (choices == null || choices.isEmpty()) return List.of();
@@ -174,7 +199,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
 
             return parseFollowUps(content, objectMapper);
         } catch (Exception e) {
-            log.warn("OpenAI follow-up 호출 실패: policyTitle={}, error={}", policyTitle, e.toString());
+            log.warn("OpenAI follow-up 응답 파싱 실패: policyTitle={}, error={}", policyTitle, e.toString());
             return List.of();
         }
     }
