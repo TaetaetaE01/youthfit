@@ -46,7 +46,7 @@ class PolicyCalendarControllerTest {
     void calendar_ok() throws Exception {
         PolicyCalendarResult r = new PolicyCalendarResult(
                 1L, "청년월세", Category.HOUSING,
-                LocalDate.of(2026, 3, 14), LocalDate.of(2026, 3, 31), "전국");
+                LocalDate.of(2026, 3, 14), LocalDate.of(2026, 3, 31), "전국", null);
         when(policyQueryService.findByDateRange(any(), any(), any(), eq(null)))
                 .thenReturn(List.of(r));
 
@@ -78,7 +78,7 @@ class PolicyCalendarControllerTest {
     @DisplayName("GET /api/v1/policies/calendar/always-open — 200 + 페이지 응답")
     void alwaysOpen_ok() throws Exception {
         PolicyCalendarResult r = new PolicyCalendarResult(
-                2L, "상시멘토링", Category.EDUCATION, null, null, "전국");
+                2L, "상시멘토링", Category.EDUCATION, null, null, "전국", null);
         PolicyCalendarPageResult page = new PolicyCalendarPageResult(
                 List.of(r), 1L, 0, 20, 1, false);
         when(policyQueryService.findAlwaysOpen(any(), eq(null), eq(0), eq(20)))

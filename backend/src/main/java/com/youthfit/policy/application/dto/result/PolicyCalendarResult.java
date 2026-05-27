@@ -11,16 +11,21 @@ public record PolicyCalendarResult(
         Category category,
         LocalDate applyStart,
         LocalDate applyEnd,
-        String regionLabel
+        String regionLabel,
+        Integer deadlineYear
 ) {
     public static PolicyCalendarResult from(Policy policy, String regionLabel) {
+        Integer deadlineYear = policy.isEffectivelyAlwaysOpen()
+                ? policy.getApplyEnd().getYear()
+                : null;
         return new PolicyCalendarResult(
                 policy.getId(),
                 policy.getTitle(),
                 policy.getCategory(),
                 policy.getApplyStart(),
                 policy.getApplyEnd(),
-                regionLabel
+                regionLabel,
+                deadlineYear
         );
     }
 }

@@ -11,7 +11,8 @@ public record PolicyCalendarResponse(
         Category category,
         LocalDate applyStart,
         LocalDate applyEnd,
-        String regionLabel
+        String regionLabel,
+        Integer deadlineYear
 ) {
     public static PolicyCalendarResponse from(PolicyCalendarResult result) {
         return new PolicyCalendarResponse(
@@ -20,7 +21,8 @@ public record PolicyCalendarResponse(
                 result.category(),
                 result.applyStart(),
                 result.applyEnd(),
-                result.regionLabel()
+                result.regionLabel(),
+                result.deadlineYear()
         );
     }
 }
