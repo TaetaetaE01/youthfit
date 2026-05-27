@@ -13,6 +13,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -260,6 +261,18 @@ public class Policy extends BaseTimeEntity {
 
     public boolean isExpired() {
         return this.applyEnd != null && this.applyEnd.isBefore(LocalDate.now());
+    }
+
+    /**
+     * 캘린더 표시에서 "사실상 상시" 로 분류할지 판정.
+     * end 가 ?-12-31 이고 신청 가능 기간이 약 9개월 (270일) 이상이면 true.
+     * 진짜 상시 (start, end 모두 null) 는 이 메서드의 책임이 아니다.
+     */
+    public boolean isEffectivelyAlwaysOpen() {
+        if (applyEnd == null) return false;
+        if (applyEnd.getMonthValue() != 12 || applyEnd.getDayOfMonth() != 31) return false;
+        if (applyStart == null) return true;
+        return ChronoUnit.DAYS.between(applyStart, applyEnd) >= 270;
     }
 
     public void updateInfo(String title, String summary, String body,

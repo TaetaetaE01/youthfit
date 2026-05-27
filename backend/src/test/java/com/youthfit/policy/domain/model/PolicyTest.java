@@ -272,6 +272,66 @@ class PolicyTest {
         assertThat(policy.getApplyUrl()).isEqualTo("https://new.kr");
     }
 
+    @Nested
+    @DisplayName("isEffectivelyAlwaysOpen - 사실상 상시 정책 판정")
+    class IsEffectivelyAlwaysOpen {
+
+        @Test
+        @DisplayName("end 가 12-31 이고 start 가 같은 해 1-1 이면 true (365일)")
+        void effectivelyAlwaysOpen_fullYear() {
+            Policy p = policyWith(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31));
+            assertThat(p.isEffectivelyAlwaysOpen()).isTrue();
+        }
+
+        @Test
+        @DisplayName("end 가 12-31 이고 start 가 null 이면 true")
+        void effectivelyAlwaysOpen_startNull() {
+            Policy p = policyWith(null, LocalDate.of(2026, 12, 31));
+            assertThat(p.isEffectivelyAlwaysOpen()).isTrue();
+        }
+
+        @Test
+        @DisplayName("end 가 12-31 이고 span 이 정확히 270일이면 true")
+        void effectivelyAlwaysOpen_exactly270Days() {
+            LocalDate end = LocalDate.of(2026, 12, 31);
+            LocalDate start = end.minusDays(270);
+            Policy p = policyWith(start, end);
+            assertThat(p.isEffectivelyAlwaysOpen()).isTrue();
+        }
+
+        @Test
+        @DisplayName("end 가 12-31 이고 span 이 269일이면 false (단기 모집)")
+        void effectivelyAlwaysOpen_below270Days() {
+            LocalDate end = LocalDate.of(2026, 12, 31);
+            LocalDate start = end.minusDays(269);
+            Policy p = policyWith(start, end);
+            assertThat(p.isEffectivelyAlwaysOpen()).isFalse();
+        }
+
+        @Test
+        @DisplayName("end 가 12-31 이 아니면 false (예: 11-30)")
+        void effectivelyAlwaysOpen_endNot1231() {
+            Policy p = policyWith(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 11, 30));
+            assertThat(p.isEffectivelyAlwaysOpen()).isFalse();
+        }
+
+        @Test
+        @DisplayName("end 가 null 이면 false (이 메서드는 사실상 상시만 책임)")
+        void effectivelyAlwaysOpen_endNull() {
+            Policy p = policyWith(null, null);
+            assertThat(p.isEffectivelyAlwaysOpen()).isFalse();
+        }
+
+        private Policy policyWith(LocalDate start, LocalDate end) {
+            return Policy.builder()
+                    .title("t").summary("s")
+                    .category(Category.JOBS).regionCode("전국")
+                    .applyStart(start)
+                    .applyEnd(end)
+                    .build();
+        }
+    }
+
     // ── 헬퍼 메서드 ──
 
     private Policy createUpcomingPolicy() {
