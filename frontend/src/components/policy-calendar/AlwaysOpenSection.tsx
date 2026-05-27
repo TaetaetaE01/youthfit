@@ -43,7 +43,7 @@ export default function AlwaysOpenSection({ regions, category }: Props) {
       <div className="flex flex-wrap gap-2">
         {data.content.map((it) => {
           const periodLabel = it.deadlineYear
-            ? `${String(it.deadlineYear).slice(2)}년 상시`
+            ? `${it.deadlineYear % 100}년 상시`
             : '상시';
           return (
             <Link
