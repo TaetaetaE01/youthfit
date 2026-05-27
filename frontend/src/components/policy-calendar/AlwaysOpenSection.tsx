@@ -41,15 +41,23 @@ export default function AlwaysOpenSection({ regions, category }: Props) {
         </Link>
       </header>
       <div className="flex flex-wrap gap-2">
-        {data.content.map((it) => (
-          <Link
-            key={it.id}
-            to={`/policies/${it.id}`}
-            className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            {it.title}
-          </Link>
-        ))}
+        {data.content.map((it) => {
+          const periodLabel = it.deadlineYear
+            ? `${String(it.deadlineYear).slice(2)}년 상시`
+            : '상시';
+          return (
+            <Link
+              key={it.id}
+              to={`/policies/${it.id}`}
+              className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+            >
+              <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-800">
+                {periodLabel}
+              </span>
+              <span>{it.title}</span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

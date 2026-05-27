@@ -14,6 +14,7 @@ const mk = (
   applyStart,
   applyEnd,
   regionLabel: '전국',
+  deadlineYear: null,
 });
 
 describe('layoutBars', () => {
