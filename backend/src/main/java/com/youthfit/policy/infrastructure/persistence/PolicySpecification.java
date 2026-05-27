@@ -151,7 +151,7 @@ public final class PolicySpecification {
             // 같은 해면 doy 차이 >= 270, 다른 해면 (start.year < end.year) 자동 만족
             Predicate sameYearLongSpan = cb.and(
                     cb.equal(startYear, endYear),
-                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), 270)
+                    cb.greaterThanOrEqualTo(cb.diff(endDoy, startDoy), Policy.EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS)
             );
             Predicate multiYear = cb.lessThan(startYear, endYear);
             Predicate spanLongEnough = cb.or(sameYearLongSpan, multiYear);

@@ -263,6 +263,9 @@ public class Policy extends BaseTimeEntity {
         return this.applyEnd != null && this.applyEnd.isBefore(LocalDate.now());
     }
 
+    /** 사실상 상시로 분류할 최소 신청 기간 (일). 약 9개월. */
+    public static final int EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS = 270;
+
     /**
      * 캘린더 표시에서 "사실상 상시" 로 분류할지 판정.
      * end 가 ?-12-31 이고 신청 가능 기간이 약 9개월 (270일) 이상이면 true.
@@ -272,7 +275,7 @@ public class Policy extends BaseTimeEntity {
         if (applyEnd == null) return false;
         if (applyEnd.getMonthValue() != 12 || applyEnd.getDayOfMonth() != 31) return false;
         if (applyStart == null) return true;
-        return ChronoUnit.DAYS.between(applyStart, applyEnd) >= 270;
+        return ChronoUnit.DAYS.between(applyStart, applyEnd) >= EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS;
     }
 
     public void updateInfo(String title, String summary, String body,
