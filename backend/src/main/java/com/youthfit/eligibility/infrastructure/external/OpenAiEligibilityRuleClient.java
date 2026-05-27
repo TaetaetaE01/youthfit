@@ -5,9 +5,9 @@ import com.youthfit.eligibility.application.dto.result.RawExtractedRule;
 import com.youthfit.eligibility.application.port.EligibilityRuleLlmProvider;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class OpenAiEligibilityRuleClient implements EligibilityRuleLlmProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiEligibilityRuleClient.class);
@@ -74,8 +73,18 @@ public class OpenAiEligibilityRuleClient implements EligibilityRuleLlmProvider {
 
     private final OpenAiEligibilityRuleProperties properties;
     private final ApplicationEventPublisher eventPublisher;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public OpenAiEligibilityRuleClient(
+            OpenAiEligibilityRuleProperties properties,
+            ApplicationEventPublisher eventPublisher,
+            @Qualifier("openAiRestClientBuilder") RestClient.Builder restClientBuilder
+    ) {
+        this.properties = properties;
+        this.eventPublisher = eventPublisher;
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     public List<RawExtractedRule> extractRules(EligibilityRuleExtractionInput input) {
