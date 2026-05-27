@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
@@ -24,6 +25,7 @@ public class OpenAiHttpConfig {
     private final OpenAiHttpProperties properties;
 
     @Bean("openAiRestClientBuilder")
+    @Scope("prototype")
     public RestClient.Builder openAiRestClientBuilder() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(properties.connectTimeoutSeconds()));
