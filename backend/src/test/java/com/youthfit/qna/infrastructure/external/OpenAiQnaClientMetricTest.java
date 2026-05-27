@@ -1,10 +1,12 @@
 package com.youthfit.qna.infrastructure.external;
 
+import com.youthfit.common.openai.OpenAiErrorClassifier;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.web.client.RestClient;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
@@ -22,7 +24,10 @@ class OpenAiQnaClientMetricTest {
         when(props.getModel()).thenReturn("gpt-4o-mini");
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
 
-        OpenAiQnaClient client = new OpenAiQnaClient(props, publisher);
+        RestClient.Builder builderMock = mock(RestClient.Builder.class);
+        when(builderMock.build()).thenReturn(mock(RestClient.class));
+
+        OpenAiQnaClient client = new OpenAiQnaClient(props, publisher, mock(OpenAiErrorClassifier.class), builderMock);
 
         // SSE 형식 더미 — content chunk 2 + usage chunk 1 + [DONE]
         String sse = """

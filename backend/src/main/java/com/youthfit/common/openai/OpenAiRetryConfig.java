@@ -30,6 +30,12 @@ public class OpenAiRetryConfig {
         return RetryConfigCustomizer.of("openai-embedding", builder -> builder.intervalBiFunction(buildIntervalFn()));
     }
 
+    @Bean
+    @SuppressWarnings("unchecked")
+    public RetryConfigCustomizer openAiQnaRetryCustomizer() {
+        return RetryConfigCustomizer.of("openai-qna", builder -> builder.intervalBiFunction(buildIntervalFn()));
+    }
+
     private IntervalBiFunction<Object> buildIntervalFn() {
         return (attempt, either) -> {
             Throwable t = either.isLeft() ? either.getLeft() : null;

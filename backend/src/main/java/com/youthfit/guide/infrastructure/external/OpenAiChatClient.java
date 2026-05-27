@@ -14,9 +14,9 @@ import com.youthfit.guide.domain.model.GuidePitfall;
 import com.youthfit.guide.domain.model.GuideSourceField;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class OpenAiChatClient implements GuideLlmProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiChatClient.class);
@@ -297,11 +296,25 @@ public class OpenAiChatClient implements GuideLlmProvider {
     private final ApplicationEventPublisher eventPublisher;
     private final TokenCounter tokenCounter;
     private final OpenAiErrorClassifier errorClassifier;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${guide.map-reduce.merge-cap-tokens:100000}")
     private int mergeCapTokens;
+
+    public OpenAiChatClient(
+            OpenAiChatProperties properties,
+            ApplicationEventPublisher eventPublisher,
+            TokenCounter tokenCounter,
+            OpenAiErrorClassifier errorClassifier,
+            @Qualifier("openAiRestClientBuilder") RestClient.Builder restClientBuilder
+    ) {
+        this.properties = properties;
+        this.eventPublisher = eventPublisher;
+        this.tokenCounter = tokenCounter;
+        this.errorClassifier = errorClassifier;
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     @Retry(name = "openai-chat")

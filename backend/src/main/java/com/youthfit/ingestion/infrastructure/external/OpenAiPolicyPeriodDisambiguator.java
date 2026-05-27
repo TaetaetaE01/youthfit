@@ -5,9 +5,9 @@ import com.youthfit.ingestion.domain.service.port.PeriodLlmDisambiguator;
 import com.youthfit.ingestion.domain.model.PeriodCandidate;
 import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 public class OpenAiPolicyPeriodDisambiguator implements PeriodLlmDisambiguator {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiPolicyPeriodDisambiguator.class);
@@ -45,7 +44,19 @@ public class OpenAiPolicyPeriodDisambiguator implements PeriodLlmDisambiguator {
     private final OpenAiPolicyPeriodProperties properties;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public OpenAiPolicyPeriodDisambiguator(
+            OpenAiPolicyPeriodProperties properties,
+            ObjectMapper objectMapper,
+            ApplicationEventPublisher eventPublisher,
+            @Qualifier("openAiRestClientBuilder") RestClient.Builder restClientBuilder
+    ) {
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     public Optional<PeriodCandidate> choose(String bodySnippet, List<PeriodCandidate> candidates) {
