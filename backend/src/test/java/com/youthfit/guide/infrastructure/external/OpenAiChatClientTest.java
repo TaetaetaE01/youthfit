@@ -16,9 +16,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import org.springframework.web.client.RestClient;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,8 +33,14 @@ class OpenAiChatClientTest {
     @Mock TokenCounter tokenCounter;
     @Mock OpenAiErrorClassifier errorClassifier;
 
+    private static RestClient.Builder mockBuilder() {
+        RestClient.Builder b = mock(RestClient.Builder.class);
+        when(b.build()).thenReturn(mock(RestClient.class));
+        return b;
+    }
+
     private OpenAiChatClient clientWithCap(int cap) {
-        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier, mockBuilder());
         ReflectionTestUtils.setField(client, "mergeCapTokens", cap);
         return client;
     }
@@ -45,7 +54,7 @@ class OpenAiChatClientTest {
 
     @Test
     void parseResponse_단일그룹_라벨없는_paired_파싱() {
-        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier, mockBuilder());
         String json = """
                 {
                   "oneLineSummary": "만 19~34세 청년 월세 지원",
@@ -73,7 +82,7 @@ class OpenAiChatClientTest {
 
     @Test
     void buildResponseFormat_includesAttachmentEnumAndAttachmentRef() throws Exception {
-        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier, mockBuilder());
         Method m = OpenAiChatClient.class.getDeclaredMethod("buildResponseFormat");
         m.setAccessible(true);
         Object format = m.invoke(client);
@@ -88,7 +97,7 @@ class OpenAiChatClientTest {
 
     @Test
     void parseResponse_라벨있는_여러그룹_paired_파싱() {
-        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier);
+        OpenAiChatClient client = new OpenAiChatClient(properties, eventPublisher, tokenCounter, errorClassifier, mockBuilder());
         String json = """
                 {
                   "oneLineSummary": "공공분양",

@@ -7,6 +7,7 @@ import com.youthfit.metrics.domain.model.LlmModule;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -17,13 +18,19 @@ import static org.mockito.Mockito.*;
 
 class OpenAiChatClientMetricTest {
 
+    private static RestClient.Builder mockBuilder() {
+        RestClient.Builder b = mock(RestClient.Builder.class);
+        when(b.build()).thenReturn(mock(RestClient.class));
+        return b;
+    }
+
     @Test
     void emitMetric_은_usage_를_파싱해_GUIDE_모듈_이벤트를_발행한다() throws Exception {
         OpenAiChatProperties props = mock(OpenAiChatProperties.class);
         when(props.getModel()).thenReturn("gpt-4o-mini");
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
 
-        OpenAiChatClient client = new OpenAiChatClient(props, publisher, mock(TokenCounter.class), mock(OpenAiErrorClassifier.class));
+        OpenAiChatClient client = new OpenAiChatClient(props, publisher, mock(TokenCounter.class), mock(OpenAiErrorClassifier.class), mockBuilder());
 
         JsonNode response = new ObjectMapper().readTree("""
                 {"choices":[{"message":{"content":"{}"}}],
@@ -49,7 +56,7 @@ class OpenAiChatClientMetricTest {
         when(props.getModel()).thenReturn("gpt-4o-mini");
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
 
-        OpenAiChatClient client = new OpenAiChatClient(props, publisher, mock(TokenCounter.class), mock(OpenAiErrorClassifier.class));
+        OpenAiChatClient client = new OpenAiChatClient(props, publisher, mock(TokenCounter.class), mock(OpenAiErrorClassifier.class), mockBuilder());
 
         JsonNode response = new ObjectMapper().readTree("""
                 {"choices":[{"message":{"content":"{}"}}]}

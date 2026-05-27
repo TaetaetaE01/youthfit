@@ -24,7 +24,9 @@ class OpenAiEmbeddingClientMetricTest {
     void publisher_는_정상_주입된다() {
         OpenAiEmbeddingProperties props = mock(OpenAiEmbeddingProperties.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
-        OpenAiEmbeddingClient client = new OpenAiEmbeddingClient(props, publisher, mock(OpenAiErrorClassifier.class));
+        RestClient.Builder builderMock = mock(RestClient.Builder.class);
+        when(builderMock.build()).thenReturn(mock(RestClient.class));
+        OpenAiEmbeddingClient client = new OpenAiEmbeddingClient(props, publisher, mock(OpenAiErrorClassifier.class), builderMock);
         assertThat(client).isNotNull();
     }
 }
