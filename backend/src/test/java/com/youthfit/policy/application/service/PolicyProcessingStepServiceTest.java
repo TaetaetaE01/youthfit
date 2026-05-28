@@ -28,10 +28,9 @@ class PolicyProcessingStepServiceTest {
     @Test
     void markStarted_는_attempt_1_로_저장한다_기존_없을_때() {
         when(repository.countByPolicyIdAndStep(1L, ProcessingStep.GUIDE)).thenReturn(0);
-        when(repository.save(any())).thenAnswer(invocation -> {
-            PolicyProcessingStep saved = invocation.getArgument(0);
-            return saved;
-        });
+        PolicyProcessingStep saved = mock(PolicyProcessingStep.class);
+        when(saved.getId()).thenReturn(42L);
+        when(repository.save(any())).thenReturn(saved);
 
         Long stepId = service.markStarted(1L, ProcessingStep.GUIDE);
 
@@ -39,18 +38,22 @@ class PolicyProcessingStepServiceTest {
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getAttempt()).isEqualTo(1);
         assertThat(captor.getValue().getStatus()).isEqualTo(ProcessingStatus.IN_PROGRESS);
+        assertThat(stepId).isEqualTo(42L);
     }
 
     @Test
     void markStarted_는_attempt_N_plus_1_로_저장한다_기존_있을_때() {
         when(repository.countByPolicyIdAndStep(1L, ProcessingStep.RAG_INDEXING)).thenReturn(2);
-        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        PolicyProcessingStep saved = mock(PolicyProcessingStep.class);
+        when(saved.getId()).thenReturn(77L);
+        when(repository.save(any())).thenReturn(saved);
 
-        service.markStarted(1L, ProcessingStep.RAG_INDEXING);
+        Long stepId = service.markStarted(1L, ProcessingStep.RAG_INDEXING);
 
         ArgumentCaptor<PolicyProcessingStep> captor = ArgumentCaptor.forClass(PolicyProcessingStep.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getAttempt()).isEqualTo(3);
+        assertThat(stepId).isEqualTo(77L);
     }
 
     @Test

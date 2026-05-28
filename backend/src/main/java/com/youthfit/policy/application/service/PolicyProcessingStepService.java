@@ -21,6 +21,12 @@ public class PolicyProcessingStepService {
 
     /**
      * 단계 시작 기록. attempt 는 기존 행 수 + 1 로 자동 계산.
+     *
+     * <p>호출 가정: 같은 (policyId, step) 에 대한 동시 호출은 없다고 가정한다.
+     * 본 Phase 의 listener 들은 서로 다른 step 이라 사실상 동시 진입이 없으며,
+     * 향후 admin 재실행 (Phase E) 단계에서 동시성이 필요해지면 unique constraint
+     * 충돌 retry 로직을 도입한다.
+     *
      * @return 저장된 step row id (markFinished 호출 시 사용)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
