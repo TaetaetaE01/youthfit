@@ -128,7 +128,7 @@
    - `source_hash` 가 같으면 중복으로 판단 → `SKIPPED_DUPLICATE` 반환
    - 신규/변경이면 `policy`, `policy_source` 테이블 upsert
 7. **코드 기반 룰 추출** (`CodeBasedRuleExtractionService`) — `rawCodes` 가 있으면 자격 룰 생성
-8. **이벤트 발행** — `PolicyUpsertedEvent` 발행 → 가이드 생성·RAG 인덱싱 등 후속 트리거
+8. **이벤트 발행** — `PolicyUpsertedEvent` 발행 → 가이드 생성 (`GuideGenerationEventListener`), 적합도 룰 추출 (`EligibilityRuleGenerationEventListener`), RAG 1차 인덱싱 (`RagIndexingEventListener`) 트리거. RAG 는 본문+enrichment 만으로 즉시 인덱싱하고, 첨부 추출이 종결되면 `AttachmentReindexService` 가 본문+첨부 merged content 로 2차 재인덱싱한다 (`source_hash` 변경으로 자동 갱신).
 9. **첨부 다운로드 트리거** — `attachmentDownloadService.downloadForPolicyAsync(policyId)` (비동기)
 10. **실행 로그 적재** — 성공/실패 모두 `ingestion_run_log` 테이블에 기록
 11. **실패 적재** — 예외 발생 시 `ingestion_item_failure` 테이블에 페이로드/스택트레이스/n8n 메타와 함께 기록

@@ -288,9 +288,16 @@ EligibilityRule
 
 ## 3. RAG 인덱싱
 
-가이드와 Q&A 가 의존하는 임베딩 인덱스. 첨부 추출이 끝난 뒤에만 한 번에 만들어진다.
+가이드와 Q&A 가 의존하는 임베딩 인덱스. **2단계 fan-out** 으로 만들어진다.
 
-### 3-1. 트리거 — 첨부 트랙
+- **1차 (PolicyUpsertedEvent)**: 정책 ingest 직후 `RagIndexingEventListener` 가 본문 + enrichment 만으로 즉시 인덱싱. 첨부가 0건이거나 첨부 추출이 아직 안 끝난 정책도 이 단계에서 Q&A 가능 상태가 된다.
+- **2차 (첨부 추출 완료 후)**: 모든 첨부가 종결 상태가 되면 `AttachmentReindexService` 가 본문 + 첨부 텍스트를 merge 해 재인덱싱. `source_hash` 가 바뀌어 1차 청크가 모두 교체된다.
+
+### 3-1. 1차 트리거 — PolicyUpsertedEvent
+
+`IngestionService.receivePolicy()` 가 정책을 정상 commit 한 직후 `PolicyUpsertedEvent` 가 발행되면 `RagIndexingEventListener.onPolicyUpserted()` 가 `@Async("llmExecutor")` 로 실행되어 본문 + enrichment 만으로 `RagIndexingService.indexPolicyDocument()` 호출. 본문이 비어있는 정책은 스킵.
+
+### 3-2. 2차 트리거 — 첨부 트랙
 
 ```
 [정책 적재 → IngestionService 가 attachmentDownloadService.downloadForPolicyAsync 호출]
@@ -318,13 +325,13 @@ EligibilityRule
    → 가이드 / 룰 재생성 fan-out
 ```
 
-### 3-2. `DocumentChunker`
+### 3-3. `DocumentChunker`
 
 - **분할 기준**: 문단/문장, 최대 500 자
 - **메타 보존**: 청크별 `chunkIndex`, `source` (`BODY` / `ATTACHMENT` / `ENRICHMENT_BODY`), `attachmentId`, `pageStart`/`pageEnd`
 - **임베딩**: OpenAI `text-embedding-3-small` (1536 차원), `pgvector` 의 `vector(1536)` 컬럼에 저장
 
-### 3-3. 인덱싱 결과
+### 3-4. 인덱싱 결과
 
 | `policy_document.source` | 의미 |
 |--------------------------|------|
