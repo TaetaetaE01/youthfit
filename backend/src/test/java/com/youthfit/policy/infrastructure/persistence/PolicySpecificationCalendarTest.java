@@ -154,7 +154,7 @@ class PolicySpecificationCalendarTest {
     }
 
     @Test
-    @DisplayName("withCalendarRange — 사실상 상시 정책 (end=12-31, span>=270일) 은 캘린더 막대에서 제외")
+    @DisplayName("withCalendarRange — 사실상 상시 정책 (end=12-31, span>=180일) 은 캘린더 막대에서 제외")
     void withCalendarRangeExcludesEffectivelyAlwaysOpen() {
         // 사실상 상시 (포함 안 됨)
         repository.save(policyWithDates("연중1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
@@ -187,7 +187,7 @@ class PolicySpecificationCalendarTest {
     }
 
     @Test
-    @DisplayName("alwaysOpen — 사실상 상시: end=12-31 AND span>=270일 정책을 포함")
+    @DisplayName("alwaysOpen — 사실상 상시: end=12-31 AND span>=180일 정책을 포함")
     void alwaysOpenIncludesEffectivelyAlwaysOpen() {
         // 진짜 상시
         repository.save(policyWithDates("진짜상시", null, null));
@@ -195,9 +195,9 @@ class PolicySpecificationCalendarTest {
         repository.save(policyWithDates("연중1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
         repository.save(policyWithDates("마감만", null, LocalDate.of(2026, 12, 31)));
         repository.save(policyWithDates("멀티year", LocalDate.of(2025, 12, 31), LocalDate.of(2026, 12, 31)));
-        repository.save(policyWithDates("정확히270일", LocalDate.of(2026, 12, 31).minusDays(270), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("정확히180일", LocalDate.of(2026, 12, 31).minusDays(180), LocalDate.of(2026, 12, 31)));
         // 제외되어야 할 케이스
-        repository.save(policyWithDates("span269", LocalDate.of(2026, 12, 31).minusDays(269), LocalDate.of(2026, 12, 31)));
+        repository.save(policyWithDates("span179", LocalDate.of(2026, 12, 31).minusDays(179), LocalDate.of(2026, 12, 31)));
         repository.save(policyWithDates("end11-30", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 11, 30)));
         repository.save(policyWithDates("3월모집", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
 
@@ -206,7 +206,7 @@ class PolicySpecificationCalendarTest {
 
         assertThat(result)
                 .extracting(Policy::getTitle)
-                .containsExactlyInAnyOrder("진짜상시", "연중1", "마감만", "멀티year", "정확히270일");
+                .containsExactlyInAnyOrder("진짜상시", "연중1", "마감만", "멀티year", "정확히180일");
     }
 
     @Test

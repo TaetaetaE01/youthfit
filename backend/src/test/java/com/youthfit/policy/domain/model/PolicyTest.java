@@ -291,19 +291,19 @@ class PolicyTest {
         }
 
         @Test
-        @DisplayName("end 가 12-31 이고 span 이 정확히 270일이면 true")
-        void effectivelyAlwaysOpen_exactly270Days() {
+        @DisplayName("end 가 12-31 이고 span 이 정확히 180일이면 true")
+        void effectivelyAlwaysOpen_exactly180Days() {
             LocalDate end = LocalDate.of(2026, 12, 31);
-            LocalDate start = end.minusDays(270);
+            LocalDate start = end.minusDays(180);
             Policy p = policyWith(start, end);
             assertThat(p.isEffectivelyAlwaysOpen()).isTrue();
         }
 
         @Test
-        @DisplayName("end 가 12-31 이고 span 이 269일이면 false (단기 모집)")
-        void effectivelyAlwaysOpen_below270Days() {
+        @DisplayName("end 가 12-31 이고 span 이 179일이면 false (단기 모집)")
+        void effectivelyAlwaysOpen_below180Days() {
             LocalDate end = LocalDate.of(2026, 12, 31);
-            LocalDate start = end.minusDays(269);
+            LocalDate start = end.minusDays(179);
             Policy p = policyWith(start, end);
             assertThat(p.isEffectivelyAlwaysOpen()).isFalse();
         }
