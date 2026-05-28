@@ -4,6 +4,7 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,7 +18,7 @@ public interface PolicyRepository {
     Optional<Policy> findById(Long id);
 
     Page<Policy> findAllByFilters(RegionFilter regionFilter, Category category, PolicyStatus status,
-                                   Pageable pageable);
+                                   SourceType source, Pageable pageable);
 
     Page<Policy> searchByKeyword(String keyword, PolicyStatus status, Pageable pageable);
 

@@ -4,6 +4,7 @@ import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,9 +31,9 @@ public class PolicyRepositoryImpl implements PolicyRepository {
 
     @Override
     public Page<Policy> findAllByFilters(RegionFilter regionFilter, Category category, PolicyStatus status,
-                                         Pageable pageable) {
+                                         SourceType source, Pageable pageable) {
         return jpaRepository.findAll(
-                PolicySpecification.withFilters(regionFilter, category, status, null), pageable);
+                PolicySpecification.withFilters(regionFilter, category, status, source), pageable);
     }
 
     @Override
