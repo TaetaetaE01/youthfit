@@ -63,7 +63,7 @@ public final class PolicySpecification {
         Root<PolicySource> sourceRoot = sub.from(PolicySource.class);
         sub.select(cb.literal(1L))
            .where(
-               cb.equal(sourceRoot.get("policy").get("id"), root.get("id")),
+               cb.equal(sourceRoot.get("policy"), root),
                cb.equal(sourceRoot.get("sourceType"), source)
            );
         return cb.exists(sub);
