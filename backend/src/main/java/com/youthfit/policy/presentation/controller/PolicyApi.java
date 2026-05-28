@@ -2,6 +2,7 @@ package com.youthfit.policy.presentation.controller;
 
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.PolicyStatus;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.presentation.dto.response.PolicyCalendarListResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyCalendarPageResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyDetailResponse;
@@ -37,6 +38,8 @@ public interface PolicyApi {
             Category category,
             @Parameter(description = "정책 상태 필터: OPEN(진행중) / UPCOMING(예정) / CLOSED(마감). 미지정 시 전체.")
             PolicyStatus status,
+            @Parameter(description = "출처 (YOUTH_SEOUL_CRAWL, BOKJIRO_CENTRAL, YOUTH_CENTER)")
+            SourceType source,
             int page,
             int size);
 

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -56,6 +57,18 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(ErrorCode.INVALID_INPUT.getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(ErrorCode.INVALID_INPUT.getCode(), message));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        Class<?> required = e.getRequiredType();
+        String typeName = required != null ? required.getSimpleName() : "unknown";
+        String message = String.format("파라미터 '%s' 값이 올바르지 않습니다 (요구 타입: %s)",
+                e.getName(), typeName);
+        log.warn("MethodArgumentTypeMismatchException: param={}, value={}, requiredType={}",
+                e.getName(), e.getValue(), typeName);
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error(ErrorCode.INVALID_INPUT.getCode(), message));
     }

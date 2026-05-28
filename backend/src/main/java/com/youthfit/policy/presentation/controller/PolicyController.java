@@ -8,6 +8,7 @@ import com.youthfit.policy.application.service.PolicyQueryService;
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.presentation.dto.response.PolicyCalendarListResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyCalendarPageResponse;
 import com.youthfit.policy.presentation.dto.response.PolicyCalendarResponse;
@@ -39,12 +40,13 @@ public class PolicyController implements PolicyApi {
             @RequestParam(required = false) String regionCode,
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) PolicyStatus status,
+            @RequestParam(required = false) SourceType source,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         RegionFilter filter = resolveRegionFilter(regions, regionCode);
         PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                filter, category, status, page, size);
+                filter, category, status, source, page, size);
         return ResponseEntity.ok(PolicyPageResponse.from(result));
     }
 
