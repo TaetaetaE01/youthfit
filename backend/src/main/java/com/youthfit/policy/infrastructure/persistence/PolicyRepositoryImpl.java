@@ -32,7 +32,7 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     public Page<Policy> findAllByFilters(RegionFilter regionFilter, Category category, PolicyStatus status,
                                          Pageable pageable) {
         return jpaRepository.findAll(
-                PolicySpecification.withFilters(regionFilter, category, status), pageable);
+                PolicySpecification.withFilters(regionFilter, category, status, null), pageable);
     }
 
     @Override

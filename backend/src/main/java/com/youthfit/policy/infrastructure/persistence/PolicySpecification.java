@@ -2,8 +2,10 @@ package com.youthfit.policy.infrastructure.persistence;
 
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -11,6 +13,7 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -28,7 +31,8 @@ public final class PolicySpecification {
 
     public static Specification<Policy> withFilters(RegionFilter regionFilter,
                                                     Category category,
-                                                    PolicyStatus status) {
+                                                    PolicyStatus status,
+                                                    SourceType source) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -41,11 +45,28 @@ public final class PolicySpecification {
             if (status != null) {
                 predicates.add(cb.equal(effectiveStatusExpr(root, cb), status.name()));
             }
+            if (source != null) {
+                predicates.add(sourcePredicate(root, query, cb, source));
+            }
 
             applyOrder(root, query, cb, status);
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Predicate sourcePredicate(Root<Policy> root,
+                                             CriteriaQuery<?> query,
+                                             CriteriaBuilder cb,
+                                             SourceType source) {
+        Subquery<Long> sub = query.subquery(Long.class);
+        Root<PolicySource> sourceRoot = sub.from(PolicySource.class);
+        sub.select(cb.literal(1L))
+           .where(
+               cb.equal(sourceRoot.get("policy").get("id"), root.get("id")),
+               cb.equal(sourceRoot.get("sourceType"), source)
+           );
+        return cb.exists(sub);
     }
 
     public static Specification<Policy> withKeyword(String keyword, PolicyStatus status) {

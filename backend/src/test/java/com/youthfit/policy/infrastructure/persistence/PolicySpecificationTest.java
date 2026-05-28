@@ -2,9 +2,12 @@ package com.youthfit.policy.infrastructure.persistence;
 
 import com.youthfit.policy.domain.model.Category;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import jakarta.persistence.criteria.*;
+import jakarta.persistence.criteria.Subquery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -70,7 +73,7 @@ class PolicySpecificationTest {
         given(root.get("createdAt")).willReturn(createdAtPath);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null, null);
 
         // when
         Predicate result = spec.toPredicate(root, query, cb);
@@ -102,7 +105,7 @@ class PolicySpecificationTest {
         given(cb.and(any(Predicate[].class))).willReturn(predicate);
 
         Specification<Policy> spec = PolicySpecification.withFilters(
-                RegionFilter.of(java.util.List.of("11")), null, null);
+                RegionFilter.of(java.util.List.of("11")), null, null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -130,7 +133,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(combined);
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -159,7 +162,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.UPCOMING);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.UPCOMING, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -187,7 +190,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descCreatedOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.CLOSED);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.CLOSED, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -209,7 +212,7 @@ class PolicySpecificationTest {
         given(cb.desc(createdAtPath)).willReturn(descOrder);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, null, null);
 
         // when
         spec.toPredicate(root, query, cb);
@@ -225,13 +228,71 @@ class PolicySpecificationTest {
         given(query.getResultType()).willReturn((Class) Long.class);
         given(cb.and(any(Predicate[].class))).willReturn(mock(Predicate.class));
 
-        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN);
+        Specification<Policy> spec = PolicySpecification.withFilters(RegionFilter.of(null), null, PolicyStatus.OPEN, null);
 
         // when
         spec.toPredicate(root, query, cb);
 
         // then
         then(query).should(never()).orderBy(any(java.util.List.class));
+    }
+
+    @Test
+    @DisplayName("withFilters: source가 주어지면 EXISTS 서브쿼리 predicate를 추가한다")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void withFilters_withSource_addsExistsSubquery() {
+        // given
+        Predicate conjunction = mock(Predicate.class);
+        Path<Object> createdAtPath = mock(Path.class);
+        Order descOrder = mock(Order.class);
+        Subquery<Long> subquery = mock(Subquery.class, RETURNS_DEEP_STUBS);
+        Root<PolicySource> sourceRoot = mock(Root.class, RETURNS_DEEP_STUBS);
+        Predicate existsPredicate = mock(Predicate.class);
+
+        given(cb.and(any(Predicate[].class))).willReturn(conjunction);
+        given(query.getResultType()).willReturn((Class) Policy.class);
+        given(query.subquery(Long.class)).willReturn(subquery);
+        given(subquery.from(PolicySource.class)).willReturn(sourceRoot);
+        given(subquery.select(any())).willReturn(subquery);
+        given(subquery.where(any(Predicate.class), any(Predicate.class))).willReturn(subquery);
+        given(cb.exists(subquery)).willReturn(existsPredicate);
+        given(root.get("createdAt")).willReturn(createdAtPath);
+        given(cb.desc(createdAtPath)).willReturn(descOrder);
+
+        Specification<Policy> spec = PolicySpecification.withFilters(
+                RegionFilter.of(null), null, null,
+                SourceType.BOKJIRO_CENTRAL);
+
+        // when
+        spec.toPredicate(root, query, cb);
+
+        // then — exists 서브쿼리가 한 번 이상 생성되었음
+        then(query).should().subquery(Long.class);
+        then(cb).should().exists(subquery);
+    }
+
+    @Test
+    @DisplayName("withFilters: source가 null이면 EXISTS 서브쿼리를 만들지 않는다")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void withFilters_withoutSource_skipsExistsSubquery() {
+        // given
+        Predicate conjunction = mock(Predicate.class);
+        Path<Object> createdAtPath = mock(Path.class);
+        Order descOrder = mock(Order.class);
+        given(cb.and(any(Predicate[].class))).willReturn(conjunction);
+        given(query.getResultType()).willReturn((Class) Policy.class);
+        given(root.get("createdAt")).willReturn(createdAtPath);
+        given(cb.desc(createdAtPath)).willReturn(descOrder);
+
+        Specification<Policy> spec = PolicySpecification.withFilters(
+                RegionFilter.of(null), null, null, null);
+
+        // when
+        spec.toPredicate(root, query, cb);
+
+        // then
+        then(query).should(never()).subquery(Long.class);
+        then(cb).should(never()).exists(any());
     }
 
     @Test
@@ -326,7 +387,7 @@ class PolicySpecificationTest {
             given(root.get(anyString())).willReturn(path);
 
             // when
-            PolicySpecification.withFilters(RegionFilter.of(null), null, null).toPredicate(root, query, cb);
+            PolicySpecification.withFilters(RegionFilter.of(null), null, null, null).toPredicate(root, query, cb);
 
             // then — region 쪽 cb.or 가 호출되지 않음을 확인하기 위해, 적어도 그 분기에 진입했을 때만 사용하는 메서드(cb.concat) 호출 회수가 0 이어야 한다
             then(cb).should(times(0)).concat(anyString(), any(jakarta.persistence.criteria.Expression.class));
@@ -345,7 +406,7 @@ class PolicySpecificationTest {
 
             // when
             PolicySpecification.withFilters(
-                    RegionFilter.of(java.util.List.of("NATIONWIDE")), null, null)
+                    RegionFilter.of(java.util.List.of("NATIONWIDE")), null, null, null)
                     .toPredicate(root, query, cb);
 
             // then — cb.equal(regionCode, "전국") 이 호출되었음을 검증
@@ -370,7 +431,7 @@ class PolicySpecificationTest {
 
             // when
             PolicySpecification.withFilters(
-                    RegionFilter.of(java.util.List.of("11")), null, null)
+                    RegionFilter.of(java.util.List.of("11")), null, null, null)
                     .toPredicate(root, query, cb);
 
             // then — like 가 시·도 prefix(11%) + CSV 패딩(",11," ",11xxx,") 으로 최소 3회 이상 호출됨
@@ -395,7 +456,7 @@ class PolicySpecificationTest {
 
             // when
             PolicySpecification.withFilters(
-                    RegionFilter.of(java.util.List.of("11680")), null, null)
+                    RegionFilter.of(java.util.List.of("11680")), null, null, null)
                     .toPredicate(root, query, cb);
 
             // then — 콤마 패딩 LIKE %,11680,% 가 호출되어야 함
