@@ -263,12 +263,12 @@ public class Policy extends BaseTimeEntity {
         return this.applyEnd != null && this.applyEnd.isBefore(LocalDate.now());
     }
 
-    /** 사실상 상시로 분류할 최소 신청 기간 (일). 약 9개월. */
-    public static final int EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS = 270;
+    /** 사실상 상시로 분류할 최소 신청 기간 (일). 약 6개월. */
+    public static final int EFFECTIVELY_ALWAYS_OPEN_MIN_DAYS = 180;
 
     /**
      * 캘린더 표시에서 "사실상 상시" 로 분류할지 판정.
-     * end 가 ?-12-31 이고 신청 가능 기간이 약 9개월 (270일) 이상이면 true.
+     * end 가 ?-12-31 이고 신청 가능 기간이 약 6개월 (180일) 이상이면 true.
      * 진짜 상시 (start, end 모두 null) 는 이 메서드의 책임이 아니다.
      */
     public boolean isEffectivelyAlwaysOpen() {
