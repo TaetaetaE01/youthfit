@@ -3,36 +3,43 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import RegionPicker from '@/components/policy/RegionPicker';
 import RegionPickerTrigger from '@/components/policy/RegionPickerTrigger';
-import type { PolicyCategory } from '@/types/policy';
-import { CATEGORY_LABELS } from '@/types/policy';
+import type { PolicyCategory, SourceType } from '@/types/policy';
+import { CATEGORY_LABELS, SOURCE_LABELS } from '@/types/policy';
 import type { RegionListResponse } from '@/types/region';
 
 const CATEGORY_ENTRIES = Object.entries(CATEGORY_LABELS) as [PolicyCategory, string][];
+const SOURCE_ENTRIES: [SourceType, string][] = [
+  ['YOUTH_CENTER', SOURCE_LABELS.YOUTH_CENTER],
+  ['BOKJIRO_CENTRAL', SOURCE_LABELS.BOKJIRO_CENTRAL],
+  ['YOUTH_SEOUL_CRAWL', SOURCE_LABELS.YOUTH_SEOUL_CRAWL],
+];
 
 type Props = {
   category: PolicyCategory | '';
+  source: SourceType | '';
   regions: string[];
   regionData: RegionListResponse | undefined;
   onCategoryChange: (next: PolicyCategory | '') => void;
+  onSourceChange: (next: SourceType | '') => void;
   onRegionsChange: (codes: string[]) => void;
   disabled?: boolean;
   disabledHint?: string;
 };
 
-/* ──────────────────────────────────────────────
-   MobileFilterSheet (내부 전용)
-   ────────────────────────────────────────────── */
-
 function MobileFilterSheet({
   isOpen,
   onClose,
   category,
+  source,
   onCategoryChange,
+  onSourceChange,
 }: {
   isOpen: boolean;
   onClose: () => void;
   category: PolicyCategory | '';
+  source: SourceType | '';
   onCategoryChange: (v: PolicyCategory | '') => void;
+  onSourceChange: (v: SourceType | '') => void;
 }) {
   useEffect(() => {
     if (isOpen) {
@@ -97,6 +104,37 @@ function MobileFilterSheet({
           </div>
         </fieldset>
 
+        <fieldset className="mt-6">
+          <legend className="mb-2 text-sm font-semibold text-gray-700">제공 출처</legend>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onSourceChange('')}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+                source === ''
+                  ? 'border-transparent bg-brand-100 text-indigo-600'
+                  : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+              )}
+            >
+              전체 출처
+            </button>
+            {SOURCE_ENTRIES.map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => onSourceChange(source === key ? '' : key)}
+                className={cn(
+                  'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+                  source === key
+                    ? 'border-transparent bg-brand-100 text-indigo-600'
+                    : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <button
           onClick={onClose}
           className="mt-6 w-full rounded-xl bg-brand-800 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-900"
@@ -108,15 +146,13 @@ function MobileFilterSheet({
   );
 }
 
-/* ──────────────────────────────────────────────
-   PolicyFilterBar
-   ────────────────────────────────────────────── */
-
 export default function PolicyFilterBar({
   category,
+  source,
   regions,
   regionData,
   onCategoryChange,
+  onSourceChange,
   onRegionsChange,
   disabled = false,
   disabledHint,
@@ -124,12 +160,11 @@ export default function PolicyFilterBar({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
 
-  // Active filter count for mobile badge (region trigger handles its own active state)
-  const activeFilterCount = category ? 1 : 0;
+  const activeFilterCount = (category ? 1 : 0) + (source ? 1 : 0);
 
   return (
     <>
-      {/* ── Desktop Filters ── */}
+      {/* Desktop Filters */}
       <div className="mb-4 hidden flex-wrap items-center gap-2 md:flex">
         <button
           onClick={() => onCategoryChange('')}
@@ -159,6 +194,36 @@ export default function PolicyFilterBar({
 
         <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden="true" />
 
+        <button
+          onClick={() => onSourceChange('')}
+          disabled={disabled}
+          className={cn(
+            'rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+            source === ''
+              ? 'border-transparent bg-brand-100 text-indigo-600'
+              : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+          )}
+        >
+          전체 출처
+        </button>
+        {SOURCE_ENTRIES.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => onSourceChange(source === key ? '' : key)}
+            disabled={disabled}
+            className={cn(
+              'rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+              source === key
+                ? 'border-transparent bg-brand-100 text-indigo-600'
+                : 'border-neutral-200 bg-white text-neutral-700 hover:bg-gray-50',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+
+        <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden="true" />
+
         <div className="relative">
           <RegionPickerTrigger
             selectedCodes={regions}
@@ -166,7 +231,6 @@ export default function PolicyFilterBar({
             onOpen={() => setRegionPickerOpen(true)}
             disabled={disabled}
           />
-          {/* 데스크톱 팝오버 모드 */}
           <div className="hidden md:block">
             <RegionPicker
               open={regionPickerOpen}
@@ -184,7 +248,7 @@ export default function PolicyFilterBar({
         )}
       </div>
 
-      {/* ── Mobile Filter Bar ── */}
+      {/* Mobile Filter Bar */}
       <div className="mb-4 flex flex-wrap items-center gap-2 md:hidden">
         <button
           onClick={() => setSheetOpen(true)}
@@ -210,15 +274,15 @@ export default function PolicyFilterBar({
         )}
       </div>
 
-      {/* Mobile category sheet */}
       <MobileFilterSheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
         category={category}
+        source={source}
         onCategoryChange={onCategoryChange}
+        onSourceChange={onSourceChange}
       />
 
-      {/* 모바일 RegionPicker (sheet) */}
       <div className="md:hidden">
         <RegionPicker
           open={regionPickerOpen}
