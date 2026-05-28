@@ -3,12 +3,14 @@ import type {
   PolicyPage,
   PolicyDetail,
   PolicyStatus,
+  SourceType,
   PolicyCalendarResponse,
   PolicyCalendarPageResponse,
 } from '@/types/policy';
 
 interface PolicyListParams {
   category?: string;
+  source?: SourceType;
   regions?: string[];         // 신규: 행정코드 배열 (서버에서 CSV 로 join)
   regionCode?: string;        // deprecated: regions 가 있으면 무시
   status?: PolicyStatus;
@@ -25,6 +27,7 @@ interface PolicySearchParams {
 export async function fetchPolicies(params: PolicyListParams): Promise<PolicyPage> {
   const searchParams = new URLSearchParams();
   if (params.category) searchParams.set('category', params.category);
+  if (params.source) searchParams.set('source', params.source);
   if (params.regions && params.regions.length > 0) {
     searchParams.set('regions', params.regions.join(','));
   } else if (params.regionCode) {
