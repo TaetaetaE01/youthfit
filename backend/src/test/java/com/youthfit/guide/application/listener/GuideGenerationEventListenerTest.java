@@ -4,6 +4,7 @@ import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
 import com.youthfit.common.event.PolicyUpsertedEvent;
 import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
 import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class GuideGenerationEventListenerTest {
 
     @Mock
     private GuideGenerationService guideGenerationService;
+
+    @Mock
+    private PolicyProcessingStepService stepService;
 
     @InjectMocks
     private GuideGenerationEventListener listener;
