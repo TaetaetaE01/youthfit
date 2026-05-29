@@ -9,6 +9,7 @@ import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.application.dto.ReprocessResult;
 import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
+import com.youthfit.common.event.PolicyReprocessRequestedEvent;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
@@ -474,6 +475,50 @@ class AdminPolicyProcessingServiceTest {
                 .isInstanceOf(RuntimeException.class);
 
         verify(stepService).markFinished(eq(112L), eq(ProcessingStatus.FAILED), anyString(), isNull());
+    }
+
+    // ---- Task 14: reprocess ----
+
+    @Test
+    @DisplayName("reprocess — 정책 없으면 NOT_FOUND")
+    void reprocess_throws404WhenPolicyMissing() {
+        given(policyRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reprocess(999L, "test"))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("reprocess — ENRICHMENT/GUIDE/RULE/RAG_INDEXING 4단계를 모두 큐잉하고 이벤트를 발행한다")
+    void reprocess_queuesAllFourStepsAndPublishesEvent() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.ENRICHMENT)).willReturn(201L);
+        given(stepService.markStarted(100L, ProcessingStep.GUIDE)).willReturn(202L);
+        given(stepService.markStarted(100L, ProcessingStep.RULE)).willReturn(203L);
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(204L);
+
+        ReprocessResult result = service.reprocess(100L, "LLM 모델 업데이트");
+
+        verify(stepService).markStarted(100L, ProcessingStep.ENRICHMENT);
+        verify(stepService).markStarted(100L, ProcessingStep.GUIDE);
+        verify(stepService).markStarted(100L, ProcessingStep.RULE);
+        verify(stepService).markStarted(100L, ProcessingStep.RAG_INDEXING);
+
+        ArgumentCaptor<PolicyReprocessRequestedEvent> eventCaptor =
+                ArgumentCaptor.forClass(PolicyReprocessRequestedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        PolicyReprocessRequestedEvent event = eventCaptor.getValue();
+        assertThat(event.policyId()).isEqualTo(100L);
+        assertThat(event.reason()).isEqualTo("LLM 모델 업데이트");
+        assertThat(event.stepIds()).containsExactly(201L, 202L, 203L, 204L);
+
+        assertThat(result.queued()).isTrue();
+        assertThat(result.stepIds()).containsExactly(201L, 202L, 203L, 204L);
+        assertThat(result.message()).contains("LLM 모델 업데이트");
     }
 
     @Test

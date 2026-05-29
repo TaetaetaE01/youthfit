@@ -14,6 +14,7 @@ import com.youthfit.admin.application.dto.ReferenceSummaryResult;
 import com.youthfit.admin.application.dto.ReprocessResult;
 import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
+import com.youthfit.common.event.PolicyReprocessRequestedEvent;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
@@ -376,6 +377,35 @@ public class AdminPolicyProcessingService {
             throw e;
         }
         return new ReprocessResult(true, List.of(stepRowId), "RAG 본문 재인덱싱 완료");
+    }
+
+    /**
+     * 정책 전체 재처리 (ENRICHMENT/GUIDE/RULE/RAG_INDEXING 4단계 일괄 큐잉).
+     *
+     * <p>4 단계에 대해 {@link PolicyProcessingStepService#markStarted} 로 IN_PROGRESS step 행을 만들고,
+     * {@link PolicyReprocessRequestedEvent} 를 발행한다. 향후 각 모듈 listener 가 본 이벤트를 받아
+     * 실제 작업을 수행할 예정이다. MVP 단계에서는 listener 연결이 없어 step 행만 IN_PROGRESS 로 남고,
+     * 대시보드에서 어드민이 진행 상태를 모니터링할 수 있다.</p>
+     *
+     * <p>운영 추적을 위해 {@code reason} 파라미터를 그대로 이벤트와 안내 메시지에 포함한다.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
+     */
+    @Transactional
+    public ReprocessResult reprocess(Long policyId, String reason) {
+        policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+        List<Long> stepIds = new ArrayList<>();
+        for (ProcessingStep step : List.of(
+                ProcessingStep.ENRICHMENT,
+                ProcessingStep.GUIDE,
+                ProcessingStep.RULE,
+                ProcessingStep.RAG_INDEXING
+        )) {
+            stepIds.add(stepService.markStarted(policyId, step));
+        }
+        eventPublisher.publishEvent(new PolicyReprocessRequestedEvent(policyId, reason, stepIds));
+        return new ReprocessResult(true, stepIds, "전체 재처리 큐잉됨 (사유: " + reason + ")");
     }
 
     /**

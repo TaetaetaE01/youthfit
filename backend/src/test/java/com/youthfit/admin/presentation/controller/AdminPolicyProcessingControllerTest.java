@@ -194,4 +194,32 @@ class AdminPolicyProcessingControllerTest {
                         .with(authentication(adminAuth())))
                 .andExpect(status().isBadRequest());
     }
+
+    // ---- Task 14: reprocess ----
+
+    @Test
+    @DisplayName("POST /reprocess - 200 + 4단계 stepId 를 반환한다")
+    void reprocess_returns200AndQueues4Steps() throws Exception {
+        when(service.reprocess(eq(100L), eq("LLM 모델 업데이트"))).thenReturn(
+                new ReprocessResult(true, List.of(201L, 202L, 203L, 204L), "전체 재처리 큐잉됨 (사유: LLM 모델 업데이트)")
+        );
+
+        mockMvc.perform(post("/api/v1/admin/policies/processing/100/reprocess")
+                        .with(authentication(adminAuth()))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"reason\":\"LLM 모델 업데이트\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.queued").value(true))
+                .andExpect(jsonPath("$.stepIds.length()").value(4));
+    }
+
+    @Test
+    @DisplayName("POST /reprocess - reason 이 비어 있으면 400")
+    void reprocess_returns400WhenReasonEmpty() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/policies/processing/100/reprocess")
+                        .with(authentication(adminAuth()))
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"reason\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

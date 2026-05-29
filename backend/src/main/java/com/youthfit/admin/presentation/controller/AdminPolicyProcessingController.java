@@ -108,7 +108,9 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
     }
 
     @Override
-    public ResponseEntity<ReprocessResponse> reprocess(Long id, ReprocessPolicyRequest request) {
-        throw new UnsupportedOperationException("Phase 2");
+    @PostMapping("/{id}/reprocess")
+    public ResponseEntity<ReprocessResponse> reprocess(@PathVariable Long id,
+                                                       @Valid @RequestBody ReprocessPolicyRequest request) {
+        return ResponseEntity.ok(ReprocessResponse.from(service.reprocess(id, request.reason())));
     }
 }
