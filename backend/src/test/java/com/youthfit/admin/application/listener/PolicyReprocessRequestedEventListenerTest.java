@@ -154,6 +154,42 @@ class PolicyReprocessRequestedEventListenerTest {
         assertThat(reason.getValue()).isEqualTo("MVP: ENRICHMENT manual trigger 미연결");
     }
 
+    @Test
+    @DisplayName("stepIds 가 null 이면 service 호출 없이 조기 종료")
+    void onPolicyReprocessRequested_stepIdsNull_returnsEarly() {
+        // given
+        PolicyReprocessRequestedEvent event = new PolicyReprocessRequestedEvent(100L, "사유", null);
+
+        // when
+        listener.onPolicyReprocessRequested(event);
+
+        // then
+        verify(stepService, never()).markFinished(any(), any(), any(), any());
+        verify(guideGenerationService, never()).generateGuide(any());
+        verify(eligibilityRuleGenerationService, never()).generateRules(any());
+        verify(ragIndexingService, never()).indexPolicyDocument(any());
+    }
+
+    @Test
+    @DisplayName("stepIds size 가 4 가 아니면 받은 만큼 FAILED 로 마감하고 service 는 호출 안 함")
+    void onPolicyReprocessRequested_stepIdsSizeMismatch_marksReceivedFailed() {
+        // given — size 3
+        List<Long> stepIds = List.of(51L, 52L, 53L);
+        PolicyReprocessRequestedEvent event = new PolicyReprocessRequestedEvent(100L, "사유", stepIds);
+
+        // when
+        listener.onPolicyReprocessRequested(event);
+
+        // then — 3개 stepIds 가 모두 FAILED 로 마감, service 호출 없음
+        verify(stepService).markFinished(eq(51L), eq(ProcessingStatus.FAILED), eq("stepIds 불일치"), isNull());
+        verify(stepService).markFinished(eq(52L), eq(ProcessingStatus.FAILED), eq("stepIds 불일치"), isNull());
+        verify(stepService).markFinished(eq(53L), eq(ProcessingStatus.FAILED), eq("stepIds 불일치"), isNull());
+        verifyNoMoreInteractions(stepService);
+        verify(guideGenerationService, never()).generateGuide(any());
+        verify(eligibilityRuleGenerationService, never()).generateRules(any());
+        verify(ragIndexingService, never()).indexPolicyDocument(any());
+    }
+
     private static <T> T mock(Class<T> clazz) {
         return org.mockito.Mockito.mock(clazz);
     }

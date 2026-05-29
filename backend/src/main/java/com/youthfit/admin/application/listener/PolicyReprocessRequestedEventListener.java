@@ -55,6 +55,9 @@ public class PolicyReprocessRequestedEventListener {
         List<Long> ids = event.stepIds();
         if (ids == null || ids.size() != 4) {
             log.error("재처리 이벤트의 stepIds 가 잘못됨: policyId={} stepIds={}", event.policyId(), ids);
+            if (ids != null) {
+                ids.forEach(id -> stepService.markFinished(id, ProcessingStatus.FAILED, "stepIds 불일치", null));
+            }
             return;
         }
         Policy policy = policyRepository.findById(event.policyId()).orElse(null);
