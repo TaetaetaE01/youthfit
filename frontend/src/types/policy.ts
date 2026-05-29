@@ -319,7 +319,7 @@ export const STATUS_LABELS: Record<PolicyStatus, string> = {
 export const SOURCE_LABELS: Record<SourceType, string> = {
   YOUTH_CENTER: '온통청년',
   BOKJIRO_CENTRAL: '복지로',
-  YOUTH_SEOUL_CRAWL: '청년서울',
+  YOUTH_SEOUL_CRAWL: '청년몽땅정보통',
 };
 
 const SOURCE_TYPE_VALUES: readonly SourceType[] = [

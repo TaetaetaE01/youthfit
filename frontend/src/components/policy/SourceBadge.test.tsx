@@ -33,7 +33,7 @@ describe('SourceBadge', () => {
     rerender(<SourceBadge sourceType="YOUTH_CENTER" sourceLabel="온통청년" />);
     const youthCenterSrc = screen.getByRole('img').getAttribute('src');
 
-    rerender(<SourceBadge sourceType="YOUTH_SEOUL_CRAWL" sourceLabel="청년 서울" />);
+    rerender(<SourceBadge sourceType="YOUTH_SEOUL_CRAWL" sourceLabel="청년몽땅정보통" />);
     const youthSeoulSrc = screen.getByRole('img').getAttribute('src');
 
     expect(bokjiroSrc).not.toBe(youthCenterSrc);
