@@ -302,6 +302,34 @@ public class AdminPolicyProcessingService {
     }
 
     /**
+     * 첨부 1건 임베딩 재실행.
+     *
+     * <p>{@link AttachmentReindexService#reindex(Long)} 는 정책 단위 동작이라 1건만 재인덱싱하는
+     * API 가 없다. MVP 에선 1건 트리거 시에도 정책 단위 재인덱싱이 이루어지며, 펼침 영역 UX
+     * 에 해당 동작을 안내한다.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 첨부가 없거나 정책 소속이 다를 때
+     */
+    @Transactional
+    public ReprocessResult reindexAttachment(Long policyId, Long attachmentId) {
+        PolicyAttachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+        if (attachment.getPolicy() == null || !attachment.getPolicy().getId().equals(policyId)) {
+            throw new YouthFitException(ErrorCode.NOT_FOUND);
+        }
+        Long stepRowId = stepService.markStarted(policyId, ProcessingStep.RAG_INDEXING);
+        try {
+            attachmentReindexService.reindex(policyId);
+            stepService.markFinished(stepRowId, ProcessingStatus.SUCCESS,
+                    "첨부 1건 재실행 트리거 (정책 단위 reindex)", null);
+        } catch (Exception e) {
+            stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
+            throw e;
+        }
+        return new ReprocessResult(true, List.of(stepRowId), "첨부 재인덱싱 큐잉됨");
+    }
+
+    /**
      * Phase D 이전에는 참조 사이트 fetch 결과를 채우지 않는다.
      *
      * <p>Phase D 에서 ENRICHMENT step 의 {@code detail_json.skippedUrls} 파싱이 추가되면

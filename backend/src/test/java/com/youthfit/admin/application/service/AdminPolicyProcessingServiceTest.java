@@ -352,6 +352,52 @@ class AdminPolicyProcessingServiceTest {
         assertThat(result.message()).contains("SKIPPED");
     }
 
+    // ---- Task 11: reindexAttachment ----
+
+    @Test
+    @DisplayName("reindexAttachment — 첨부가 없으면 NOT_FOUND")
+    void reindexAttachment_throws404WhenAttachmentMissing() {
+        given(attachmentRepository.findById(401L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reindexAttachment(100L, 401L))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("reindexAttachment — 첨부가 다른 정책 소속이면 NOT_FOUND")
+    void reindexAttachment_throws404WhenNotBelongToPolicy() {
+        Policy otherPolicy = mock(Policy.class);
+        lenient().when(otherPolicy.getId()).thenReturn(999L);
+        PolicyAttachment attachment = attachmentMockWithPolicy(401L, "안내문.pdf",
+                AttachmentStatus.EXTRACTED, otherPolicy);
+        given(attachmentRepository.findById(401L)).willReturn(Optional.of(attachment));
+
+        assertThatThrownBy(() -> service.reindexAttachment(100L, 401L))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("reindexAttachment — 정책 단위 reindex 를 호출하고 SUCCESS 로 마감한다")
+    void reindexAttachment_invokesAttachmentReindex() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        PolicyAttachment attachment = attachmentMockWithPolicy(401L, "안내문.pdf",
+                AttachmentStatus.EXTRACTED, policy);
+        given(attachmentRepository.findById(401L)).willReturn(Optional.of(attachment));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(91L);
+
+        ReprocessResult result = service.reindexAttachment(100L, 401L);
+
+        verify(attachmentReindexService).reindex(100L);
+        verify(stepService).markFinished(eq(91L), eq(ProcessingStatus.SUCCESS), anyString(), isNull());
+        assertThat(result.queued()).isTrue();
+        assertThat(result.stepIds()).containsExactly(91L);
+    }
+
     @Test
     @DisplayName("retryStep — RAG 가 실패하면 FAILED 로 마감하고 예외를 다시 던진다")
     void retryStep_marksFailedAndRethrowsOnRagException() {
@@ -385,6 +431,12 @@ class AdminPolicyProcessingServiceTest {
         lenient().when(a.getId()).thenReturn(id);
         lenient().when(a.getName()).thenReturn(name);
         lenient().when(a.getExtractionStatus()).thenReturn(status);
+        return a;
+    }
+
+    private PolicyAttachment attachmentMockWithPolicy(Long id, String name, AttachmentStatus status, Policy policy) {
+        PolicyAttachment a = attachmentMock(id, name, status);
+        lenient().when(a.getPolicy()).thenReturn(policy);
         return a;
     }
 
