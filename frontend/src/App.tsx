@@ -19,6 +19,7 @@ import AdminLlmCostPage from '@/pages/admin/AdminLlmCostPage';
 import AdminIngestionPage from '@/pages/admin/AdminIngestionPage';
 import AdminIngestionFailureDetailPage from '@/pages/admin/AdminIngestionFailureDetailPage';
 import AdminRagPreviewPage from '@/pages/admin/AdminRagPreviewPage';
+import AdminPolicyProcessingPage from '@/pages/admin/AdminPolicyProcessingPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="ingestion" element={<AdminIngestionPage />} />
               <Route path="ingestion/failures/:id" element={<AdminIngestionFailureDetailPage />} />
               <Route path="rag-preview" element={<AdminRagPreviewPage />} />
+              <Route path="policies/processing" element={<AdminPolicyProcessingPage />} />
             </Route>
           </Route>
         </Routes>

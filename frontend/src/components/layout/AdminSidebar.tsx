@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import {
+  Activity,
   BookOpen,
   ChevronRight,
   DollarSign,
@@ -56,6 +57,7 @@ const GROUPS: MenuGroup[] = [
       { to: '/admin/qna-cache', label: 'Q&A 캐시 로그', icon: MessageSquareText },
       { to: '/admin/llm-cost', label: 'LLM 비용', icon: DollarSign },
       { to: '/admin/ingestion', label: 'Ingestion 헬스', icon: Download },
+      { to: '/admin/policies/processing', label: '정책 처리 현황', icon: Activity },
       { to: '/admin/rag-preview', label: 'RAG 미리보기', icon: SearchCode },
     ],
   },

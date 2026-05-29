@@ -18,6 +18,8 @@ const SEGMENT_LABEL: Record<string, string> = {
   'llm-cost': 'LLM 비용',
   ingestion: 'Ingestion',
   failures: '실패',
+  policies: '정책',
+  processing: '처리 현황',
 };
 
 function getGreeting(now = new Date()) {

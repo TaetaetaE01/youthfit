@@ -56,6 +56,22 @@ public interface PolicyDocumentJpaRepository extends JpaRepository<PolicyDocumen
     @Query("SELECT DISTINCT pd.sourceHash FROM PolicyDocument pd WHERE pd.policyId = :policyId")
     List<String> findDistinctSourceHashByPolicyId(@Param("policyId") Long policyId);
 
+    @Query("""
+            select d.policyId, count(distinct d.attachmentId)
+            from PolicyDocument d
+            where d.policyId in :policyIds
+              and d.source = com.youthfit.rag.domain.model.PolicyDocumentSource.ATTACHMENT
+            group by d.policyId
+            """)
+    List<Object[]> countAttachmentEmbeddingsByPolicyIdsRaw(@Param("policyIds") List<Long> policyIds);
+
+    @Query("""
+            select distinct d.attachmentId from PolicyDocument d
+            where d.policyId = :policyId
+              and d.source = com.youthfit.rag.domain.model.PolicyDocumentSource.ATTACHMENT
+            """)
+    List<Long> findDistinctAttachmentIds(@Param("policyId") Long policyId);
+
     @Query(value = """
             SELECT id,
                    policy_id     AS policyId,

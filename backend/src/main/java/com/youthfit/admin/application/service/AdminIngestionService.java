@@ -28,9 +28,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,7 +98,7 @@ public class AdminIngestionService {
         List<IngestionSourceSummaryResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
             String source = (String) row[0];
-            Instant lastReceived = ((LocalDateTime) row[1]).toInstant(ZoneOffset.UTC);
+            Instant lastReceived = (Instant) row[1];
             long weekReceived = ((Number) row[2]).longValue();
             BigDecimal failureRate = (BigDecimal) row[3];
             boolean stale = lastReceived.isBefore(staleThreshold);
@@ -118,7 +116,7 @@ public class AdminIngestionService {
         List<IngestionStaleSourceResponse> result = new ArrayList<>();
         for (Object[] row : rows) {
             String source = (String) row[0];
-            Instant lastReceived = ((LocalDateTime) row[1]).toInstant(ZoneOffset.UTC);
+            Instant lastReceived = (Instant) row[1];
             long hours = Duration.between(lastReceived, now).toHours();
             result.add(new IngestionStaleSourceResponse(source, lastReceived, hours));
         }

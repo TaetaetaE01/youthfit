@@ -16,6 +16,7 @@ import com.youthfit.ingestion.domain.service.PeriodResolver;
 import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.service.PolicyIngestionService;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -67,6 +68,9 @@ class IngestionServiceTest {
 
     @Mock
     private CodeBasedRuleExtractionService codeBasedRuleExtractionService;
+
+    @Mock
+    private PolicyProcessingStepService stepService;
 
     @Spy
     private ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();

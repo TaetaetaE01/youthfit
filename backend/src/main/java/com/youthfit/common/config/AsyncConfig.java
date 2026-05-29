@@ -8,7 +8,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 가이드/적합도 룰 LLM 후속 처리용 비동기 실행기.
+ * 가이드/적합도 룰/RAG 인덱싱 LLM 후속 처리용 비동기 실행기.
  *
  * - 풀 크기: core 2 / max 4
  * - 큐 깊이: 100
