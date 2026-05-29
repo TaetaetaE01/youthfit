@@ -1,16 +1,24 @@
 package com.youthfit.admin.application.service;
 
+import com.youthfit.admin.application.dto.AttachmentDetailResult;
 import com.youthfit.admin.application.dto.AttachmentSummaryResult;
+import com.youthfit.admin.application.dto.PolicyProcessingDetailResult;
 import com.youthfit.admin.application.dto.PolicyProcessingFilter;
 import com.youthfit.admin.application.dto.PolicyProcessingItemResult;
 import com.youthfit.admin.application.dto.PolicyProcessingListCommand;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingSort;
 import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
+import com.youthfit.admin.application.dto.ReferenceDetailResult;
 import com.youthfit.admin.application.dto.ReferenceSummaryResult;
+import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.model.PolicyProcessingStep;
 import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -24,9 +32,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 어드민 정책 처리 현황 대시보드 유스케이스 서비스.
@@ -144,6 +157,102 @@ public class AdminPolicyProcessingService {
         }
 
         return new PolicyProcessingStatsResult(all.size(), complete, partial, incomplete, recent);
+    }
+
+    /**
+     * 정책 1건의 펼침 영역 상세 조회.
+     *
+     * <p>1) policy_processing_step 의 step 별 최신 attempt 행 → 2) policy_attachment 전체 행 +
+     * 임베딩 적재 attachmentId set → 3) ENRICHMENT detail_json 의 참조 사이트 fetch 결과를
+     * 한 응답으로 조립한다.</p>
+     *
+     * <p>repository 의 {@code findLatestRowsByPolicyId} 는 JPQL {@code order by pps.step} 로
+     * 정렬하지만 {@link ProcessingStep} 가 {@code @Enumerated(EnumType.STRING)} 으로 저장되어
+     * 알파벳 순 (ENRICHMENT, GUIDE, INGESTION, RAG_INDEXING, RULE) 로 내려온다.
+     * 파이프라인 순서대로 보여주기 위해 호출 측에서 {@link ProcessingStep#ordinal()} 로
+     * 다시 정렬한다.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책이 존재하지 않을 때
+     */
+    public PolicyProcessingDetailResult findProcessingDetail(Long policyId) {
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+
+        List<PolicyProcessingStep> stepRows = stepRepository.findLatestRowsByPolicyId(policyId).stream()
+                .sorted(Comparator.comparingInt(s -> s.getStep().ordinal()))
+                .toList();
+
+        List<StepDetailResult> stepResults = stepRows.stream()
+                .map(AdminPolicyProcessingService::toStepDetail)
+                .toList();
+
+        List<PolicyAttachment> attachments = attachmentRepository.findByPolicyId(policyId);
+        Set<Long> embeddedIds = documentRepository.findEmbeddedAttachmentIds(policyId);
+
+        List<AttachmentDetailResult> attachmentResults = attachments.stream()
+                .map(a -> new AttachmentDetailResult(
+                        a.getId(),
+                        a.getName(),
+                        a.getExtractionStatus(),
+                        embeddedIds.contains(a.getId())
+                ))
+                .toList();
+
+        List<ReferenceDetailResult> referenceResults = parseReferenceResults(stepRows);
+
+        Map<ProcessingStep, ProcessingStatus> stepStatusMap = stepRows.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        PolicyProcessingStep::getStep,
+                        PolicyProcessingStep::getStatus,
+                        (a, b) -> b
+                ));
+        AttachmentExtractionCounts attachCounts = attachmentRepository
+                .aggregateExtractionByPolicyIds(List.of(policyId))
+                .getOrDefault(policyId, AttachmentExtractionCounts.empty());
+        long embeddedCount = embeddedIds.size();
+
+        PolicyProcessingCompleteness completeness =
+                computeCompleteness(stepStatusMap, attachCounts, embeddedCount);
+
+        return new PolicyProcessingDetailResult(
+                policy.getId(),
+                policy.getTitle(),
+                completeness,
+                stepResults,
+                attachmentResults,
+                referenceResults
+        );
+    }
+
+    /**
+     * Phase D 이전에는 참조 사이트 fetch 결과를 채우지 않는다.
+     *
+     * <p>Phase D 에서 ENRICHMENT step 의 {@code detail_json.skippedUrls} 파싱이 추가되면
+     * 이 메서드가 url / status / chunkCount 를 채워 리스트로 반환한다. 현재는 항상 빈 리스트.</p>
+     */
+    private List<ReferenceDetailResult> parseReferenceResults(List<PolicyProcessingStep> stepRows) {
+        return List.of();
+    }
+
+    private static StepDetailResult toStepDetail(PolicyProcessingStep s) {
+        Instant started = s.getStartedAt();
+        Instant finished = s.getFinishedAt();
+        Long durationMs = (started != null && finished != null)
+                ? Duration.between(started, finished).toMillis()
+                : null;
+        return new StepDetailResult(
+                s.getStep(),
+                s.getStatus(),
+                durationMs,
+                s.getAttempt(),
+                s.getReason(),
+                toLocalDateTime(started),
+                toLocalDateTime(finished)
+        );
+    }
+
+    private static LocalDateTime toLocalDateTime(Instant instant) {
+        return instant == null ? null : LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
 
     /**

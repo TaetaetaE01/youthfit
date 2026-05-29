@@ -1,13 +1,20 @@
 package com.youthfit.admin.application.service;
 
+import com.youthfit.admin.application.dto.PolicyProcessingDetailResult;
 import com.youthfit.admin.application.dto.PolicyProcessingFilter;
 import com.youthfit.admin.application.dto.PolicyProcessingListCommand;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingSort;
 import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
+import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
+import com.youthfit.policy.domain.model.AttachmentStatus;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
+import com.youthfit.policy.domain.model.PolicyProcessingStep;
 import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -25,11 +32,15 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -155,6 +166,101 @@ class AdminPolicyProcessingServiceTest {
         assertThat(stats.partialCount()).isEqualTo(1);
         assertThat(stats.incompleteCount()).isEqualTo(1);
         assertThat(stats.recent24hCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("findProcessingDetail 은 정책이 없으면 NOT_FOUND 를 던진다")
+    void findProcessingDetail_throwsNotFoundWhenPolicyMissing() {
+        given(policyRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findProcessingDetail(999L))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("findProcessingDetail 은 단계 행을 ProcessingStep ordinal 순으로 재정렬한다")
+    void findProcessingDetail_resortsStepsByPipelineOrder() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getTitle()).thenReturn("월세 지원");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+
+        // repository 는 알파벳 순 (ENRICHMENT, GUIDE, INGESTION, RAG_INDEXING, RULE) 로 내려준다.
+        // 서비스는 이를 INGESTION → ENRICHMENT → GUIDE → RULE → RAG_INDEXING 순으로 재정렬해야 한다.
+        List<PolicyProcessingStep> alphabeticalRows = List.of(
+                stepMock(ProcessingStep.ENRICHMENT, ProcessingStatus.SUCCESS),
+                stepMock(ProcessingStep.GUIDE, ProcessingStatus.SUCCESS),
+                stepMock(ProcessingStep.INGESTION, ProcessingStatus.SUCCESS),
+                stepMock(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                stepMock(ProcessingStep.RULE, ProcessingStatus.SUCCESS)
+        );
+        given(stepRepository.findLatestRowsByPolicyId(100L)).willReturn(alphabeticalRows);
+        given(attachmentRepository.findByPolicyId(100L)).willReturn(List.of());
+        given(documentRepository.findEmbeddedAttachmentIds(100L)).willReturn(Set.of());
+        given(attachmentRepository.aggregateExtractionByPolicyIds(List.of(100L)))
+                .willReturn(Map.of());
+
+        PolicyProcessingDetailResult result = service.findProcessingDetail(100L);
+
+        assertThat(result.steps()).extracting(StepDetailResult::step).containsExactly(
+                ProcessingStep.INGESTION,
+                ProcessingStep.ENRICHMENT,
+                ProcessingStep.GUIDE,
+                ProcessingStep.RULE,
+                ProcessingStep.RAG_INDEXING
+        );
+        // RAG SUCCESS + 첨부 0 → COMPLETE
+        assertThat(result.completeness()).isEqualTo(PolicyProcessingCompleteness.COMPLETE);
+        // Phase D 이전 references 는 빈 리스트
+        assertThat(result.references()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findProcessingDetail 은 첨부 임베딩 적재 여부를 attachment id set 으로 판정한다")
+    void findProcessingDetail_marksAttachmentEmbeddedWhenIdInSet() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(200L);
+        lenient().when(policy.getTitle()).thenReturn("도전지원금");
+        given(policyRepository.findById(200L)).willReturn(Optional.of(policy));
+
+        given(stepRepository.findLatestRowsByPolicyId(200L)).willReturn(List.of());
+
+        PolicyAttachment a1 = attachmentMock(11L, "guide.pdf", AttachmentStatus.EXTRACTED);
+        PolicyAttachment a2 = attachmentMock(12L, "form.pdf", AttachmentStatus.FAILED);
+        given(attachmentRepository.findByPolicyId(200L)).willReturn(List.of(a1, a2));
+        given(documentRepository.findEmbeddedAttachmentIds(200L)).willReturn(Set.of(11L));
+        given(attachmentRepository.aggregateExtractionByPolicyIds(List.of(200L)))
+                .willReturn(Map.of(200L, new AttachmentExtractionCounts(2, 2, 1)));
+
+        PolicyProcessingDetailResult result = service.findProcessingDetail(200L);
+
+        assertThat(result.attachments()).hasSize(2);
+        assertThat(result.attachments().get(0).attachmentId()).isEqualTo(11L);
+        assertThat(result.attachments().get(0).embedded()).isTrue();
+        assertThat(result.attachments().get(0).extractionStatus()).isEqualTo(AttachmentStatus.EXTRACTED);
+        assertThat(result.attachments().get(1).attachmentId()).isEqualTo(12L);
+        assertThat(result.attachments().get(1).embedded()).isFalse();
+    }
+
+    private PolicyProcessingStep stepMock(ProcessingStep step, ProcessingStatus status) {
+        PolicyProcessingStep s = mock(PolicyProcessingStep.class);
+        Instant now = Instant.now();
+        lenient().when(s.getStep()).thenReturn(step);
+        lenient().when(s.getStatus()).thenReturn(status);
+        lenient().when(s.getAttempt()).thenReturn(1);
+        lenient().when(s.getStartedAt()).thenReturn(now.minusSeconds(10));
+        lenient().when(s.getFinishedAt()).thenReturn(now);
+        return s;
+    }
+
+    private PolicyAttachment attachmentMock(Long id, String name, AttachmentStatus status) {
+        PolicyAttachment a = mock(PolicyAttachment.class);
+        lenient().when(a.getId()).thenReturn(id);
+        lenient().when(a.getName()).thenReturn(name);
+        lenient().when(a.getExtractionStatus()).thenReturn(status);
+        return a;
     }
 
     private Policy policyMock(Long id, LocalDateTime createdAt) {
