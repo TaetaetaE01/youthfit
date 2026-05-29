@@ -106,11 +106,15 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
     /**
      * 어드민 정책 처리 현황 대시보드 — 제목 부분 일치(query) + region_code 정확 일치 페이지 조회.
      * 정렬은 Pageable 의 Sort 를 그대로 사용한다.
+     *
+     * <p>NULL 비교 대신 빈 문자열을 sentinel 로 사용한다. Hibernate 6 에서 `:query IS NULL`
+     * 같은 패턴은 prepared statement 의 parameter type 추론이 BYTEA 로 떨어져
+     * `lower(bytea) does not exist` PSQL 에러를 유발한다. 호출자는 null 대신 "" 을 전달한다.</p>
      */
     @Query("""
         SELECT p FROM Policy p
-        WHERE (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')))
-          AND (:region IS NULL OR p.regionCode = :region)
+        WHERE (:query = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')))
+          AND (:region = '' OR p.regionCode = :region)
         """)
     Page<Policy> findForAdminProcessing(@Param("query") String query,
                                         @Param("region") String region,

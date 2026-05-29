@@ -102,7 +102,16 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     public Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable) {
         Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 sort == null ? Sort.unsorted() : sort);
-        return jpaRepository.findForAdminProcessing(normalizeKeyword(query), normalizeRegion(region), effective);
+        // JPQL 의 :query / :region 은 null 대신 "" 을 sentinel 로 사용한다.
+        // Hibernate 6 + Postgres JDBC 가 nullable STRING parameter 의 type 을 BYTEA 로 추론해
+        // `lower(bytea) does not exist` 에러를 던지기 때문 (PolicyJpaRepository 의 Javadoc 참조).
+        String queryParam = orEmpty(normalizeKeyword(query));
+        String regionParam = orEmpty(normalizeRegion(region));
+        return jpaRepository.findForAdminProcessing(queryParam, regionParam, effective);
+    }
+
+    private static String orEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     @Override
