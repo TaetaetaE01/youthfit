@@ -10,10 +10,16 @@ import com.youthfit.admin.presentation.dto.response.PolicyProcessingDetailRespon
 import com.youthfit.admin.presentation.dto.response.PolicyProcessingListResponse;
 import com.youthfit.admin.presentation.dto.response.PolicyProcessingStatsResponse;
 import com.youthfit.admin.presentation.dto.response.ReprocessResponse;
+import com.youthfit.common.exception.ErrorCode;
+import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.policy.domain.model.ProcessingStep;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 어드민 — 정책 처리 현황 대시보드 컨트롤러.
  *
- * <p>Phase 1 에서는 조회 endpoint 3종만 노출하고,
- * 재실행 endpoint 5종은 Task 10~14 에서 구현될 때까지 {@link UnsupportedOperationException} 으로 막아둔다.</p>
+ * <p>Phase 1 에서 조회 endpoint 3종 + Phase 2 (Task 10~14) 에서 재실행 endpoint 5종을 노출한다.</p>
  *
  * <p>URL prefix 는 SecurityConfig 의 {@code /api/v1/admin/**} ADMIN 가드와
  * 다른 admin 컨트롤러 컨벤션을 따른다. plan 본문은 {@code /admin/policies/processing} 만 명시했지만
@@ -70,10 +75,17 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
         return ResponseEntity.ok(PolicyProcessingDetailResponse.from(service.findProcessingDetail(id)));
     }
 
-    // Phase 2 (Task 10~14) 에서 구현될 때까지 미지원 표시.
     @Override
-    public ResponseEntity<ReprocessResponse> retryStep(Long id, String step) {
-        throw new UnsupportedOperationException("Phase 2");
+    @PostMapping("/{id}/steps/{step}/retry")
+    public ResponseEntity<ReprocessResponse> retryStep(@PathVariable Long id, @PathVariable String step) {
+        ProcessingStep processingStep;
+        try {
+            processingStep = ProcessingStep.valueOf(step.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new YouthFitException(ErrorCode.INVALID_INPUT,
+                    "알 수 없는 ProcessingStep: " + step);
+        }
+        return ResponseEntity.ok(ReprocessResponse.from(service.retryStep(id, processingStep)));
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.youthfit.admin.application.dto.PolicyProcessingItemResult;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.application.dto.ReferenceSummaryResult;
+import com.youthfit.admin.application.dto.ReprocessResult;
 import com.youthfit.admin.application.service.AdminPolicyProcessingService;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.auth.infrastructure.jwt.JwtAuthenticationEntryPoint;
@@ -37,8 +38,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -156,5 +159,39 @@ class AdminPolicyProcessingControllerTest {
         mockMvc.perform(get("/api/v1/admin/policies/processing")
                         .with(authentication(userAuth())))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- Task 10: retryStep ----
+
+    @Test
+    @DisplayName("POST /steps/{step}/retry - 200 + 큐잉된 stepId 를 반환한다")
+    void retryStep_returns200WithStepIds() throws Exception {
+        when(service.retryStep(eq(100L), eq(com.youthfit.policy.domain.model.ProcessingStep.RAG_INDEXING)))
+                .thenReturn(new ReprocessResult(true, List.of(77L), "재실행 큐잉됨"));
+
+        mockMvc.perform(post("/api/v1/admin/policies/processing/100/steps/RAG_INDEXING/retry")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.queued").value(true))
+                .andExpect(jsonPath("$.stepIds[0]").value(77));
+    }
+
+    @Test
+    @DisplayName("POST /steps/INGESTION/retry - 400 (INGESTION 거부)")
+    void retryStep_returns400_forIngestionStep() throws Exception {
+        when(service.retryStep(eq(100L), eq(com.youthfit.policy.domain.model.ProcessingStep.INGESTION)))
+                .thenThrow(new YouthFitException(ErrorCode.INVALID_INPUT));
+
+        mockMvc.perform(post("/api/v1/admin/policies/processing/100/steps/INGESTION/retry")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /steps/{step}/retry - 알 수 없는 step 은 400")
+    void retryStep_returns400_forUnknownStep() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/policies/processing/100/steps/UNKNOWN/retry")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isBadRequest());
     }
 }

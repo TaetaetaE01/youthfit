@@ -11,10 +11,17 @@ import com.youthfit.admin.application.dto.PolicyProcessingSort;
 import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.application.dto.ReferenceDetailResult;
 import com.youthfit.admin.application.dto.ReferenceSummaryResult;
+import com.youthfit.admin.application.dto.ReprocessResult;
 import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
+import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
+import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.ingestion.application.service.AttachmentReindexService;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
@@ -24,8 +31,11 @@ import com.youthfit.policy.domain.model.ProcessingStep;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyProcessingStepRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
+import com.youthfit.rag.application.service.RagIndexingService;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -36,6 +46,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +69,12 @@ public class AdminPolicyProcessingService {
     private final PolicyProcessingStepRepository stepRepository;
     private final PolicyAttachmentRepository attachmentRepository;
     private final PolicyDocumentRepository documentRepository;
+    private final PolicyProcessingStepService stepService;
+    private final RagIndexingService ragIndexingService;
+    private final AttachmentReindexService attachmentReindexService;
+    private final GuideGenerationService guideGenerationService;
+    private final EligibilityRuleGenerationService eligibilityRuleGenerationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 어드민 정책 처리 현황 페이지 조회.
@@ -222,6 +239,66 @@ public class AdminPolicyProcessingService {
                 attachmentResults,
                 referenceResults
         );
+    }
+
+    /**
+     * 단계 1건 재실행.
+     *
+     * <p>{@link ProcessingStep#INGESTION} 은 n8n 재크롤이 필요하므로 어드민에서 재실행할 수 없다 (400).
+     * 그 외 단계는 다음 동작을 수행한다:</p>
+     * <ul>
+     *   <li>{@code RAG_INDEXING} → {@link RagIndexingService#indexPolicyDocument(IndexPolicyDocumentCommand)}</li>
+     *   <li>{@code GUIDE} → {@link GuideGenerationService#generateGuide(GenerateGuideCommand)}</li>
+     *   <li>{@code RULE} → {@link EligibilityRuleGenerationService#generateRules(GenerateEligibilityRulesCommand)}</li>
+     *   <li>{@code ENRICHMENT} → SKIPPED 처리 (MVP: admin trigger 미연결, n8n 재실행 필요)</li>
+     * </ul>
+     *
+     * <p>모든 경로에서 {@link PolicyProcessingStepService#markStarted} 로 step 행을 만들고,
+     * 성공 시 {@code SUCCESS}, 실패 시 {@code FAILED} 로 {@link PolicyProcessingStepService#markFinished} 호출.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#INVALID_INPUT} INGESTION 재실행 시도, {@link ErrorCode#NOT_FOUND} 정책 없음
+     */
+    @Transactional
+    public ReprocessResult retryStep(Long policyId, ProcessingStep step) {
+        if (step == ProcessingStep.INGESTION) {
+            throw new YouthFitException(
+                    ErrorCode.INVALID_INPUT,
+                    "INGESTION 단계는 n8n 재크롤이 필요해 어드민에서 재실행할 수 없습니다."
+            );
+        }
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+
+        Long stepRowId = stepService.markStarted(policyId, step);
+        try {
+            switch (step) {
+                case RAG_INDEXING -> ragIndexingService.indexPolicyDocument(
+                        new IndexPolicyDocumentCommand(policyId, policy.getBody(), policy.getEnrichment())
+                );
+                case GUIDE -> guideGenerationService.generateGuide(
+                        new GenerateGuideCommand(policyId, policy.getTitle(), null)
+                );
+                case RULE -> eligibilityRuleGenerationService.generateRules(
+                        new GenerateEligibilityRulesCommand(policyId)
+                );
+                case ENRICHMENT -> {
+                    // MVP: ENRICHMENT 는 n8n 파이프라인 외 진입점이 없어 admin 에서 직접 트리거하지 않는다.
+                    // TODO: 별도 enrichment 재실행 서비스가 생기면 연결한다.
+                    stepService.markFinished(stepRowId, ProcessingStatus.SKIPPED,
+                            "MVP: ENRICHMENT manual trigger 미연결", null);
+                    return new ReprocessResult(true, List.of(stepRowId), "ENRICHMENT 재실행 미지원 (SKIPPED)");
+                }
+                default -> throw new YouthFitException(ErrorCode.INVALID_INPUT);
+            }
+            stepService.markFinished(stepRowId, ProcessingStatus.SUCCESS, null, null);
+        } catch (YouthFitException e) {
+            stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
+            throw e;
+        } catch (Exception e) {
+            stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
+            throw e;
+        }
+        return new ReprocessResult(true, List.of(stepRowId), "재실행 큐잉됨");
     }
 
     /**

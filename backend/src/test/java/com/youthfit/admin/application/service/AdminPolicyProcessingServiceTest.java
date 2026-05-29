@@ -6,10 +6,17 @@ import com.youthfit.admin.application.dto.PolicyProcessingListCommand;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingSort;
 import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
+import com.youthfit.admin.application.dto.ReprocessResult;
 import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
+import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRulesCommand;
+import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
+import com.youthfit.guide.application.dto.command.GenerateGuideCommand;
+import com.youthfit.guide.application.service.GuideGenerationService;
+import com.youthfit.ingestion.application.service.AttachmentReindexService;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
 import com.youthfit.policy.domain.model.AttachmentStatus;
 import com.youthfit.policy.domain.model.Policy;
@@ -20,13 +27,18 @@ import com.youthfit.policy.domain.model.ProcessingStep;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyProcessingStepRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
+import com.youthfit.rag.application.dto.result.IndexingResult;
+import com.youthfit.rag.application.service.RagIndexingService;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +61,8 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @DisplayName("AdminPolicyProcessingService")
@@ -59,6 +73,12 @@ class AdminPolicyProcessingServiceTest {
     @Mock private PolicyProcessingStepRepository stepRepository;
     @Mock private PolicyAttachmentRepository attachmentRepository;
     @Mock private PolicyDocumentRepository documentRepository;
+    @Mock private PolicyProcessingStepService stepService;
+    @Mock private RagIndexingService ragIndexingService;
+    @Mock private AttachmentReindexService attachmentReindexService;
+    @Mock private GuideGenerationService guideGenerationService;
+    @Mock private EligibilityRuleGenerationService eligibilityRuleGenerationService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private AdminPolicyProcessingService service;
 
@@ -242,6 +262,111 @@ class AdminPolicyProcessingServiceTest {
         assertThat(result.attachments().get(0).extractionStatus()).isEqualTo(AttachmentStatus.EXTRACTED);
         assertThat(result.attachments().get(1).attachmentId()).isEqualTo(12L);
         assertThat(result.attachments().get(1).embedded()).isFalse();
+    }
+
+    // ---- Task 10: retryStep ----
+
+    @Test
+    @DisplayName("retryStep — INGESTION 단계는 INVALID_INPUT 으로 거부한다")
+    void retryStep_rejectsIngestion() {
+        assertThatThrownBy(() -> service.retryStep(100L, ProcessingStep.INGESTION))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("retryStep — 정책이 없으면 NOT_FOUND 를 던진다")
+    void retryStep_throwsNotFoundWhenPolicyMissing() {
+        given(policyRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.retryStep(999L, ProcessingStep.RAG_INDEXING))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("retryStep — RAG_INDEXING 은 RagIndexingService 를 호출하고 SUCCESS 로 마감한다")
+    void retryStep_invokesRagIndexingForRagStep() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(77L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willReturn(new IndexingResult(100L, 3, true));
+
+        ReprocessResult result = service.retryStep(100L, ProcessingStep.RAG_INDEXING);
+
+        verify(stepService).markStarted(100L, ProcessingStep.RAG_INDEXING);
+        verify(ragIndexingService).indexPolicyDocument(any(IndexPolicyDocumentCommand.class));
+        verify(stepService).markFinished(eq(77L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+        assertThat(result.queued()).isTrue();
+        assertThat(result.stepIds()).containsExactly(77L);
+    }
+
+    @Test
+    @DisplayName("retryStep — GUIDE 는 GuideGenerationService 를 호출한다")
+    void retryStep_invokesGuideGenerationForGuideStep() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getTitle()).thenReturn("월세 지원");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.GUIDE)).willReturn(78L);
+
+        ReprocessResult result = service.retryStep(100L, ProcessingStep.GUIDE);
+
+        verify(guideGenerationService).generateGuide(any(GenerateGuideCommand.class));
+        verify(stepService).markFinished(eq(78L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+        assertThat(result.queued()).isTrue();
+    }
+
+    @Test
+    @DisplayName("retryStep — RULE 은 EligibilityRuleGenerationService 를 호출한다")
+    void retryStep_invokesRuleGenerationForRuleStep() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RULE)).willReturn(79L);
+
+        ReprocessResult result = service.retryStep(100L, ProcessingStep.RULE);
+
+        verify(eligibilityRuleGenerationService).generateRules(any(GenerateEligibilityRulesCommand.class));
+        verify(stepService).markFinished(eq(79L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+        assertThat(result.queued()).isTrue();
+    }
+
+    @Test
+    @DisplayName("retryStep — ENRICHMENT 는 MVP 미연결로 SKIPPED 처리한다")
+    void retryStep_marksEnrichmentSkippedAsMvpStub() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.ENRICHMENT)).willReturn(80L);
+
+        ReprocessResult result = service.retryStep(100L, ProcessingStep.ENRICHMENT);
+
+        verify(stepService).markFinished(eq(80L), eq(ProcessingStatus.SKIPPED), anyString(), isNull());
+        assertThat(result.queued()).isTrue();
+        assertThat(result.message()).contains("SKIPPED");
+    }
+
+    @Test
+    @DisplayName("retryStep — RAG 가 실패하면 FAILED 로 마감하고 예외를 다시 던진다")
+    void retryStep_marksFailedAndRethrowsOnRagException() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(81L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willThrow(new RuntimeException("embedding down"));
+
+        assertThatThrownBy(() -> service.retryStep(100L, ProcessingStep.RAG_INDEXING))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(stepService).markFinished(eq(81L), eq(ProcessingStatus.FAILED), anyString(), isNull());
     }
 
     private PolicyProcessingStep stepMock(ProcessingStep step, ProcessingStatus status) {
