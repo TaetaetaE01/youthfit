@@ -1,5 +1,6 @@
 package com.youthfit.policy.infrastructure.persistence;
 
+import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
 import com.youthfit.policy.domain.model.AttachmentStatus;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -7,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -59,5 +62,22 @@ public class PolicyAttachmentJpaRepositoryAdapter implements PolicyAttachmentRep
     @Override
     public List<PolicyAttachment> findByPolicyId(Long policyId) {
         return jpa.findByPolicy_Id(policyId);
+    }
+
+    @Override
+    public Map<Long, AttachmentExtractionCounts> aggregateExtractionByPolicyIds(List<Long> policyIds) {
+        if (policyIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = jpa.aggregateExtractionByPolicyIdsRaw(policyIds);
+        Map<Long, AttachmentExtractionCounts> result = new HashMap<>();
+        for (Object[] row : rows) {
+            Long policyId = ((Number) row[0]).longValue();
+            long total = ((Number) row[1]).longValue();
+            long downloaded = ((Number) row[2]).longValue();
+            long extracted = ((Number) row[3]).longValue();
+            result.put(policyId, new AttachmentExtractionCounts(total, downloaded, extracted));
+        }
+        return result;
     }
 }
