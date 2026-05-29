@@ -13,7 +13,7 @@ class SourceTypeTest {
     @CsvSource({
             "BOKJIRO_CENTRAL,복지로",
             "YOUTH_CENTER,온통청년",
-            "YOUTH_SEOUL_CRAWL,청년 서울"
+            "YOUTH_SEOUL_CRAWL,청년몽땅정보통"
     })
     @DisplayName("getLabel 은 한글 라벨을 반환한다")
     void getLabel_returnsKoreanLabel(SourceType type, String expectedLabel) {

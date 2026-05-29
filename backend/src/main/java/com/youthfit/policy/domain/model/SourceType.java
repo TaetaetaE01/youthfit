@@ -1,7 +1,7 @@
 package com.youthfit.policy.domain.model;
 
 public enum SourceType {
-    YOUTH_SEOUL_CRAWL("청년 서울"),
+    YOUTH_SEOUL_CRAWL("청년몽땅정보통"),
     BOKJIRO_CENTRAL("복지로"),
     YOUTH_CENTER("온통청년");
 
