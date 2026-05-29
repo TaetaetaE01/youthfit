@@ -398,6 +398,35 @@ class AdminPolicyProcessingServiceTest {
         assertThat(result.stepIds()).containsExactly(91L);
     }
 
+    // ---- Task 12: reindexAllAttachments ----
+
+    @Test
+    @DisplayName("reindexAllAttachments — 정책 없으면 NOT_FOUND")
+    void reindexAllAttachments_throws404WhenPolicyMissing() {
+        given(policyRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reindexAllAttachments(999L))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("reindexAllAttachments — 정책 단위 reindex 호출하고 SUCCESS 마감")
+    void reindexAllAttachments_invokesPolicyReindex() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(101L);
+
+        ReprocessResult result = service.reindexAllAttachments(100L);
+
+        verify(attachmentReindexService).reindex(100L);
+        verify(stepService).markFinished(eq(101L), eq(ProcessingStatus.SUCCESS), anyString(), isNull());
+        assertThat(result.queued()).isTrue();
+        assertThat(result.stepIds()).containsExactly(101L);
+    }
+
     @Test
     @DisplayName("retryStep — RAG 가 실패하면 FAILED 로 마감하고 예외를 다시 던진다")
     void retryStep_marksFailedAndRethrowsOnRagException() {

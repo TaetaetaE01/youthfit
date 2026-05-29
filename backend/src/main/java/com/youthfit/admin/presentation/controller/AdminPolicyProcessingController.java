@@ -96,8 +96,9 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
     }
 
     @Override
-    public ResponseEntity<ReprocessResponse> reindexAllAttachments(Long id) {
-        throw new UnsupportedOperationException("Phase 2");
+    @PostMapping("/{id}/attachments/reindex")
+    public ResponseEntity<ReprocessResponse> reindexAllAttachments(@PathVariable Long id) {
+        return ResponseEntity.ok(ReprocessResponse.from(service.reindexAllAttachments(id)));
     }
 
     @Override

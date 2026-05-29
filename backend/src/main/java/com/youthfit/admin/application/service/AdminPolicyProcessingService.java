@@ -330,6 +330,30 @@ public class AdminPolicyProcessingService {
     }
 
     /**
+     * 정책의 모든 첨부 임베딩 일괄 재실행.
+     *
+     * <p>{@link AttachmentReindexService#reindex(Long)} 는 정책 단위 동작이라 그대로 호출한다.
+     * RAG_INDEXING step 행에 SUCCESS/FAILED 기록.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
+     */
+    @Transactional
+    public ReprocessResult reindexAllAttachments(Long policyId) {
+        policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+        Long stepRowId = stepService.markStarted(policyId, ProcessingStep.RAG_INDEXING);
+        try {
+            attachmentReindexService.reindex(policyId);
+            stepService.markFinished(stepRowId, ProcessingStatus.SUCCESS,
+                    "전체 첨부 재인덱싱 트리거", null);
+        } catch (Exception e) {
+            stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
+            throw e;
+        }
+        return new ReprocessResult(true, List.of(stepRowId), "전체 첨부 재인덱싱 큐잉됨");
+    }
+
+    /**
      * Phase D 이전에는 참조 사이트 fetch 결과를 채우지 않는다.
      *
      * <p>Phase D 에서 ENRICHMENT step 의 {@code detail_json.skippedUrls} 파싱이 추가되면
