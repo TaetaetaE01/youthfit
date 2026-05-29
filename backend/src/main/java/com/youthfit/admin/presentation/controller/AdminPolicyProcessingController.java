@@ -55,12 +55,42 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
         PolicyProcessingListCommand command = new PolicyProcessingListCommand(
                 q,
                 region,
-                PolicyProcessingFilter.valueOf(filter),
-                PolicyProcessingSort.valueOf(sort),
+                parseFilter(filter),
+                parseSort(sort),
                 page,
                 size
         );
         return ResponseEntity.ok(PolicyProcessingListResponse.from(service.findProcessingPolicies(command)));
+    }
+
+    /**
+     * {@code filter} 쿼리 파라미터를 {@link PolicyProcessingFilter} 로 변환.
+     *
+     * <p>잘못된 값이면 {@link ErrorCode#INVALID_INPUT} 으로 400 응답을 던진다.
+     * {@link #retryStep retryStep} 의 step 파라미터 검증과 동일한 패턴을 사용해
+     * 어드민 API 의 enum 파라미터 응답 코드를 일관되게 유지한다.</p>
+     */
+    private static PolicyProcessingFilter parseFilter(String raw) {
+        try {
+            return PolicyProcessingFilter.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new YouthFitException(ErrorCode.INVALID_INPUT,
+                    "지원하지 않는 filter: " + raw);
+        }
+    }
+
+    /**
+     * {@code sort} 쿼리 파라미터를 {@link PolicyProcessingSort} 로 변환.
+     *
+     * <p>잘못된 값이면 {@link ErrorCode#INVALID_INPUT} 으로 400 응답을 던진다.</p>
+     */
+    private static PolicyProcessingSort parseSort(String raw) {
+        try {
+            return PolicyProcessingSort.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new YouthFitException(ErrorCode.INVALID_INPUT,
+                    "지원하지 않는 sort: " + raw);
+        }
     }
 
     @Override
