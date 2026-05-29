@@ -127,14 +127,15 @@ class PolicyQueryServiceTest {
                     List.of(createMockPolicy()),
                     Pageable.ofSize(20), 1);
             given(policyRepository.findAllByFilters(
-                    any(RegionFilter.class), eq(Category.HOUSING), eq(PolicyStatus.OPEN), any(Pageable.class)))
+                    any(RegionFilter.class), eq(Category.HOUSING), eq(PolicyStatus.OPEN),
+                    isNull(), any(Pageable.class)))
                     .willReturn(mockPage);
             given(policySourceRepository.findFirstByPolicyIds(anyList()))
                     .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    RegionFilter.of(List.of("11")), Category.HOUSING, PolicyStatus.OPEN, 0, 20);
+                    RegionFilter.of(List.of("11")), Category.HOUSING, PolicyStatus.OPEN, null, 0, 20);
 
             // then
             assertThat(result.policies()).hasSize(1);
@@ -148,14 +149,14 @@ class PolicyQueryServiceTest {
             // given
             Page<Policy> emptyPage = Page.empty();
             given(policyRepository.findAllByFilters(
-                    any(RegionFilter.class), isNull(), isNull(), any(Pageable.class)))
+                    any(RegionFilter.class), isNull(), isNull(), isNull(), any(Pageable.class)))
                     .willReturn(emptyPage);
             given(policySourceRepository.findFirstByPolicyIds(anyList()))
                     .willReturn(Map.of());
 
             // when
             PolicyPageResult result = policyQueryService.findPoliciesByFilters(
-                    RegionFilter.of(null), null, null, 0, 20);
+                    RegionFilter.of(null), null, null, null, 0, 20);
 
             // then
             assertThat(result.policies()).isEmpty();
@@ -175,18 +176,42 @@ class PolicyQueryServiceTest {
                     .rawJson("{}")
                     .sourceHash("hash")
                     .build();
-            given(policyRepository.findAllByFilters(any(RegionFilter.class), any(), any(), any(Pageable.class)))
+            given(policyRepository.findAllByFilters(
+                    any(RegionFilter.class), any(), any(), isNull(), any(Pageable.class)))
                     .willReturn(mockPage);
             given(policySourceRepository.findFirstByPolicyIds(List.of(1L)))
                     .willReturn(Map.of(1L, source));
 
-            PolicyPageResult result = policyQueryService.findPoliciesByFilters(RegionFilter.of(null), null, null, 0, 20);
+            PolicyPageResult result = policyQueryService.findPoliciesByFilters(
+                    RegionFilter.of(null), null, null, null, 0, 20);
 
             assertThat(result.policies()).hasSize(1);
             assertThat(result.policies().getFirst().sourceType()).isEqualTo(SourceType.YOUTH_CENTER);
             assertThat(result.policies().getFirst().sourceLabel()).isEqualTo("온통청년");
 
             then(policySourceRepository).should(times(1)).findFirstByPolicyIds(any());
+        }
+
+        @Test
+        @DisplayName("findPoliciesByFilters: source 인자를 그대로 repository 로 전달한다")
+        void findPoliciesByFilters_passesSourceToRepository() {
+            // given
+            PageImpl<Policy> emptyPage = new PageImpl<>(List.of());
+            given(policyRepository.findAllByFilters(
+                    any(RegionFilter.class), any(), any(),
+                    eq(SourceType.YOUTH_CENTER), any(Pageable.class)))
+                    .willReturn(emptyPage);
+
+            // when
+            PolicyPageResult result = policyQueryService.findPoliciesByFilters(
+                    RegionFilter.of(null), null, null,
+                    SourceType.YOUTH_CENTER, 0, 20);
+
+            // then
+            then(policyRepository).should().findAllByFilters(
+                    any(RegionFilter.class), any(), any(),
+                    eq(SourceType.YOUTH_CENTER), any(Pageable.class));
+            assertThat(result.totalCount()).isZero();
         }
     }
 

@@ -15,6 +15,7 @@ import com.youthfit.policy.domain.model.PolicySource;
 import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionCode;
 import com.youthfit.policy.domain.model.RegionFilter;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,10 +40,10 @@ public class PolicyQueryService {
     private final RegionCodeRegistry regionCodeRegistry;
 
     public PolicyPageResult findPoliciesByFilters(RegionFilter regionFilter, Category category,
-                                                  PolicyStatus status,
+                                                  PolicyStatus status, SourceType source,
                                                   int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Policy> policyPage = policyRepository.findAllByFilters(regionFilter, category, status, pageable);
+        Page<Policy> policyPage = policyRepository.findAllByFilters(regionFilter, category, status, source, pageable);
         return toPageResult(policyPage);
     }
 

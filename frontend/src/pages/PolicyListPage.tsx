@@ -15,8 +15,9 @@ import { useAuthStore } from '@/stores/authStore';
 import type {
   PolicyCategory,
   PolicyStatus,
+  SourceType,
 } from '@/types/policy';
-import { CATEGORY_LABELS } from '@/types/policy';
+import { CATEGORY_LABELS, SOURCE_LABELS, isSourceType } from '@/types/policy';
 import { SIDO_CODE_BY_ENUM, type RegionSidoCode } from '@/lib/labels/region';
 import { parseRegionsParam, toRegionsParam } from '@/lib/regionFilter';
 
@@ -224,6 +225,8 @@ export default function PolicyListPage() {
   const category = (searchParams.get('category') ?? '') as PolicyCategory | '';
   const rawStatus = searchParams.get('status');
   const status: PolicyStatus = isPolicyStatus(rawStatus) ? rawStatus : DEFAULT_STATUS;
+  const rawSource = searchParams.get('source');
+  const source: SourceType | '' = isSourceType(rawSource) ? rawSource : '';
   const regions = parseRegionsParam(searchParams.get('regions'));
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
 
@@ -280,6 +283,7 @@ export default function PolicyListPage() {
   const { data, isLoading, isError, refetch } = usePolicies({
     keyword: keyword || undefined,
     category,
+    source,
     status,
     regions: regions.length > 0 ? regions : undefined,
     page,
@@ -346,6 +350,7 @@ export default function PolicyListPage() {
   // Active filter badges (지역은 트리거 자체가 활성 칩 역할이므로 제외)
   const activeFilters: { key: string; label: string }[] = [];
   if (category) activeFilters.push({ key: 'category', label: CATEGORY_LABELS[category] });
+  if (source) activeFilters.push({ key: 'source', label: SOURCE_LABELS[source] });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,7 +358,9 @@ export default function PolicyListPage() {
   };
 
   const isSearchMode = Boolean(keyword);
-  const hasActiveQuery = Boolean(keyword || category || regions.length > 0 || status !== DEFAULT_STATUS);
+  const hasActiveQuery = Boolean(
+    keyword || category || source || regions.length > 0 || status !== DEFAULT_STATUS,
+  );
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
@@ -398,12 +405,14 @@ export default function PolicyListPage() {
 
       <PolicyFilterBar
         category={category}
+        source={source}
         regions={regions}
         regionData={regionData}
         onCategoryChange={(v) => updateParams({ category: v, page: '' })}
+        onSourceChange={(v) => updateParams({ source: v, page: '' })}
         onRegionsChange={handleRegionApply}
         disabled={isSearchMode}
-        disabledHint="검색 결과에는 지역 필터가 적용되지 않습니다"
+        disabledHint="검색 결과에는 지역·출처 필터가 적용되지 않습니다"
       />
 
       {/* ── Active filter badges ── */}

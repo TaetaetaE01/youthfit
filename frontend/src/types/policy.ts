@@ -316,6 +316,22 @@ export const STATUS_LABELS: Record<PolicyStatus, string> = {
   CLOSED: '마감',
 };
 
+export const SOURCE_LABELS: Record<SourceType, string> = {
+  YOUTH_CENTER: '온통청년',
+  BOKJIRO_CENTRAL: '복지로',
+  YOUTH_SEOUL_CRAWL: '청년서울',
+};
+
+const SOURCE_TYPE_VALUES: readonly SourceType[] = [
+  'YOUTH_CENTER',
+  'BOKJIRO_CENTRAL',
+  'YOUTH_SEOUL_CRAWL',
+];
+
+export function isSourceType(value: string | null): value is SourceType {
+  return value !== null && (SOURCE_TYPE_VALUES as readonly string[]).includes(value);
+}
+
 export const REGION_OPTIONS = [
   { value: 'SEOUL', label: '서울' },
   { value: 'BUSAN', label: '부산' },
