@@ -46,7 +46,6 @@ public class PolicyProcessingStepTimeoutScheduler {
 
         for (PolicyProcessingStep step : stale) {
             step.markTimedOut();
-            repository.save(step);
             log.warn("PolicyProcessingStep expired: id={} policyId={} step={} attempt={}",
                     step.getId(), step.getPolicyId(), step.getStep(), step.getAttempt());
         }
