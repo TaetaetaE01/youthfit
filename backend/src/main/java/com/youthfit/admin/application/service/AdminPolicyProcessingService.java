@@ -81,7 +81,16 @@ public class AdminPolicyProcessingService {
      * 어드민 정책 처리 현황 페이지 조회.
      *
      * <p>1) Policy 페이지를 조회하고 → 2) policy id 들로 step / attachment / embedding 을 일괄 조회하여
-     * 3) 각 정책마다 종합 완성도를 계산한 다음 4) 메모리 상에서 filter 를 적용한다.
+     * 3) 각 정책마다 종합 완성도를 계산한 다음 4) 메모리 상에서 filter 를 적용한다.</p>
+     *
+     * <p><b>페이징 + in-memory 필터 의미 한계:</b>
+     * {@code totalCount} 는 검색·지역 SQL 필터까지 적용된 모집단 크기다.
+     * {@code filteredItemCount} 는 in-memory 빠른필터까지 적용한 페이지 결과 수다.
+     * computed 필터({@code RAG_FAILED}, {@code ATTACHMENT_EMBEDDING_MISSING},
+     * {@code GUIDE_RULE_FAILED}, {@code REFERENCE_FETCH_FAILED}) 는 SQL 사전 거름이 불가능해
+     * 페이지 후 후처리되므로 같은 totalCount 안에서도 페이지마다 filteredItemCount 가 0 ~ {@code size}
+     * 사이로 변동될 수 있다. 정확한 글로벌 필터 카운트가 필요해지면 SQL group-by + projection 으로
+     * 마이그레이션해야 한다.</p>
      */
     public PolicyProcessingListResult findProcessingPolicies(PolicyProcessingListCommand command) {
         Page<Policy> policyPage = policyRepository.findForAdminProcessing(
@@ -127,6 +136,7 @@ public class AdminPolicyProcessingService {
                 policyPage.getTotalElements(),
                 command.page(),
                 command.size(),
+                filtered.size(),
                 filtered
         );
     }

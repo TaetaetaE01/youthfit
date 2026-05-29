@@ -538,6 +538,47 @@ class AdminPolicyProcessingServiceTest {
         verify(stepService).markFinished(eq(81L), eq(ProcessingStatus.FAILED), anyString(), isNull());
     }
 
+    // ---- Fix 1 (M1): filteredItemCount 회귀 테스트 ----
+
+    @Test
+    @DisplayName("Fix M1 — INCOMPLETE 필터 시 totalCount(SQL 모집단) 와 filteredItemCount(필터 통과 수) 가 다를 수 있다")
+    void findProcessingPolicies_exposesFilteredItemCountSeparateFromTotal() {
+        // 정책 3건 페이지: 1건 INCOMPLETE, 2건 COMPLETE.
+        // SQL 모집단(totalCount) 은 3이고, INCOMPLETE 필터를 적용한 filteredItemCount 는 1이어야 한다.
+        Policy p1 = mockPolicy(1L, "정책1", "11");
+        Policy p2 = mockPolicy(2L, "정책2", "11");
+        Policy p3 = mockPolicy(3L, "정책3", "11");
+        Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+                .willReturn(page);
+        // p1 → RAG FAILED → INCOMPLETE
+        // p2, p3 → RAG SUCCESS, 첨부 없음 → COMPLETE
+        given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of(
+                1L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.FAILED),
+                2L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                3L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS)
+        ));
+        given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of());
+        given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of());
+
+        PolicyProcessingListResult result = service.findProcessingPolicies(new PolicyProcessingListCommand(
+                null, null, PolicyProcessingFilter.INCOMPLETE, PolicyProcessingSort.UPDATED_DESC, 0, 50));
+
+        assertThat(result.totalCount()).isEqualTo(3L); // SQL 모집단
+        assertThat(result.filteredItemCount()).isEqualTo(1L); // INCOMPLETE 통과 1건
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().get(0).completeness())
+                .isEqualTo(PolicyProcessingCompleteness.INCOMPLETE);
+    }
+
+    private Policy mockPolicy(Long id, String title, String regionCode) {
+        Policy p = mock(Policy.class);
+        lenient().when(p.getId()).thenReturn(id);
+        lenient().when(p.getTitle()).thenReturn(title);
+        lenient().when(p.getRegionCode()).thenReturn(regionCode);
+        return p;
+    }
+
     private PolicyProcessingStep stepMock(ProcessingStep step, ProcessingStatus status) {
         PolicyProcessingStep s = mock(PolicyProcessingStep.class);
         Instant now = Instant.now();

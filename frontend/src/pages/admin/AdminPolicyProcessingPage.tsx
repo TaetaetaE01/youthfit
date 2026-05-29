@@ -108,7 +108,19 @@ export default function AdminPolicyProcessingPage() {
         </div>
       )}
       {list && list.items.length === 0 && !isLoading && (
-        <div className="text-xs text-neutral-500">조건에 맞는 정책이 없습니다.</div>
+        <div className="text-xs text-neutral-500">
+          {params.filter && params.filter !== 'ALL' ? (
+            <>
+              이 페이지에서는 필터 조건에 맞는 정책이 없습니다. 다른 페이지를 확인해 주세요.
+              <br />
+              <span className="text-[10px] text-neutral-400">
+                (전체 {list.totalCount}건 중 빠른필터는 페이지별로 적용되어 0건 페이지가 발생할 수 있습니다.)
+              </span>
+            </>
+          ) : (
+            '조건에 맞는 정책이 없습니다.'
+          )}
+        </div>
       )}
       {list && list.items.length > 0 && (
         <>

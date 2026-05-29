@@ -51,9 +51,20 @@ export interface PolicyProcessingItem {
 }
 
 export interface PolicyProcessingList {
+  /**
+   * 검색·지역 SQL 필터까지 적용된 모집단 크기.
+   * computed 빠른필터(RAG_FAILED 등)는 페이지 후 in-memory 처리되므로 totalCount 에 반영되지 않는다.
+   */
   totalCount: number;
   page: number;
   size: number;
+  /**
+   * in-memory 빠른필터까지 적용한 페이지 결과 수 (= items.length).
+   *
+   * 백엔드는 페이지를 SQL 로 잘라온 뒤 메모리에서 한 번 더 필터링하므로 같은 totalCount 라도
+   * 페이지마다 0 ~ size 사이로 변동될 수 있다. 빈 페이지가 나와도 다른 페이지에는 결과가 있을 수 있다.
+   */
+  filteredItemCount: number;
   items: PolicyProcessingItem[];
 }
 

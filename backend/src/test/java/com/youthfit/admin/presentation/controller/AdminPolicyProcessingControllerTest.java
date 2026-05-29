@@ -102,7 +102,7 @@ class AdminPolicyProcessingControllerTest {
                 LocalDateTime.now()
         );
         when(service.findProcessingPolicies(any())).thenReturn(
-                new PolicyProcessingListResult(1L, 0, 50, List.of(item))
+                new PolicyProcessingListResult(1L, 0, 50, 1L, List.of(item))
         );
 
         mockMvc.perform(get("/api/v1/admin/policies/processing")
@@ -159,6 +159,26 @@ class AdminPolicyProcessingControllerTest {
         mockMvc.perform(get("/api/v1/admin/policies/processing")
                         .with(authentication(userAuth())))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- Fix 3 (M3): filter/sort 유효성 일관 처리 ----
+
+    @Test
+    @DisplayName("Fix M3 — 알 수 없는 filter 파라미터는 400 (INVALID_INPUT)")
+    void getPolicies_returns400WhenFilterInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/policies/processing")
+                        .param("filter", "BOGUS")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Fix M3 — 알 수 없는 sort 파라미터는 400 (INVALID_INPUT)")
+    void getPolicies_returns400WhenSortInvalid() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/policies/processing")
+                        .param("sort", "BOGUS_SORT")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isBadRequest());
     }
 
     // ---- Task 10: retryStep ----
