@@ -244,6 +244,7 @@ class PolicySpecificationTest {
         // given
         Predicate conjunction = mock(Predicate.class);
         Path<Object> createdAtPath = mock(Path.class);
+        Path<Object> rootIdPath = mock(Path.class);
         Order descOrder = mock(Order.class);
         Subquery<Long> subquery = mock(Subquery.class, RETURNS_DEEP_STUBS);
         Root<PolicySource> sourceRoot = mock(Root.class, RETURNS_DEEP_STUBS);
@@ -256,8 +257,9 @@ class PolicySpecificationTest {
         given(subquery.select(any())).willReturn(subquery);
         given(subquery.where(any(Predicate.class), any(Predicate.class))).willReturn(subquery);
         given(cb.exists(subquery)).willReturn(existsPredicate);
-        given(cb.equal(any(jakarta.persistence.criteria.Expression.class), any(Root.class))).willReturn(mock(Predicate.class));
+        given(cb.equal(any(jakarta.persistence.criteria.Expression.class), any(jakarta.persistence.criteria.Expression.class))).willReturn(mock(Predicate.class));
         given(cb.equal(any(jakarta.persistence.criteria.Expression.class), any(SourceType.class))).willReturn(mock(Predicate.class));
+        given(root.get("id")).willReturn(rootIdPath);
         given(root.get("createdAt")).willReturn(createdAtPath);
         given(cb.desc(createdAtPath)).willReturn(descOrder);
 
