@@ -31,9 +31,17 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 
 /**
- * AdminPolicyProcessingService.reprocess → 이벤트 발행 → listener 4단계 마감 end-to-end 통합 테스트.
+ * 통합 테스트 — {@link com.youthfit.admin.application.service.AdminPolicyProcessingService#reprocess}
+ * 호출이 비동기 listener 까지 도달해 4개 step 행을 마감하는지 검증.
+ *
+ * <p>발행 측 {@code reprocess} 는 LLM 호출 블록을 피하기 위해 의도적으로 {@code @Transactional}
+ * 을 두지 않는다. 그 결과 본 테스트는 {@code @TransactionalEventListener(AFTER_COMMIT,
+ * fallbackExecution = true)} 의 fallback 경로(트랜잭션 없이 즉시 호출되는 분기) 를 검증한다.
+ * 운영 어드민 컨트롤러 호출 시점에도 트랜잭션이 없으므로 fallback 경로가 실제 운영 경로다.
  *
  * <p>외부 LLM/임베딩 호출은 {@link MockitoBean} 으로 격리하고 PostgreSQL(pgvector) 은
  * testcontainers 로 띄워 실제 DB 에 IN_PROGRESS → SUCCESS/SKIPPED 전이가 기록되는지 검증한다.</p>
@@ -44,6 +52,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @Testcontainers
 class PolicyReprocessIntegrationTest {
+
+    private static final Duration ASYNC_LISTENER_WAIT = Duration.ofSeconds(5);
+
+    // 테스트 격리: ddl-auto=create-drop + 테스트마다 새 정책 INSERT (고정 SEED id 없음) 으로 다른 통합 테스트와 행 충돌 없음.
+    // 동일 SpringBootTest 컨텍스트를 공유하는 후속 통합 테스트가 추가되면, 정책 / step 행 cleanup 방안을 재검토할 것.
 
     @Container
     @ServiceConnection
@@ -75,8 +88,8 @@ class PolicyReprocessIntegrationTest {
     @MockitoBean private RagIndexingService ragIndexingService;
 
     @Test
-    @DisplayName("reprocess 호출 시 listener 가 4단계 step 행을 IN_PROGRESS 가 아닌 상태로 마감한다")
-    void reprocess_triggersListenerAndFinishesAllSteps() {
+    @DisplayName("reprocess 호출 시 비동기 listener 가 DB step 행을 마감한다 (fallback 경로)")
+    void reprocess_triggersAsyncListener_andFinishesAllStepsInDb() {
         // given — 정책 저장
         Policy policy = Policy.builder()
                 .title("통합 테스트 정책")
@@ -95,7 +108,7 @@ class PolicyReprocessIntegrationTest {
 
         // listener 가 @Async("llmExecutor") 로 비동기 실행 — Awaitility 로 폴링
         Awaitility.await()
-                .atMost(Duration.ofSeconds(5))
+                .atMost(ASYNC_LISTENER_WAIT)
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> {
                     Map<ProcessingStep, ProcessingStatus> latest = stepRepository
@@ -112,5 +125,11 @@ class PolicyReprocessIntegrationTest {
         List<PolicyProcessingStep> rows = stepRepository.findLatestRowsByPolicyId(saved.getId());
         assertThat(rows).hasSize(4);
         assertThat(rows).allSatisfy(r -> assertThat(r.getFinishedAt()).isNotNull());
+
+        // listener 가 실제로 정책 entity 의 필드를 각 service 에 전달했는지 검증
+        verify(guideGenerationService).generateGuide(argThat(c -> c.policyId().equals(saved.getId())));
+        verify(eligibilityRuleGenerationService).generateRules(argThat(c -> c.policyId().equals(saved.getId())));
+        verify(ragIndexingService).indexPolicyDocument(argThat(c ->
+                c.policyId().equals(saved.getId()) && "본문".equals(c.content())));
     }
 }
