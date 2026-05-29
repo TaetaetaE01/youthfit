@@ -6,7 +6,9 @@ import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -96,11 +98,40 @@ public class PolicyRepositoryImpl implements PolicyRepository {
                 pageable);
     }
 
+    @Override
+    public Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable) {
+        Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                sort == null ? Sort.unsorted() : sort);
+        // JPQL 의 :query / :region 은 null 대신 "" 을 sentinel 로 사용한다.
+        // Hibernate 6 + Postgres JDBC 가 nullable STRING parameter 의 type 을 BYTEA 로 추론해
+        // `lower(bytea) does not exist` 에러를 던지기 때문 (PolicyJpaRepository 의 Javadoc 참조).
+        String queryParam = orEmpty(normalizeKeyword(query));
+        String regionParam = orEmpty(normalizeRegion(region));
+        return jpaRepository.findForAdminProcessing(queryParam, regionParam, effective);
+    }
+
+    private static String orEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    @Override
+    public List<Policy> findAllForStats() {
+        return jpaRepository.findAllForStats();
+    }
+
     private String normalizeKeyword(String keyword) {
         if (keyword == null) {
             return null;
         }
         String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeRegion(String region) {
+        if (region == null) {
+            return null;
+        }
+        String trimmed = region.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 }

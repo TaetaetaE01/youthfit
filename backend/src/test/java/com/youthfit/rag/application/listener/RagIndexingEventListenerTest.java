@@ -1,6 +1,7 @@
 package com.youthfit.rag.application.listener;
 
 import com.youthfit.common.event.PolicyUpsertedEvent;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
 import com.youthfit.policy.domain.repository.PolicyRepository;
@@ -34,6 +35,9 @@ class RagIndexingEventListenerTest {
 
     @Mock
     private RagIndexingService ragIndexingService;
+
+    @Mock
+    private PolicyProcessingStepService stepService;
 
     @InjectMocks
     private RagIndexingEventListener listener;

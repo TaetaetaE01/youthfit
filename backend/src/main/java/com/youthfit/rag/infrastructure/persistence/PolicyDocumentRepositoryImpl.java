@@ -6,9 +6,13 @@ import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -63,6 +67,23 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
                 .map(this::toTrigramChunk)
                 .filter(c -> c.distance() <= maxDistance)
                 .toList();
+    }
+
+    @Override
+    public Map<Long, Long> countAttachmentEmbeddingsByPolicyIds(List<Long> policyIds) {
+        if (policyIds == null || policyIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpaRepository.countAttachmentEmbeddingsByPolicyIdsRaw(policyIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Number) row[1]).longValue()
+                ));
+    }
+
+    @Override
+    public Set<Long> findEmbeddedAttachmentIds(Long policyId) {
+        return new HashSet<>(jpaRepository.findDistinctAttachmentIds(policyId));
     }
 
     private SimilarChunk toTrigramChunk(Object[] row) {

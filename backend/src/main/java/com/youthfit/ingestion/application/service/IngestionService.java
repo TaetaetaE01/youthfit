@@ -19,7 +19,12 @@ import com.youthfit.policy.application.dto.command.RegisterPolicyCommand;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult;
 import com.youthfit.policy.application.dto.result.PolicyIngestionResult.Outcome;
 import com.youthfit.policy.application.service.PolicyIngestionService;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import com.youthfit.policy.domain.model.Category;
+import com.youthfit.policy.domain.model.EnrichmentStatus;
+import com.youthfit.policy.domain.model.PolicyEnrichment;
+import com.youthfit.policy.domain.model.ProcessingStatus;
+import com.youthfit.policy.domain.model.ProcessingStep;
 import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +66,7 @@ public class IngestionService {
     private final IngestionItemFailureRepository ingestionItemFailureRepository;
     private final CodeBasedRuleExtractionService codeBasedRuleExtractionService;
     private final PolicySourceRepository policySourceRepository;
+    private final PolicyProcessingStepService stepService;
 
     public IngestPolicyResult receivePolicy(IngestPolicyCommand command) {
         Instant runStart = Instant.now();
@@ -136,8 +142,28 @@ public class IngestionService {
                     period.isEmpty() ? null : period.evidence()
             );
 
+            // registerPolicy 실패 시에는 policyId 가 없어 INGESTION step row 자체를 생성하지 않는다.
+            // FailureReason 은 outer catch -> recordFailure 가 ingestion_item_failure 에 적재한다.
             PolicyIngestionResult ingestionResult = policyIngestionService.registerPolicy(registerCommand);
             duplicate = ingestionResult.outcome() != Outcome.REGISTERED;
+
+            // INGESTION step 기록 — policyId 확보 후 정규화·dedup 결과를 SUCCESS / SKIPPED 로 마킹한다.
+            Long policyId = ingestionResult.policyId();
+            Long ingestionStepId = stepService.markStarted(policyId, ProcessingStep.INGESTION);
+            if (ingestionResult.outcome() == Outcome.SKIPPED_DUPLICATE) {
+                stepService.markFinished(ingestionStepId, ProcessingStatus.SKIPPED, "DUPLICATE", null);
+            } else {
+                stepService.markFinished(ingestionStepId, ProcessingStatus.SUCCESS, null, null);
+            }
+
+            // ENRICHMENT step 기록 — payload 가 있고 status 가 있을 때만 별도 행으로 결과만 복사한다.
+            PolicyEnrichment enrichment = command.enrichment();
+            if (enrichment != null && enrichment.status() != null) {
+                Long enrichmentStepId = stepService.markStarted(policyId, ProcessingStep.ENRICHMENT);
+                ProcessingStatus mappedStatus = mapEnrichmentStatus(enrichment.status());
+                String detail = serializeEnrichmentDetail(enrichment);
+                stepService.markFinished(enrichmentStepId, mappedStatus, enrichment.status().name(), detail);
+            }
 
             if (ingestionResult.outcome() == Outcome.SKIPPED_DUPLICATE) {
                 return new IngestPolicyResult(UUID.randomUUID(), "SKIPPED_DUPLICATE");
@@ -164,13 +190,6 @@ public class IngestionService {
 
             eventPublisher.publishEvent(new PolicyUpsertedEvent(ingestionResult.policyId(), command.title()));
             triggerAttachmentDownload(ingestionResult.policyId());
-
-            if (command.enrichment() != null) {
-                log.info("enrichment received: externalId={}, status={}, confidence={}",
-                        command.externalId(),
-                        command.enrichment().status(),
-                        command.enrichment().confidence());
-            }
 
             return new IngestPolicyResult(UUID.randomUUID(), "RECEIVED");
         } catch (RuntimeException e) {
@@ -378,6 +397,26 @@ public class IngestionService {
             attachmentDownloadService.downloadForPolicyAsync(policyId);
         } catch (Exception e) {
             log.warn("첨부 다운로드 트리거 실패: policyId={}", policyId, e);
+        }
+    }
+
+    private ProcessingStatus mapEnrichmentStatus(EnrichmentStatus status) {
+        return switch (status) {
+            case OK -> ProcessingStatus.SUCCESS;
+            case NO_LINK, TOO_SHORT, LOW_CONFIDENCE -> ProcessingStatus.SKIPPED;
+            case FETCH_FAILED, LLM_FAILED, PARSE_FAILED -> ProcessingStatus.FAILED;
+        };
+    }
+
+    private String serializeEnrichmentDetail(PolicyEnrichment enrichment) {
+        try {
+            java.util.Map<String, Object> detail = new java.util.HashMap<>();
+            detail.put("extractor", enrichment.extractor());
+            detail.put("confidence", enrichment.confidence());
+            detail.put("sourceUrl", enrichment.sourceUrl());
+            return objectMapper.writeValueAsString(detail);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

@@ -102,4 +102,28 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
          GROUP BY p.detail_level
         """, nativeQuery = true)
     List<Object[]> aggregateDetailLevelCounts();
+
+    /**
+     * 어드민 정책 처리 현황 대시보드 — 제목 부분 일치(query) + region_code 정확 일치 페이지 조회.
+     * 정렬은 Pageable 의 Sort 를 그대로 사용한다.
+     *
+     * <p>NULL 비교 대신 빈 문자열을 sentinel 로 사용한다. Hibernate 6 에서 `:query IS NULL`
+     * 같은 패턴은 prepared statement 의 parameter type 추론이 BYTEA 로 떨어져
+     * `lower(bytea) does not exist` PSQL 에러를 유발한다. 호출자는 null 대신 "" 을 전달한다.</p>
+     */
+    @Query("""
+        SELECT p FROM Policy p
+        WHERE (:query = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')))
+          AND (:region = '' OR p.regionCode = :region)
+        """)
+    Page<Policy> findForAdminProcessing(@Param("query") String query,
+                                        @Param("region") String region,
+                                        Pageable pageable);
+
+    /**
+     * 어드민 정책 처리 현황 KPI 집계용 전체 정책 조회.
+     * id 만으로도 집계가 가능하지만 createdAt 24h 필터에 엔티티 필드가 필요하므로 엔티티를 반환한다.
+     */
+    @Query("SELECT p FROM Policy p")
+    List<Policy> findAllForStats();
 }

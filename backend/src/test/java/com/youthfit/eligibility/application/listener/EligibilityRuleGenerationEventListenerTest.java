@@ -6,6 +6,7 @@ import com.youthfit.eligibility.application.dto.command.GenerateEligibilityRules
 import com.youthfit.eligibility.application.service.EligibilityRuleGenerationService;
 import com.youthfit.eligibility.domain.model.EligibilityRule;
 import com.youthfit.eligibility.domain.repository.EligibilityRuleRepository;
+import com.youthfit.policy.application.service.PolicyProcessingStepService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,9 @@ class EligibilityRuleGenerationEventListenerTest {
 
     @Mock
     private EligibilityRuleRepository ruleRepository;
+
+    @Mock
+    private PolicyProcessingStepService stepService;
 
     @InjectMocks
     private EligibilityRuleGenerationEventListener listener;
