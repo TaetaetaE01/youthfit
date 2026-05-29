@@ -36,6 +36,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -62,6 +63,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -606,6 +608,46 @@ class AdminPolicyProcessingServiceTest {
                 .isEqualTo(PolicyProcessingCompleteness.PARTIAL);
         assertThat(result.items().get(2).completeness())
                 .isEqualTo(PolicyProcessingCompleteness.COMPLETE);
+    }
+
+    // ---- Fix 4 (M4): markStarted 가 외부 호출보다 먼저 invoke 되는지 순서 검증 ----
+
+    @Test
+    @DisplayName("Fix M4 — retryStep 은 외부 LLM 호출 전에 markStarted 를 먼저 부른다 (IN_PROGRESS 가 모니터링에 보이도록)")
+    void retryStep_marksStartedBeforeExternalCall() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(77L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willReturn(new IndexingResult(100L, 3, true));
+
+        service.retryStep(100L, ProcessingStep.RAG_INDEXING);
+
+        InOrder inOrder = inOrder(stepService, ragIndexingService);
+        inOrder.verify(stepService).markStarted(100L, ProcessingStep.RAG_INDEXING);
+        inOrder.verify(ragIndexingService).indexPolicyDocument(any(IndexPolicyDocumentCommand.class));
+        inOrder.verify(stepService).markFinished(eq(77L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+    }
+
+    @Test
+    @DisplayName("Fix M4 — reindexRag 도 markStarted 가 RAG 호출보다 먼저 invoke 된다")
+    void reindexRag_marksStartedBeforeExternalCall() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(111L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willReturn(new IndexingResult(100L, 2, true));
+
+        service.reindexRag(100L);
+
+        InOrder inOrder = inOrder(stepService, ragIndexingService);
+        inOrder.verify(stepService).markStarted(100L, ProcessingStep.RAG_INDEXING);
+        inOrder.verify(ragIndexingService).indexPolicyDocument(any(IndexPolicyDocumentCommand.class));
+        inOrder.verify(stepService).markFinished(eq(111L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
     }
 
     private Policy mockPolicy(Long id, String title, String regionCode) {

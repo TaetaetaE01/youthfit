@@ -272,9 +272,14 @@ public class AdminPolicyProcessingService {
      * <p>모든 경로에서 {@link PolicyProcessingStepService#markStarted} 로 step 행을 만들고,
      * 성공 시 {@code SUCCESS}, 실패 시 {@code FAILED} 로 {@link PolicyProcessingStepService#markFinished} 호출.</p>
      *
+     * <p><b>트랜잭션:</b> 본 메서드에는 {@code @Transactional} 을 두지 않는다. 외부 LLM/임베딩 호출이
+     * 길게 (수 초 ~ 수십 초) 블로킹되는 동안 어드민 컨트롤러의 DB 트랜잭션을 점유하지 않도록 하기 위함이다.
+     * step 행 기록은 {@link PolicyProcessingStepService#markStarted} / {@link PolicyProcessingStepService#markFinished}
+     * 가 자체적으로 {@code REQUIRES_NEW} 로 별도 트랜잭션을 열기 때문에, IN_PROGRESS / FAILED 상태는 외부 호출 진행 중에도
+     * 모니터링 화면에 즉시 노출된다.</p>
+     *
      * @throws YouthFitException {@link ErrorCode#INVALID_INPUT} INGESTION 재실행 시도, {@link ErrorCode#NOT_FOUND} 정책 없음
      */
-    @Transactional
     public ReprocessResult retryStep(Long policyId, ProcessingStep step) {
         if (step == ProcessingStep.INGESTION) {
             throw new YouthFitException(
@@ -324,9 +329,11 @@ public class AdminPolicyProcessingService {
      * API 가 없다. MVP 에선 1건 트리거 시에도 정책 단위 재인덱싱이 이루어지며, 펼침 영역 UX
      * 에 해당 동작을 안내한다.</p>
      *
+     * <p><b>트랜잭션:</b> {@link #retryStep} 와 동일한 이유로 메서드 레벨 {@code @Transactional} 을 두지 않는다.
+     * step 기록은 {@link PolicyProcessingStepService} 가 {@code REQUIRES_NEW} 로 별도 트랜잭션을 연다.</p>
+     *
      * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 첨부가 없거나 정책 소속이 다를 때
      */
-    @Transactional
     public ReprocessResult reindexAttachment(Long policyId, Long attachmentId) {
         PolicyAttachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
@@ -351,9 +358,11 @@ public class AdminPolicyProcessingService {
      * <p>{@link AttachmentReindexService#reindex(Long)} 는 정책 단위 동작이라 그대로 호출한다.
      * RAG_INDEXING step 행에 SUCCESS/FAILED 기록.</p>
      *
+     * <p><b>트랜잭션:</b> {@link #retryStep} 와 동일한 이유로 메서드 레벨 {@code @Transactional} 을 두지 않는다.
+     * step 기록은 {@link PolicyProcessingStepService} 가 {@code REQUIRES_NEW} 로 별도 트랜잭션을 연다.</p>
+     *
      * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
      */
-    @Transactional
     public ReprocessResult reindexAllAttachments(Long policyId) {
         policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
@@ -375,9 +384,11 @@ public class AdminPolicyProcessingService {
      * <p>{@link RagIndexingService#indexPolicyDocument} 를 정책 본문 + enrichment 만 가지고 호출한다.
      * 첨부 머지는 포함하지 않으므로 본문/요약/조건/지원내용 등 정책 자체의 변경만 다시 임베딩한다.</p>
      *
+     * <p><b>트랜잭션:</b> {@link #retryStep} 와 동일한 이유로 메서드 레벨 {@code @Transactional} 을 두지 않는다.
+     * step 기록은 {@link PolicyProcessingStepService} 가 {@code REQUIRES_NEW} 로 별도 트랜잭션을 연다.</p>
+     *
      * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
      */
-    @Transactional
     public ReprocessResult reindexRag(Long policyId) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
@@ -404,9 +415,12 @@ public class AdminPolicyProcessingService {
      *
      * <p>운영 추적을 위해 {@code reason} 파라미터를 그대로 이벤트와 안내 메시지에 포함한다.</p>
      *
+     * <p><b>트랜잭션:</b> 본 메서드는 외부 LLM 호출 없이 4개 step 행만 IN_PROGRESS 로 만들고 이벤트를 발행하므로
+     * 빠르게 종료된다. 별도 {@code @Transactional} 없이 {@link PolicyProcessingStepService} 의 REQUIRES_NEW 만으로
+     * 충분하며, 다른 재실행 메서드와 트랜잭션 정책을 통일하기 위해 메서드 레벨 어노테이션을 두지 않는다.</p>
+     *
      * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
      */
-    @Transactional
     public ReprocessResult reprocess(Long policyId, String reason) {
         policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
