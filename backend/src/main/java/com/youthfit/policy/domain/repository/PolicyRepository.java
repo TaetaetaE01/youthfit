@@ -6,6 +6,7 @@ import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -49,4 +50,18 @@ public interface PolicyRepository {
                                            Set<String> statuses,
                                            Set<String> detailLevels,
                                            Pageable pageable);
+
+    /**
+     * 어드민 정책 처리 현황 대시보드 목록 조회.
+     *
+     * <p>제목 부분 일치 검색(query) 및 단일 region code 필터를 적용하며,
+     * 정렬은 호출자가 제공한 Sort 를 그대로 사용한다. query / region 이 null 이면 해당 조건을 무시한다.
+     *
+     * @param query  제목 부분 일치 검색어 (null 허용)
+     * @param region 정확히 일치할 region code (null 허용)
+     * @param sort   페이지 내 정렬 — 호출자가 책임지고 Policy 엔티티 필드명을 사용해야 한다.
+     * @param pageable 페이지·사이즈 정보 (Sort 는 무시되고 위의 sort 가 적용된다)
+     * @return Policy 페이지
+     */
+    Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable);
 }

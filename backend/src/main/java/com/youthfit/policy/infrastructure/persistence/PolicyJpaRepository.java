@@ -102,4 +102,17 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
          GROUP BY p.detail_level
         """, nativeQuery = true)
     List<Object[]> aggregateDetailLevelCounts();
+
+    /**
+     * 어드민 정책 처리 현황 대시보드 — 제목 부분 일치(query) + region_code 정확 일치 페이지 조회.
+     * 정렬은 Pageable 의 Sort 를 그대로 사용한다.
+     */
+    @Query("""
+        SELECT p FROM Policy p
+        WHERE (:query IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')))
+          AND (:region IS NULL OR p.regionCode = :region)
+        """)
+    Page<Policy> findForAdminProcessing(@Param("query") String query,
+                                        @Param("region") String region,
+                                        Pageable pageable);
 }

@@ -6,7 +6,9 @@ import com.youthfit.policy.domain.model.PolicyStatus;
 import com.youthfit.policy.domain.model.RegionFilter;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -96,11 +98,26 @@ public class PolicyRepositoryImpl implements PolicyRepository {
                 pageable);
     }
 
+    @Override
+    public Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable) {
+        Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                sort == null ? Sort.unsorted() : sort);
+        return jpaRepository.findForAdminProcessing(normalizeKeyword(query), normalizeRegion(region), effective);
+    }
+
     private String normalizeKeyword(String keyword) {
         if (keyword == null) {
             return null;
         }
         String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeRegion(String region) {
+        if (region == null) {
+            return null;
+        }
+        String trimmed = region.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
