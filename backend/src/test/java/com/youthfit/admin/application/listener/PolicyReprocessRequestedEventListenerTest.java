@@ -26,10 +26,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @DisplayName("PolicyReprocessRequestedEventListener")
 @ExtendWith(MockitoExtension.class)
@@ -84,13 +86,16 @@ class PolicyReprocessRequestedEventListenerTest {
         listener.onPolicyReprocessRequested(event);
 
         // then
-        verify(stepService).markFinished(eq(21L), eq(ProcessingStatus.FAILED), eq("정책 없음"), eq(null));
-        verify(stepService).markFinished(eq(22L), eq(ProcessingStatus.FAILED), eq("정책 없음"), eq(null));
-        verify(stepService).markFinished(eq(23L), eq(ProcessingStatus.FAILED), eq("정책 없음"), eq(null));
-        verify(stepService).markFinished(eq(24L), eq(ProcessingStatus.FAILED), eq("정책 없음"), eq(null));
+        verify(stepService).markFinished(eq(21L), eq(ProcessingStatus.FAILED), eq("정책 없음"), isNull());
+        verify(stepService).markFinished(eq(22L), eq(ProcessingStatus.FAILED), eq("정책 없음"), isNull());
+        verify(stepService).markFinished(eq(23L), eq(ProcessingStatus.FAILED), eq("정책 없음"), isNull());
+        verify(stepService).markFinished(eq(24L), eq(ProcessingStatus.FAILED), eq("정책 없음"), isNull());
         verify(guideGenerationService, never()).generateGuide(any());
         verify(eligibilityRuleGenerationService, never()).generateRules(any());
         verify(ragIndexingService, never()).indexPolicyDocument(any());
+        verify(stepService, never()).markFinished(any(), eq(ProcessingStatus.SUCCESS), any(), any());
+        verify(stepService, never()).markFinished(any(), eq(ProcessingStatus.SKIPPED), any(), any());
+        verifyNoMoreInteractions(stepService);
     }
 
     @Test
@@ -112,15 +117,20 @@ class PolicyReprocessRequestedEventListenerTest {
         // when
         listener.onPolicyReprocessRequested(event);
 
-        // then
-        verify(stepService).markFinished(eq(31L), eq(ProcessingStatus.SKIPPED), any(), any()); // ENRICHMENT
-        verify(stepService).markFinished(eq(32L), eq(ProcessingStatus.FAILED), eq("LLM rate limit"), eq(null)); // GUIDE
-        verify(eligibilityRuleGenerationService).generateRules(any()); // RULE 계속 호출
-        verify(stepService).markFinished(eq(33L), eq(ProcessingStatus.SUCCESS), any(), any()); // RULE
-        verify(ragIndexingService).indexPolicyDocument(any()); // RAG 계속 호출
-        verify(stepService).markFinished(eq(34L), eq(ProcessingStatus.SUCCESS), any(), any()); // RAG
+        // then — 순서 보장 + ENRICHMENT reason 고정
+        InOrder order = inOrder(stepService, guideGenerationService, eligibilityRuleGenerationService, ragIndexingService);
+        order.verify(stepService).markFinished(eq(31L), eq(ProcessingStatus.SKIPPED),
+                eq("MVP: ENRICHMENT manual trigger 미연결"), isNull());
+        order.verify(guideGenerationService).generateGuide(any(GenerateGuideCommand.class));
+        order.verify(stepService).markFinished(eq(32L), eq(ProcessingStatus.FAILED),
+                eq("LLM rate limit"), isNull());
+        order.verify(eligibilityRuleGenerationService).generateRules(any(GenerateEligibilityRulesCommand.class));
+        order.verify(stepService).markFinished(eq(33L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+        order.verify(ragIndexingService).indexPolicyDocument(any(IndexPolicyDocumentCommand.class));
+        order.verify(stepService).markFinished(eq(34L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
     }
 
+    // ENRICHMENT_SKIP_REASON 상수 (PolicyReprocessRequestedEventListener) 와 일관 유지 — 변경 시 두 곳 동시 수정.
     @Test
     @DisplayName("ENRICHMENT 단계는 SKIPPED 로 마감되고 reason 은 retryStep 과 동일한 메시지")
     void onPolicyReprocessRequested_enrichmentMarkedSkippedWithRetryStepMessage() {
@@ -140,7 +150,7 @@ class PolicyReprocessRequestedEventListenerTest {
 
         // then — reason 메시지가 retryStep(ENRICHMENT) 와 정확히 일치하는지 검증
         ArgumentCaptor<String> reason = ArgumentCaptor.forClass(String.class);
-        verify(stepService).markFinished(eq(41L), eq(ProcessingStatus.SKIPPED), reason.capture(), eq(null));
+        verify(stepService).markFinished(eq(41L), eq(ProcessingStatus.SKIPPED), reason.capture(), isNull());
         assertThat(reason.getValue()).isEqualTo("MVP: ENRICHMENT manual trigger 미연결");
     }
 
