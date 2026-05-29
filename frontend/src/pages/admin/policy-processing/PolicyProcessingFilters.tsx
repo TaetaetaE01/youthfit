@@ -28,7 +28,7 @@ export function PolicyProcessingFilters({ params, onChange, chipCounts }: Props)
       <div className="flex items-center gap-2">
         <input
           type="text"
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm flex-1 max-w-xs"
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-500 flex-1 max-w-xs focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
           placeholder="정책 ID, 제목 검색…"
           defaultValue={params.q ?? ''}
           onChange={(e) =>
@@ -36,7 +36,7 @@ export function PolicyProcessingFilters({ params, onChange, chipCounts }: Props)
           }
         />
         <select
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
           value={params.sort ?? 'UPDATED_DESC'}
           onChange={(e) =>
             onChange({ ...params, sort: e.target.value as Sort })
@@ -48,7 +48,7 @@ export function PolicyProcessingFilters({ params, onChange, chipCounts }: Props)
         </select>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-500">빠른 필터</span>
+        <span className="text-xs text-neutral-500">빠른 필터</span>
         {CHIPS.map((chip) => {
           const active = (params.filter ?? 'ALL') === chip.key;
           const count = chipCounts[chip.key];
@@ -62,11 +62,11 @@ export function PolicyProcessingFilters({ params, onChange, chipCounts }: Props)
                 onChange({ ...params, filter: chip.key, page: 0 })
               }
               className={cn(
-                'rounded-full border px-3 py-1 text-xs',
-                active && chip.tone === 'fail' && 'border-red-500 bg-red-900/30 text-red-400',
-                active && chip.tone === 'warn' && 'border-amber-500 bg-amber-900/30 text-amber-400',
-                active && chip.tone === 'default' && 'border-green-500 bg-green-900/30 text-green-400',
-                !active && 'border-slate-700 bg-slate-900 text-slate-400',
+                'rounded-full border px-3 py-1 text-xs transition-colors',
+                active && chip.tone === 'fail' && 'border-red-300 bg-red-50 text-red-700',
+                active && chip.tone === 'warn' && 'border-amber-300 bg-amber-50 text-amber-700',
+                active && chip.tone === 'default' && 'border-indigo-300 bg-indigo-50 text-indigo-700',
+                !active && 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50',
                 disabled && 'opacity-50 cursor-not-allowed',
               )}
             >

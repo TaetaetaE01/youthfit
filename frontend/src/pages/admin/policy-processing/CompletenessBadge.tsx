@@ -2,9 +2,9 @@ import type { Completeness } from '@/types/adminPolicyProcessing';
 import { cn } from '@/lib/cn';
 
 const STYLE: Record<Completeness, string> = {
-  COMPLETE: 'bg-green-900/30 text-green-400',
-  PARTIAL: 'bg-amber-900/30 text-amber-400',
-  INCOMPLETE: 'bg-red-900/30 text-red-400',
+  COMPLETE: 'bg-green-50 text-green-700',
+  PARTIAL: 'bg-amber-50 text-amber-700',
+  INCOMPLETE: 'bg-red-50 text-red-700',
 };
 
 const LABEL: Record<Completeness, string> = {
@@ -19,7 +19,7 @@ interface Props {
 
 export function CompletenessBadge({ value }: Props) {
   return (
-    <span className={cn('inline-block px-2 py-0.5 rounded text-[10px] font-semibold', STYLE[value])}>
+    <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold', STYLE[value])}>
       {LABEL[value]}
     </span>
   );

@@ -50,19 +50,19 @@ interface KpiCardProps {
 }
 
 const VALUE_COLOR: Record<Tone, string> = {
-  ok: 'text-green-500',
-  warn: 'text-amber-500',
-  fail: 'text-red-500',
-  neutral: 'text-white',
+  ok: 'text-green-600',
+  warn: 'text-amber-600',
+  fail: 'text-red-600',
+  neutral: 'text-neutral-900',
 };
 
 function KpiCard({ label, value, suffix, tone }: KpiCardProps) {
   return (
-    <div className="rounded border border-slate-700 bg-slate-900 p-3">
-      <div className="text-xs uppercase tracking-wider text-blue-300">{label}</div>
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="text-xs uppercase tracking-wider text-indigo-600">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${VALUE_COLOR[tone]}`}>
         {value}{' '}
-        <span className="text-sm font-normal text-slate-500">{suffix}</span>
+        <span className="text-sm font-normal text-neutral-500">{suffix}</span>
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ interface Props {
 export function PolicyProcessingDetailPanel({ policyId, onAction }: Props) {
   const { data, isLoading } = useAdminPolicyProcessingDetail(policyId);
 
-  if (isLoading) return <div className="text-xs text-slate-500">로딩 중…</div>;
+  if (isLoading) return <div className="text-xs text-neutral-500">로딩 중…</div>;
   if (!data) return null;
 
   return (
@@ -44,25 +44,25 @@ export function PolicyProcessingDetailPanel({ policyId, onAction }: Props) {
         <ReferenceDetailTable references={data.references} />
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-xs text-blue-300">통합 액션</span>
+        <span className="text-xs text-indigo-600">통합 액션</span>
         <button
           type="button"
           onClick={() => onAction?.reindexAllAttachments()}
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1 text-xs"
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
         >
           첨부 임베딩 재인덱싱
         </button>
         <button
           type="button"
           onClick={() => onAction?.reindexRag()}
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1 text-xs"
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
         >
           RAG 본문 재인덱싱
         </button>
         <button
           type="button"
           onClick={() => onAction?.reprocess()}
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1 text-xs"
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
         >
           전체 재처리
         </button>
@@ -79,13 +79,13 @@ function StepDetailTable({
   onRetry?: (step: string) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded border border-slate-700">
-      <div className="bg-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-blue-300">
+    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
         5단계 처리 이력
       </div>
       <table className="w-full text-[10px]">
-        <thead>
-          <tr className="text-blue-300">
+        <thead className="bg-neutral-50">
+          <tr className="text-indigo-600">
             <th className="p-1 text-left">단계</th>
             <th className="p-1">STATUS</th>
             <th className="p-1">소요</th>
@@ -95,8 +95,8 @@ function StepDetailTable({
         </thead>
         <tbody>
           {steps.map((s) => (
-            <tr key={s.step} className="border-t border-slate-800">
-              <td className="p-1">{s.step}</td>
+            <tr key={s.step} className="border-t border-neutral-200 text-neutral-700">
+              <td className="p-1 text-neutral-900">{s.step}</td>
               <td className={`p-1 ${statusColor(s.status)}`}>{s.status}</td>
               <td className="p-1">
                 {s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : '—'}
@@ -107,7 +107,7 @@ function StepDetailTable({
                   <button
                     type="button"
                     onClick={() => onRetry?.(s.step)}
-                    className="text-blue-400 hover:text-green-400"
+                    className="text-indigo-600 hover:text-green-600"
                     title="재실행"
                   >
                     ⟲
@@ -131,23 +131,23 @@ function AttachmentDetailTable({
 }) {
   if (attachments.length === 0) {
     return (
-      <div className="overflow-hidden rounded border border-slate-700">
-        <div className="bg-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-blue-300">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
           첨부파일
         </div>
-        <div className="p-3 text-xs text-slate-500">첨부 없음</div>
+        <div className="p-3 text-xs text-neutral-500">첨부 없음</div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded border border-slate-700">
-      <div className="bg-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-blue-300">
+    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
         첨부파일 {attachments.length}건
       </div>
       <table className="w-full text-[10px]">
-        <thead>
-          <tr className="text-blue-300">
+        <thead className="bg-neutral-50">
+          <tr className="text-indigo-600">
             <th className="p-1 text-left">파일명</th>
             <th className="p-1">EXT</th>
             <th className="p-1">EMB</th>
@@ -158,9 +158,9 @@ function AttachmentDetailTable({
           {attachments.map((a) => {
             const needsAction = a.extractionStatus === 'FAILED' || !a.embedded;
             return (
-              <tr key={a.attachmentId} className="border-t border-slate-800">
+              <tr key={a.attachmentId} className="border-t border-neutral-200 text-neutral-700">
                 <td
-                  className="max-w-[12ch] truncate p-1"
+                  className="max-w-[12ch] truncate p-1 text-neutral-900"
                   title={a.filename}
                 >
                   {a.filename}
@@ -168,10 +168,10 @@ function AttachmentDetailTable({
                 <td
                   className={`p-1 ${
                     a.extractionStatus === 'EXTRACTED'
-                      ? 'text-green-500'
+                      ? 'text-green-600'
                       : a.extractionStatus === 'FAILED'
-                        ? 'text-red-500'
-                        : 'text-slate-500'
+                        ? 'text-red-600'
+                        : 'text-neutral-500'
                   }`}
                 >
                   {a.extractionStatus === 'EXTRACTED'
@@ -181,7 +181,7 @@ function AttachmentDetailTable({
                       : '—'}
                 </td>
                 <td
-                  className={`p-1 ${a.embedded ? 'text-green-500' : 'text-amber-500'}`}
+                  className={`p-1 ${a.embedded ? 'text-green-600' : 'text-amber-600'}`}
                 >
                   {a.embedded ? '✓' : '누락'}
                 </td>
@@ -190,7 +190,7 @@ function AttachmentDetailTable({
                     <button
                       type="button"
                       onClick={() => onReindex?.(a.attachmentId)}
-                      className="text-blue-400"
+                      className="text-indigo-600"
                       title="재인덱싱"
                     >
                       ⟲
@@ -209,11 +209,11 @@ function AttachmentDetailTable({
 function ReferenceDetailTable({ references }: { references: ReferenceDetail[] }) {
   if (references.length === 0) {
     return (
-      <div className="overflow-hidden rounded border border-slate-700">
-        <div className="bg-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-blue-300">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
           참고 사이트
         </div>
-        <div className="p-3 text-[10px] text-slate-500">
+        <div className="p-3 text-[10px] text-neutral-500">
           Phase D 완료 후 채워짐
         </div>
       </div>
@@ -221,13 +221,13 @@ function ReferenceDetailTable({ references }: { references: ReferenceDetail[] })
   }
 
   return (
-    <div className="overflow-hidden rounded border border-slate-700">
-      <div className="bg-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-blue-300">
+    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
         참고 사이트
       </div>
       <table className="w-full text-[10px]">
-        <thead>
-          <tr className="text-blue-300">
+        <thead className="bg-neutral-50">
+          <tr className="text-indigo-600">
             <th className="p-1 text-left">URL</th>
             <th className="p-1">STATUS</th>
             <th className="p-1">청크</th>
@@ -235,12 +235,12 @@ function ReferenceDetailTable({ references }: { references: ReferenceDetail[] })
         </thead>
         <tbody>
           {references.map((r, i) => (
-            <tr key={i} className="border-t border-slate-800">
-              <td className="max-w-[16ch] truncate p-1" title={r.url}>
+            <tr key={i} className="border-t border-neutral-200 text-neutral-700">
+              <td className="max-w-[16ch] truncate p-1 text-neutral-900" title={r.url}>
                 {r.url}
               </td>
               <td
-                className={`p-1 ${r.status === 'SUCCESS' ? 'text-green-500' : 'text-amber-500'}`}
+                className={`p-1 ${r.status === 'SUCCESS' ? 'text-green-600' : 'text-amber-600'}`}
               >
                 {r.status}
               </td>
@@ -255,19 +255,19 @@ function ReferenceDetailTable({ references }: { references: ReferenceDetail[] })
 
 /**
  * 백엔드 ProcessingStatus#name() 문자열을 색상 클래스로 매핑.
- * SUCCESS/FAILED/SKIPPED/IN_PROGRESS 외 (PENDING 등) 는 slate-400 으로 폴백.
+ * SUCCESS/FAILED/SKIPPED/IN_PROGRESS 외 (PENDING 등) 는 neutral-500 으로 폴백.
  */
 function statusColor(s: string): string {
   switch (s) {
     case 'SUCCESS':
-      return 'text-green-500';
+      return 'text-green-600';
     case 'FAILED':
-      return 'text-red-500';
+      return 'text-red-600';
     case 'SKIPPED':
-      return 'text-slate-500';
+      return 'text-neutral-500';
     case 'IN_PROGRESS':
-      return 'text-blue-500';
+      return 'text-indigo-600';
     default:
-      return 'text-slate-400';
+      return 'text-neutral-500';
   }
 }

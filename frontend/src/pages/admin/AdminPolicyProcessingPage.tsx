@@ -75,8 +75,8 @@ export default function AdminPolicyProcessingPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="mb-1 text-lg font-semibold">정책 처리 현황</h1>
-      <p className="mb-4 text-xs text-slate-500">
+      <h1 className="mb-1 text-2xl font-bold text-neutral-900">정책 처리 현황</h1>
+      <p className="mb-6 text-sm text-neutral-500">
         5단계 적재 + 첨부 임베딩 + 참고 사이트 fetch — 전체 {stats?.totalCount ?? '…'}건
       </p>
 
@@ -97,18 +97,18 @@ export default function AdminPolicyProcessingPage() {
         }
       />
 
-      {isLoading && <div className="text-xs text-slate-500">로딩 중…</div>}
+      {isLoading && <div className="text-xs text-neutral-500">로딩 중…</div>}
       {error && (
-        <div className="rounded border border-red-700 bg-red-950/50 p-3 text-xs text-red-300">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           목록 조회 실패: {error instanceof Error ? error.message : String(error)}
           <br />
-          <span className="text-[10px] text-red-400">
+          <span className="text-[10px] text-red-600">
             브라우저 DevTools(F12) → Network 탭에서 <code>/api/v1/admin/policies/processing</code> 응답 상태/본문을 확인해 주세요.
           </span>
         </div>
       )}
       {list && list.items.length === 0 && !isLoading && (
-        <div className="text-xs text-slate-500">조건에 맞는 정책이 없습니다.</div>
+        <div className="text-xs text-neutral-500">조건에 맞는 정책이 없습니다.</div>
       )}
       {list && list.items.length > 0 && (
         <PolicyProcessingTable
