@@ -427,6 +427,55 @@ class AdminPolicyProcessingServiceTest {
         assertThat(result.stepIds()).containsExactly(101L);
     }
 
+    // ---- Task 13: reindexRag ----
+
+    @Test
+    @DisplayName("reindexRag — 정책 없으면 NOT_FOUND")
+    void reindexRag_throws404WhenPolicyMissing() {
+        given(policyRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reindexRag(999L))
+                .isInstanceOf(YouthFitException.class)
+                .extracting(e -> ((YouthFitException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("reindexRag — RagIndexingService 를 호출하고 SUCCESS 로 마감한다")
+    void reindexRag_invokesRagIndexing() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("정책 본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(111L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willReturn(new IndexingResult(100L, 2, true));
+
+        ReprocessResult result = service.reindexRag(100L);
+
+        verify(ragIndexingService).indexPolicyDocument(any(IndexPolicyDocumentCommand.class));
+        verify(stepService).markFinished(eq(111L), eq(ProcessingStatus.SUCCESS), isNull(), isNull());
+        assertThat(result.queued()).isTrue();
+        assertThat(result.stepIds()).containsExactly(111L);
+    }
+
+    @Test
+    @DisplayName("reindexRag — RAG 호출이 실패하면 FAILED 로 마감하고 예외 재throw")
+    void reindexRag_marksFailedOnException() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(100L);
+        lenient().when(policy.getBody()).thenReturn("정책 본문");
+        given(policyRepository.findById(100L)).willReturn(Optional.of(policy));
+        given(stepService.markStarted(100L, ProcessingStep.RAG_INDEXING)).willReturn(112L);
+        given(ragIndexingService.indexPolicyDocument(any(IndexPolicyDocumentCommand.class)))
+                .willThrow(new RuntimeException("embedding 5xx"));
+
+        assertThatThrownBy(() -> service.reindexRag(100L))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(stepService).markFinished(eq(112L), eq(ProcessingStatus.FAILED), anyString(), isNull());
+    }
+
     @Test
     @DisplayName("retryStep — RAG 가 실패하면 FAILED 로 마감하고 예외를 다시 던진다")
     void retryStep_marksFailedAndRethrowsOnRagException() {

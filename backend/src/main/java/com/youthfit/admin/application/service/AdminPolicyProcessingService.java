@@ -354,6 +354,31 @@ public class AdminPolicyProcessingService {
     }
 
     /**
+     * 정책 본문 RAG 재인덱싱.
+     *
+     * <p>{@link RagIndexingService#indexPolicyDocument} 를 정책 본문 + enrichment 만 가지고 호출한다.
+     * 첨부 머지는 포함하지 않으므로 본문/요약/조건/지원내용 등 정책 자체의 변경만 다시 임베딩한다.</p>
+     *
+     * @throws YouthFitException {@link ErrorCode#NOT_FOUND} 정책 없음
+     */
+    @Transactional
+    public ReprocessResult reindexRag(Long policyId) {
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND));
+        Long stepRowId = stepService.markStarted(policyId, ProcessingStep.RAG_INDEXING);
+        try {
+            ragIndexingService.indexPolicyDocument(
+                    new IndexPolicyDocumentCommand(policyId, policy.getBody(), policy.getEnrichment())
+            );
+            stepService.markFinished(stepRowId, ProcessingStatus.SUCCESS, null, null);
+        } catch (Exception e) {
+            stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
+            throw e;
+        }
+        return new ReprocessResult(true, List.of(stepRowId), "RAG 본문 재인덱싱 완료");
+    }
+
+    /**
      * Phase D 이전에는 참조 사이트 fetch 결과를 채우지 않는다.
      *
      * <p>Phase D 에서 ENRICHMENT step 의 {@code detail_json.skippedUrls} 파싱이 추가되면
