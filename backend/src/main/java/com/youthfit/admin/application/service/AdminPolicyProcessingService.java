@@ -6,6 +6,7 @@ import com.youthfit.admin.application.dto.PolicyProcessingItemResult;
 import com.youthfit.admin.application.dto.PolicyProcessingListCommand;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingSort;
+import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.application.dto.ReferenceSummaryResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -96,6 +98,52 @@ public class AdminPolicyProcessingService {
                 command.size(),
                 filtered
         );
+    }
+
+    /**
+     * 어드민 정책 처리 현황 KPI 집계.
+     *
+     * <p>전체 정책을 한 번에 로드한 뒤 step/attachment/embedding 일괄 조회 결과와 함께
+     * 정책마다 {@link #computeCompleteness} 를 호출해 4 종 카운트를 합산한다.
+     * recent24hCount 는 {@code policy.created_at} 기준으로 in-memory 비교한다.
+     *
+     * <p>MVP 운영 데이터 기준 정책 수가 수백~수천 수준이라는 전제에서 안전하다.
+     * 정책 수가 그 이상으로 늘어나면 SQL group-by 집계로 마이그레이션해야 한다.
+     */
+    public PolicyProcessingStatsResult findProcessingStats() {
+        List<Policy> all = policyRepository.findAllForStats();
+        List<Long> ids = all.stream().map(Policy::getId).toList();
+
+        Map<Long, Map<ProcessingStep, ProcessingStatus>> stepMap =
+                stepRepository.findLatestStatusMapByPolicyIds(ids);
+        Map<Long, AttachmentExtractionCounts> attachMap =
+                attachmentRepository.aggregateExtractionByPolicyIds(ids);
+        Map<Long, Long> embedMap =
+                documentRepository.countAttachmentEmbeddingsByPolicyIds(ids);
+
+        long complete = 0;
+        long partial = 0;
+        long incomplete = 0;
+        long recent = 0;
+        LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
+
+        for (Policy p : all) {
+            PolicyProcessingCompleteness c = computeCompleteness(
+                    stepMap.getOrDefault(p.getId(), Map.of()),
+                    attachMap.getOrDefault(p.getId(), AttachmentExtractionCounts.empty()),
+                    embedMap.getOrDefault(p.getId(), 0L)
+            );
+            switch (c) {
+                case COMPLETE -> complete++;
+                case PARTIAL -> partial++;
+                case INCOMPLETE -> incomplete++;
+            }
+            if (p.getCreatedAt() != null && p.getCreatedAt().isAfter(twentyFourHoursAgo)) {
+                recent++;
+            }
+        }
+
+        return new PolicyProcessingStatsResult(all.size(), complete, partial, incomplete, recent);
     }
 
     /**

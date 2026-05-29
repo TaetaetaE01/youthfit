@@ -115,4 +115,11 @@ public interface PolicyJpaRepository extends JpaRepository<Policy, Long>,
     Page<Policy> findForAdminProcessing(@Param("query") String query,
                                         @Param("region") String region,
                                         Pageable pageable);
+
+    /**
+     * 어드민 정책 처리 현황 KPI 집계용 전체 정책 조회.
+     * id 만으로도 집계가 가능하지만 createdAt 24h 필터에 엔티티 필드가 필요하므로 엔티티를 반환한다.
+     */
+    @Query("SELECT p FROM Policy p")
+    List<Policy> findAllForStats();
 }

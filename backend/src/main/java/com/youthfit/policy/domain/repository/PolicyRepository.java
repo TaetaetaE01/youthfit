@@ -64,4 +64,13 @@ public interface PolicyRepository {
      * @return Policy 페이지
      */
     Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable);
+
+    /**
+     * 어드민 정책 처리 현황 KPI 집계용 전체 정책 조회.
+     *
+     * <p>총건수/완성도 버킷/최근 24시간 신규 정책 집계를 위해 모든 정책을 한 번에 로드한다.
+     * 정책 수가 수백~수천 수준이라는 전제(MVP 운영 데이터 기준)에서 안전하며,
+     * 정책 수가 그 이상으로 늘어나면 SQL group-by 집계로 마이그레이션해야 한다.
+     */
+    List<Policy> findAllForStats();
 }

@@ -4,6 +4,7 @@ import com.youthfit.admin.application.dto.PolicyProcessingFilter;
 import com.youthfit.admin.application.dto.PolicyProcessingListCommand;
 import com.youthfit.admin.application.dto.PolicyProcessingListResult;
 import com.youthfit.admin.application.dto.PolicyProcessingSort;
+import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.policy.domain.model.AttachmentExtractionCounts;
 import com.youthfit.policy.domain.model.Policy;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -114,6 +116,52 @@ class AdminPolicyProcessingServiceTest {
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).completeness())
                 .isEqualTo(PolicyProcessingCompleteness.INCOMPLETE);
+    }
+
+    @Test
+    @DisplayName("findProcessingStats 는 전체/완성도/24h 버킷을 모두 집계한다")
+    void findProcessingStats_aggregatesAllCompletenessBuckets() {
+        // 5개 정책 mock: 3 COMPLETE, 1 PARTIAL, 1 INCOMPLETE, recent24h 는 2건
+        LocalDateTime now = LocalDateTime.now();
+        Policy p1 = policyMock(1L, now.minusHours(2));   // COMPLETE, recent
+        Policy p2 = policyMock(2L, now.minusDays(2));    // COMPLETE
+        Policy p3 = policyMock(3L, now.minusHours(10));  // COMPLETE, recent
+        Policy p4 = policyMock(4L, now.minusDays(5));    // PARTIAL
+        Policy p5 = policyMock(5L, now.minusDays(7));    // INCOMPLETE
+        given(policyRepository.findAllForStats()).willReturn(List.of(p1, p2, p3, p4, p5));
+
+        given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of(
+                1L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                2L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                3L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                4L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                5L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.FAILED)
+        ));
+        given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of(
+                1L, AttachmentExtractionCounts.empty(),
+                2L, AttachmentExtractionCounts.empty(),
+                3L, AttachmentExtractionCounts.empty(),
+                4L, new AttachmentExtractionCounts(3, 3, 1), // PARTIAL: 추출 일부 + 임베딩 1
+                5L, AttachmentExtractionCounts.empty()
+        ));
+        given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(
+                Map.of(4L, 1L)
+        );
+
+        PolicyProcessingStatsResult stats = service.findProcessingStats();
+
+        assertThat(stats.totalCount()).isEqualTo(5);
+        assertThat(stats.completeCount()).isEqualTo(3);
+        assertThat(stats.partialCount()).isEqualTo(1);
+        assertThat(stats.incompleteCount()).isEqualTo(1);
+        assertThat(stats.recent24hCount()).isEqualTo(2);
+    }
+
+    private Policy policyMock(Long id, LocalDateTime createdAt) {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(id);
+        lenient().when(policy.getCreatedAt()).thenReturn(createdAt);
+        return policy;
     }
 
     private void givenSinglePolicyPage(Long id, String title, String regionCode) {

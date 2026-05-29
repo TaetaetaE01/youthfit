@@ -105,6 +105,11 @@ public class PolicyRepositoryImpl implements PolicyRepository {
         return jpaRepository.findForAdminProcessing(normalizeKeyword(query), normalizeRegion(region), effective);
     }
 
+    @Override
+    public List<Policy> findAllForStats() {
+        return jpaRepository.findAllForStats();
+    }
+
     private String normalizeKeyword(String keyword) {
         if (keyword == null) {
             return null;
