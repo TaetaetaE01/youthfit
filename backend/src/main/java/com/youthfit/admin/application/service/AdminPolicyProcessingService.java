@@ -91,6 +91,10 @@ public class AdminPolicyProcessingService {
      * 페이지 후 후처리되므로 같은 totalCount 안에서도 페이지마다 filteredItemCount 가 0 ~ {@code size}
      * 사이로 변동될 수 있다. 정확한 글로벌 필터 카운트가 필요해지면 SQL group-by + projection 으로
      * 마이그레이션해야 한다.</p>
+     *
+     * <p><b>{@link PolicyProcessingSort#COMPLETENESS_ASC}:</b>
+     * 정책 페이지 단계에서는 완성도 컬럼이 없어 id 정렬 SQL 로 가져온 다음 페이지 결과를 in-memory 로
+     * 재정렬한다. 따라서 페이지 안에서만 완성도순이 보장되며, 전역 정렬은 보장되지 않는다.</p>
      */
     public PolicyProcessingListResult findProcessingPolicies(PolicyProcessingListCommand command) {
         Page<Policy> policyPage = policyRepository.findForAdminProcessing(
@@ -131,13 +135,14 @@ public class AdminPolicyProcessingService {
         }).toList();
 
         List<PolicyProcessingItemResult> filtered = applyFilter(items, command.filter());
+        List<PolicyProcessingItemResult> sorted = applyInMemorySort(filtered, command.sort());
 
         return new PolicyProcessingListResult(
                 policyPage.getTotalElements(),
                 command.page(),
                 command.size(),
-                filtered.size(),
-                filtered
+                sorted.size(),
+                sorted
         );
     }
 
@@ -511,9 +516,52 @@ public class AdminPolicyProcessingService {
         return switch (sort) {
             case UPDATED_DESC -> Sort.by(Sort.Direction.DESC, "updatedAt");
             // COMPLETENESS_ASC 는 정책 페이지 단계에서 정렬할 수 없으므로 id 정렬로 일단 가져와
-            // 서비스 후처리에서 다시 정렬한다. (Task 5 단계에서는 in-memory 후처리 생략)
+            // 페이지 결과를 받은 뒤 {@link #applyInMemorySort} 에서 in-memory 로 재정렬한다.
             case COMPLETENESS_ASC -> Sort.by(Sort.Direction.ASC, "id");
             case ID_ASC -> Sort.by(Sort.Direction.ASC, "id");
+        };
+    }
+
+    /**
+     * 페이지 결과에 대한 in-memory 보조 정렬.
+     *
+     * <p>{@link PolicyProcessingSort#COMPLETENESS_ASC} 만 in-memory 재정렬 대상이다.
+     * {@code Policy} 엔티티에 완성도 컬럼이 없어 SQL 단계에서 정렬할 수 없으므로
+     * 동일한 페이지 안에서만 INCOMPLETE → PARTIAL → COMPLETE 순으로 다시 정렬한다.
+     * 같은 완성도 안에서는 {@code updatedAt DESC} 보조 정렬을 적용해 결정성을 확보한다.</p>
+     *
+     * <p><b>한계:</b> 페이지 안에서만 정렬이 보장된다. 전역 완성도 정렬은 보장되지 않는다.
+     * 예를 들어 page=0 의 INCOMPLETE 가 page=1 의 INCOMPLETE 보다 항상 앞서는 것은 아니다.
+     * 어드민 UI 는 페이지마다 "INCOMPLETE 가 위로" 라는 정도의 정렬 안내만 기대한다.</p>
+     */
+    private List<PolicyProcessingItemResult> applyInMemorySort(
+            List<PolicyProcessingItemResult> items, PolicyProcessingSort sort
+    ) {
+        if (sort != PolicyProcessingSort.COMPLETENESS_ASC) {
+            return items;
+        }
+        // INCOMPLETE 가 가장 시급하므로 위로, PARTIAL, COMPLETE 순으로 정렬한다.
+        // PolicyProcessingCompleteness 의 선언 순서(COMPLETE/PARTIAL/INCOMPLETE) 와 다르므로
+        // 명시적 가중치를 매겨 정렬 의도(가장 미흡한 항목 우선)를 코드에 드러낸다.
+        Comparator<PolicyProcessingItemResult> byCompletenessUrgency =
+                Comparator.comparingInt(i -> completenessSortWeight(i.completeness()));
+        // updatedAt 가 null 인 경우는 가장 뒤로 보내 NPE 방지.
+        Comparator<PolicyProcessingItemResult> byUpdatedAtDesc = (a, b) -> {
+            if (a.updatedAt() == null && b.updatedAt() == null) return 0;
+            if (a.updatedAt() == null) return 1;
+            if (b.updatedAt() == null) return -1;
+            return b.updatedAt().compareTo(a.updatedAt());
+        };
+        return items.stream()
+                .sorted(byCompletenessUrgency.thenComparing(byUpdatedAtDesc))
+                .toList();
+    }
+
+    private static int completenessSortWeight(PolicyProcessingCompleteness c) {
+        return switch (c) {
+            case INCOMPLETE -> 0;
+            case PARTIAL -> 1;
+            case COMPLETE -> 2;
         };
     }
 }

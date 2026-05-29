@@ -30,7 +30,17 @@ public interface AdminPolicyProcessingApi {
 
     @Operation(
             summary = "정책 처리 현황 목록",
-            description = "검색·필터·정렬·페이징. filter ∈ {ALL, INCOMPLETE, PARTIAL, RAG_FAILED, ATTACHMENT_EMBEDDING_MISSING, REFERENCE_FETCH_FAILED, GUIDE_RULE_FAILED, RECENT_24H}. sort ∈ {UPDATED_DESC, COMPLETENESS_ASC, ID_ASC}."
+            description = """
+                검색·필터·정렬·페이징.
+                filter ∈ {ALL, INCOMPLETE, PARTIAL, RAG_FAILED, ATTACHMENT_EMBEDDING_MISSING, REFERENCE_FETCH_FAILED, GUIDE_RULE_FAILED, RECENT_24H}.
+                sort ∈ {UPDATED_DESC, COMPLETENESS_ASC, ID_ASC}.
+
+                ⚠ totalCount 는 검색·지역 필터만 적용된 모집단 크기이며, items.length 는 추가 빠른필터(완성도/단계별 FAILED 등)
+                통과한 페이지 결과다. computed 필터(RAG_FAILED, ATTACHMENT_EMBEDDING_MISSING, GUIDE_RULE_FAILED, REFERENCE_FETCH_FAILED)
+                는 페이지 후 in-memory 로 적용되므로 페이지마다 결과가 0 ~ size 사이일 수 있다.
+
+                ⚠ COMPLETENESS_ASC 는 페이지 안에서만 INCOMPLETE → PARTIAL → COMPLETE 순으로 정렬된다 (in-memory 후처리).
+                전역 정렬은 보장되지 않는다."""
     )
     @ApiResponses({
             @ApiResponse(responseCode = "400", description = "입력값이 올바르지 않습니다 (YF-001)")

@@ -571,6 +571,43 @@ class AdminPolicyProcessingServiceTest {
                 .isEqualTo(PolicyProcessingCompleteness.INCOMPLETE);
     }
 
+    // ---- Fix 2 (M2): COMPLETENESS_ASC 재정렬 회귀 테스트 ----
+
+    @Test
+    @DisplayName("Fix M2 — COMPLETENESS_ASC 정렬 시 페이지 결과를 INCOMPLETE → PARTIAL → COMPLETE 순으로 재정렬한다")
+    void findProcessingPolicies_resortsByCompletenessWhenCompletenessAscRequested() {
+        // SQL 은 id ASC 로 가져오므로 페이지 순서는 1 → 2 → 3 (각각 COMPLETE/PARTIAL/INCOMPLETE).
+        // in-memory 재정렬 후 items 는 3(INCOMPLETE) → 2(PARTIAL) → 1(COMPLETE) 순이어야 한다.
+        Policy p1 = mockPolicy(1L, "complete-policy", "11");
+        Policy p2 = mockPolicy(2L, "partial-policy", "11");
+        Policy p3 = mockPolicy(3L, "incomplete-policy", "11");
+        Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+                .willReturn(page);
+        given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of(
+                1L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                2L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
+                3L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.FAILED)
+        ));
+        given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of(
+                1L, AttachmentExtractionCounts.empty(),
+                2L, new AttachmentExtractionCounts(3, 3, 2), // extracted=2, total=3 → PARTIAL
+                3L, AttachmentExtractionCounts.empty()
+        ));
+        given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of(2L, 1L));
+
+        PolicyProcessingListResult result = service.findProcessingPolicies(new PolicyProcessingListCommand(
+                null, null, PolicyProcessingFilter.ALL, PolicyProcessingSort.COMPLETENESS_ASC, 0, 50));
+
+        assertThat(result.items()).hasSize(3);
+        assertThat(result.items().get(0).completeness())
+                .isEqualTo(PolicyProcessingCompleteness.INCOMPLETE);
+        assertThat(result.items().get(1).completeness())
+                .isEqualTo(PolicyProcessingCompleteness.PARTIAL);
+        assertThat(result.items().get(2).completeness())
+                .isEqualTo(PolicyProcessingCompleteness.COMPLETE);
+    }
+
     private Policy mockPolicy(Long id, String title, String regionCode) {
         Policy p = mock(Policy.class);
         lenient().when(p.getId()).thenReturn(id);
