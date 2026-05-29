@@ -111,25 +111,28 @@ export default function AdminPolicyProcessingPage() {
         <div className="text-xs text-neutral-500">조건에 맞는 정책이 없습니다.</div>
       )}
       {list && list.items.length > 0 && (
-        <PolicyProcessingTable
-          items={list.items}
-          expandedIds={expandedIds}
-          onToggle={toggleExpand}
-          renderDetail={(policyId) => {
-            const matchedItem = list.items.find((i) => i.policyId === policyId);
-            return (
-              <DetailWithActions
-                policyId={policyId}
-                onOpenReprocess={() =>
-                  setReprocessFor({
-                    id: policyId,
-                    title: matchedItem?.title ?? `정책 ${policyId}`,
-                  })
-                }
-              />
-            );
-          }}
-        />
+        <>
+          <StepDotsLegend />
+          <PolicyProcessingTable
+            items={list.items}
+            expandedIds={expandedIds}
+            onToggle={toggleExpand}
+            renderDetail={(policyId) => {
+              const matchedItem = list.items.find((i) => i.policyId === policyId);
+              return (
+                <DetailWithActions
+                  policyId={policyId}
+                  onOpenReprocess={() =>
+                    setReprocessFor({
+                      id: policyId,
+                      title: matchedItem?.title ?? `정책 ${policyId}`,
+                    })
+                  }
+                />
+              );
+            }}
+          />
+        </>
       )}
 
       {reprocessFor && (
@@ -139,6 +142,45 @@ export default function AdminPolicyProcessingPage() {
           onClose={() => setReprocessFor(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * 5단계 dot 색상 범례.
+ *
+ * 표 위에 작게 표시해 신규 어드민 사용자도 dot 의 의미를 바로 파악할 수 있게 한다.
+ * 색상은 `PolicyProcessingTable` 의 `StepDots` 와 동일한 토큰을 사용한다.
+ */
+function StepDotsLegend() {
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+      <span className="font-semibold uppercase tracking-wider text-indigo-600">
+        5단계 범례
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+        <span>성공</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+        <span>실패</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-2 rounded-full bg-neutral-400" />
+        <span>건너뜀</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
+        <span>진행중</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2 w-2 rounded-full border border-neutral-300" />
+        <span>미실행</span>
+      </span>
+      <span className="ml-auto text-neutral-400">
+        단계 순서: INGESTION → ENRICHMENT → GUIDE → RULE → RAG_INDEXING
+      </span>
     </div>
   );
 }

@@ -27,6 +27,25 @@ interface Props {
   };
 }
 
+/**
+ * 5단계 표는 항상 모든 단계를 보여준다 — 백엔드 응답에 누락된 단계는
+ * "미실행" 으로 placeholder 처리해 사용자가 어떤 단계가 안 돌았는지 즉시 인지하게 한다.
+ */
+const STEP_ORDER: Array<'INGESTION' | 'ENRICHMENT' | 'GUIDE' | 'RULE' | 'RAG_INDEXING'> = [
+  'INGESTION',
+  'ENRICHMENT',
+  'GUIDE',
+  'RULE',
+  'RAG_INDEXING',
+];
+
+/** 표 헤더 공통 스타일 — 5단계 / 첨부 / 참조 3표가 같은 시각 hierarchy 를 유지한다. */
+const PANEL_HEADER_CLASS =
+  'bg-indigo-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600';
+
+/** 표 헤더 셀 공통 스타일. */
+const TH_BASE = 'p-2 text-xs font-semibold uppercase tracking-wider text-indigo-600';
+
 export function PolicyProcessingDetailPanel({ policyId, onAction }: Props) {
   const { data, isLoading } = useAdminPolicyProcessingDetail(policyId);
 
@@ -43,26 +62,28 @@ export function PolicyProcessingDetailPanel({ policyId, onAction }: Props) {
         />
         <ReferenceDetailTable references={data.references} />
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-xs text-indigo-600">통합 액션</span>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="mr-2 text-xs font-semibold uppercase tracking-wider text-indigo-600">
+          통합 액션
+        </span>
         <button
           type="button"
           onClick={() => onAction?.reindexAllAttachments()}
-          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
         >
           첨부 임베딩 재인덱싱
         </button>
         <button
           type="button"
           onClick={() => onAction?.reindexRag()}
-          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
         >
           RAG 본문 재인덱싱
         </button>
         <button
           type="button"
           onClick={() => onAction?.reprocess()}
-          className="rounded-md border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
         >
           전체 재처리
         </button>
@@ -78,44 +99,61 @@ function StepDetailTable({
   steps: StepDetail[];
   onRetry?: (step: string) => void;
 }) {
+  const byStep = new Map(steps.map((s) => [s.step, s]));
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
-        5단계 처리 이력
-      </div>
-      <table className="w-full text-[10px]">
+      <div className={PANEL_HEADER_CLASS}>5단계 처리 이력</div>
+      <table className="w-full text-xs tabular-nums">
         <thead className="bg-neutral-50">
-          <tr className="text-indigo-600">
-            <th className="p-1 text-left">단계</th>
-            <th className="p-1">STATUS</th>
-            <th className="p-1">소요</th>
-            <th className="p-1">시도</th>
-            <th className="p-1"></th>
+          <tr>
+            <th className={`${TH_BASE} w-32 text-left`}>단계</th>
+            <th className={`${TH_BASE} w-28 text-left`}>STATUS</th>
+            <th className={`${TH_BASE} w-16 text-right`}>소요</th>
+            <th className={`${TH_BASE} w-12 text-right`}>시도</th>
+            <th className={`${TH_BASE} w-10 text-center`}></th>
           </tr>
         </thead>
         <tbody>
-          {steps.map((s) => (
-            <tr key={s.step} className="border-t border-neutral-200 text-neutral-700">
-              <td className="p-1 text-neutral-900">{s.step}</td>
-              <td className={`p-1 ${statusColor(s.status)}`}>{s.status}</td>
-              <td className="p-1">
-                {s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : '—'}
-              </td>
-              <td className="p-1">{s.attempt}</td>
-              <td className="p-1">
-                {s.step !== 'INGESTION' && (
-                  <button
-                    type="button"
-                    onClick={() => onRetry?.(s.step)}
-                    className="text-indigo-600 hover:text-green-600"
-                    title="재실행"
-                  >
-                    ⟲
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {STEP_ORDER.map((step) => {
+            const s = byStep.get(step);
+            if (!s) {
+              return (
+                <tr key={step} className="border-t border-neutral-200">
+                  <td className="p-2 align-middle text-left text-neutral-700">{step}</td>
+                  <td className="p-2 align-middle text-left text-neutral-400">미실행</td>
+                  <td className="p-2 align-middle text-right text-neutral-300">—</td>
+                  <td className="p-2 align-middle text-right text-neutral-300">—</td>
+                  <td className="p-2 align-middle text-center"></td>
+                </tr>
+              );
+            }
+            return (
+              <tr key={step} className="border-t border-neutral-200">
+                <td className="p-2 align-middle text-left text-neutral-700">{s.step}</td>
+                <td
+                  className={`p-2 align-middle text-left ${statusColor(s.status)}`}
+                >
+                  {s.status}
+                </td>
+                <td className="p-2 align-middle text-right text-neutral-700">
+                  {s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : '—'}
+                </td>
+                <td className="p-2 align-middle text-right text-neutral-700">{s.attempt}</td>
+                <td className="p-2 align-middle text-center">
+                  {s.step !== 'INGESTION' && (
+                    <button
+                      type="button"
+                      onClick={() => onRetry?.(s.step)}
+                      className="text-indigo-600 hover:text-green-600"
+                      title="재실행"
+                    >
+                      ⟲
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -132,41 +170,44 @@ function AttachmentDetailTable({
   if (attachments.length === 0) {
     return (
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
-          첨부파일
+        <div className={PANEL_HEADER_CLASS}>첨부파일</div>
+        <div className="flex min-h-[140px] items-center justify-center text-sm text-neutral-400">
+          첨부 없음
         </div>
-        <div className="p-3 text-xs text-neutral-500">첨부 없음</div>
       </div>
     );
   }
 
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
-        첨부파일 {attachments.length}건
-      </div>
-      <table className="w-full text-[10px]">
+      <div className={PANEL_HEADER_CLASS}>첨부파일 {attachments.length}건</div>
+      <table className="w-full table-fixed text-xs tabular-nums">
         <thead className="bg-neutral-50">
-          <tr className="text-indigo-600">
-            <th className="p-1 text-left">파일명</th>
-            <th className="p-1">EXT</th>
-            <th className="p-1">EMB</th>
-            <th className="p-1"></th>
+          <tr>
+            <th className={`${TH_BASE} text-left`}>파일명</th>
+            <th className={`${TH_BASE} w-14 text-center`}>DL</th>
+            <th className={`${TH_BASE} w-14 text-center`}>EXT</th>
+            <th className={`${TH_BASE} w-14 text-center`}>EMB</th>
+            <th className={`${TH_BASE} w-10 text-center`}></th>
           </tr>
         </thead>
         <tbody>
           {attachments.map((a) => {
             const needsAction = a.extractionStatus === 'FAILED' || !a.embedded;
+            const dlTone = downloadTone(a.extractionStatus);
             return (
-              <tr key={a.attachmentId} className="border-t border-neutral-200 text-neutral-700">
+              <tr key={a.attachmentId} className="border-t border-neutral-200">
                 <td
-                  className="max-w-[12ch] truncate p-1 text-neutral-900"
+                  className="min-w-0 truncate p-2 align-middle text-left text-neutral-700"
                   title={a.filename}
                 >
                   {a.filename}
                 </td>
+                <td className={`p-2 align-middle text-center ${dlTone.className}`}>
+                  {dlTone.label}
+                </td>
                 <td
-                  className={`p-1 ${
+                  className={`p-2 align-middle text-center ${
                     a.extractionStatus === 'EXTRACTED'
                       ? 'text-green-600'
                       : a.extractionStatus === 'FAILED'
@@ -181,11 +222,11 @@ function AttachmentDetailTable({
                       : '—'}
                 </td>
                 <td
-                  className={`p-1 ${a.embedded ? 'text-green-600' : 'text-amber-600'}`}
+                  className={`p-2 align-middle text-center ${a.embedded ? 'text-green-600' : 'text-amber-600'}`}
                 >
                   {a.embedded ? '✓' : '누락'}
                 </td>
-                <td className="p-1">
+                <td className="p-2 align-middle text-center">
                   {needsAction && (
                     <button
                       type="button"
@@ -210,11 +251,10 @@ function ReferenceDetailTable({ references }: { references: ReferenceDetail[] })
   if (references.length === 0) {
     return (
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
-          참고 사이트
-        </div>
-        <div className="p-3 text-[10px] text-neutral-500">
-          Phase D 완료 후 채워짐
+        <div className={PANEL_HEADER_CLASS}>참고 사이트</div>
+        <div className="flex min-h-[140px] flex-col items-center justify-center gap-1 text-center text-sm text-neutral-400">
+          <span>참조 사이트 데이터 없음</span>
+          <span className="text-xs text-neutral-400">Phase D 완료 후 채워짐</span>
         </div>
       </div>
     );
@@ -222,29 +262,30 @@ function ReferenceDetailTable({ references }: { references: ReferenceDetail[] })
 
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div className="bg-indigo-50 px-3 py-1.5 text-[10px] uppercase tracking-wider text-indigo-600">
-        참고 사이트
-      </div>
-      <table className="w-full text-[10px]">
+      <div className={PANEL_HEADER_CLASS}>참고 사이트 {references.length}건</div>
+      <table className="w-full table-fixed text-xs tabular-nums">
         <thead className="bg-neutral-50">
-          <tr className="text-indigo-600">
-            <th className="p-1 text-left">URL</th>
-            <th className="p-1">STATUS</th>
-            <th className="p-1">청크</th>
+          <tr>
+            <th className={`${TH_BASE} text-left`}>URL</th>
+            <th className={`${TH_BASE} w-32 text-left`}>STATUS</th>
+            <th className={`${TH_BASE} w-12 text-right`}>청크</th>
           </tr>
         </thead>
         <tbody>
           {references.map((r, i) => (
-            <tr key={i} className="border-t border-neutral-200 text-neutral-700">
-              <td className="max-w-[16ch] truncate p-1 text-neutral-900" title={r.url}>
+            <tr key={i} className="border-t border-neutral-200">
+              <td
+                className="min-w-0 truncate p-2 align-middle text-left text-neutral-700"
+                title={r.url}
+              >
                 {r.url}
               </td>
               <td
-                className={`p-1 ${r.status === 'SUCCESS' ? 'text-green-600' : 'text-amber-600'}`}
+                className={`p-2 align-middle text-left ${r.status === 'SUCCESS' ? 'text-green-600' : 'text-amber-600'}`}
               >
                 {r.status}
               </td>
-              <td className="p-1">{r.chunkCount}</td>
+              <td className="p-2 align-middle text-right text-neutral-700">{r.chunkCount}</td>
             </tr>
           ))}
         </tbody>
@@ -269,5 +310,30 @@ function statusColor(s: string): string {
       return 'text-indigo-600';
     default:
       return 'text-neutral-500';
+  }
+}
+
+/**
+ * 첨부파일 다운로드 상태(DL 컬럼) 를 extractionStatus 로부터 파생.
+ *
+ * 백엔드 AttachmentStatus: PENDING | DOWNLOADING | DOWNLOADED | EXTRACTING | EXTRACTED | FAILED | SKIPPED
+ * - DOWNLOADED 이후 단계는 다운로드 성공으로 본다.
+ * - DOWNLOADING 은 진행 중.
+ * - FAILED 는 실패(추출 실패와 구분되지 않지만 동일하게 표시).
+ */
+function downloadTone(status: string): { label: string; className: string } {
+  switch (status) {
+    case 'DOWNLOADED':
+    case 'EXTRACTING':
+    case 'EXTRACTED':
+      return { label: '✓', className: 'text-green-600' };
+    case 'DOWNLOADING':
+      return { label: '…', className: 'text-indigo-600' };
+    case 'FAILED':
+      return { label: 'FAIL', className: 'text-red-600' };
+    case 'SKIPPED':
+      return { label: '—', className: 'text-neutral-400' };
+    default:
+      return { label: '—', className: 'text-neutral-500' };
   }
 }
