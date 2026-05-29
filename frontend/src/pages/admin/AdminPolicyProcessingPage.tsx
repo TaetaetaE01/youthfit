@@ -47,7 +47,7 @@ export default function AdminPolicyProcessingPage() {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [reprocessFor, setReprocessFor] = useState<{ id: number; title: string } | null>(null);
 
-  const { data: list, isLoading } = useAdminPolicyProcessingList(params);
+  const { data: list, isLoading, error } = useAdminPolicyProcessingList(params);
   const { data: stats } = useAdminPolicyProcessingStats();
 
   const onParamsChange = (next: PolicyProcessingListParams) => {
@@ -98,7 +98,19 @@ export default function AdminPolicyProcessingPage() {
       />
 
       {isLoading && <div className="text-xs text-slate-500">로딩 중…</div>}
-      {list && (
+      {error && (
+        <div className="rounded border border-red-700 bg-red-950/50 p-3 text-xs text-red-300">
+          목록 조회 실패: {error instanceof Error ? error.message : String(error)}
+          <br />
+          <span className="text-[10px] text-red-400">
+            브라우저 DevTools(F12) → Network 탭에서 <code>/api/v1/admin/policies/processing</code> 응답 상태/본문을 확인해 주세요.
+          </span>
+        </div>
+      )}
+      {list && list.items.length === 0 && !isLoading && (
+        <div className="text-xs text-slate-500">조건에 맞는 정책이 없습니다.</div>
+      )}
+      {list && list.items.length > 0 && (
         <PolicyProcessingTable
           items={list.items}
           expandedIds={expandedIds}
