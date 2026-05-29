@@ -56,4 +56,19 @@ class PolicyProcessingStepTest {
         assertThat(step.getReason()).isEqualTo("ALL_URLS_SKIPPED");
         assertThat(step.getDetailJson()).isEqualTo(detail);
     }
+
+    @Test
+    void markTimedOut_setsFailedAndTimeoutReason() {
+        // given
+        PolicyProcessingStep step = PolicyProcessingStep.start(10L, ProcessingStep.GUIDE, 1);
+        assertThat(step.getStatus()).isEqualTo(ProcessingStatus.IN_PROGRESS);
+
+        // when
+        step.markTimedOut();
+
+        // then
+        assertThat(step.getStatus()).isEqualTo(ProcessingStatus.FAILED);
+        assertThat(step.getReason()).isEqualTo("timeout");
+        assertThat(step.getFinishedAt()).isNotNull();
+    }
 }

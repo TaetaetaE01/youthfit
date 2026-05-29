@@ -92,6 +92,14 @@ public class PolicyProcessingStep {
         this.updatedAt = now;
     }
 
+    /**
+     * 타임아웃으로 강제 마감. 운영 환경에서 listener 가 markFinished 호출에 실패한 (NPE/OOM/kill) 경우
+     * {@code PolicyProcessingStepTimeoutScheduler} 가 호출.
+     */
+    public void markTimedOut() {
+        finish(ProcessingStatus.FAILED, "timeout", null);
+    }
+
     private static String truncate(String s) {
         if (s == null) return null;
         return s.length() <= MAX_REASON_LENGTH ? s : s.substring(0, MAX_REASON_LENGTH);

@@ -4,6 +4,7 @@ import com.youthfit.policy.domain.model.PolicyProcessingStep;
 import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,4 +31,10 @@ public interface PolicyProcessingStepRepository {
 
     /** 정책의 5단계 각 step 의 최신 attempt 행 전체 반환 (펼침 영역 표시용). */
     List<PolicyProcessingStep> findLatestRowsByPolicyId(Long policyId);
+
+    /**
+     * IN_PROGRESS 이면서 startedAt 이 threshold 보다 이전인 stale 행 조회.
+     * {@code PolicyProcessingStepTimeoutScheduler} 가 호출.
+     */
+    List<PolicyProcessingStep> findActiveStaleBefore(Instant threshold);
 }

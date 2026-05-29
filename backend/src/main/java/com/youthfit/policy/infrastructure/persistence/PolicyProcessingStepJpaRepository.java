@@ -1,11 +1,13 @@
 package com.youthfit.policy.infrastructure.persistence;
 
 import com.youthfit.policy.domain.model.PolicyProcessingStep;
+import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,4 +39,6 @@ public interface PolicyProcessingStepJpaRepository extends JpaRepository<PolicyP
         order by pps.step
     """)
     List<PolicyProcessingStep> findLatestByPolicyIdAllSteps(@Param("policyId") Long policyId);
+
+    List<PolicyProcessingStep> findByStatusAndStartedAtBefore(ProcessingStatus status, Instant threshold);
 }
