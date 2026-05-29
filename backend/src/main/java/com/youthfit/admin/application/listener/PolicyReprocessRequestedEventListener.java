@@ -14,9 +14,10 @@ import com.youthfit.rag.application.service.RagIndexingService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -49,9 +50,13 @@ public class PolicyReprocessRequestedEventListener {
     private final EligibilityRuleGenerationService eligibilityRuleGenerationService;
 
     @Async("llmExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPolicyReprocessRequested(PolicyReprocessRequestedEvent event) {
         List<Long> ids = event.stepIds();
+        if (ids == null || ids.size() != 4) {
+            log.error("재처리 이벤트의 stepIds 가 잘못됨: policyId={} stepIds={}", event.policyId(), ids);
+            return;
+        }
         Policy policy = policyRepository.findById(event.policyId()).orElse(null);
         if (policy == null) {
             log.warn("재처리 이벤트 도착 — 정책 없음: policyId={}", event.policyId());
@@ -75,7 +80,7 @@ public class PolicyReprocessRequestedEventListener {
             action.run();
             stepService.markFinished(stepRowId, ProcessingStatus.SUCCESS, null, null);
         } catch (Exception e) {
-            log.warn("재처리 단계 실패: stepRowId={} message={}", stepRowId, e.getMessage());
+            log.warn("재처리 단계 실패: stepRowId={}", stepRowId, e);
             stepService.markFinished(stepRowId, ProcessingStatus.FAILED, e.getMessage(), null);
         }
     }
