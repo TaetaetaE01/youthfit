@@ -162,6 +162,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const p = $input.first().json;\nconst e = {\n  sourceUrl: (p.rawData._refUrls && p.rawData._refUrls[0]) || null,\n  fetchedAt: new Date().toISOString(),\n  extractor: 'regex',\n  confidence: null,\n  status: p._enrichmentStatus || 'FETCH_FAILED',\n  sections: null,\n  extraAttachments: p._extraAttachments || [],\n  cleanedText: p._cleanedText || null\n};\nreturn [{ json: { ...p, rawData: { ...p.rawData, enrichment: e } } }];"
+      },
+      "id": "enrichment-meta",
+      "name": "enrichment 메타 합성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        100
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies",
         "sendHeaders": true,
@@ -301,6 +314,11 @@
     "상세 데이터 파싱": {
       "main": [
         [{ "node": "참고사이트 fetch + 머지", "type": "main", "index": 0 }]
+      ]
+    },
+    "참고사이트 fetch + 머지": {
+      "main": [
+        [{ "node": "enrichment 메타 합성", "type": "main", "index": 0 }]
       ]
     },
     "백엔드 API 전송": {
