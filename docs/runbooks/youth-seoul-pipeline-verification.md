@@ -18,6 +18,23 @@ plan 의 초기 가정(`catPath`/`catKey` 만 치환, 동일 `ctList.do`)이 실
 - 페이지네이션은 양쪽 모두 `pageIndex` (`fn_egov_link_page`).
 - **caveat**: 중앙정부/타지역은 `list.do` 기본 목록이 ~10건(1페이지)으로 관측됨. `sc_searchSe=youthPlcy001(중앙정부)/youthPlcy002(타지역)` 세분화는 이번 범위에 넣지 않았다. 분량이 부족하면 후속 spec 으로 세분화 검토.
 
+## 루프 아키텍처 (수집/처리 평탄화)
+
+E2E 테스트 중 **원래 워크플로우의 기존 버그 2개**를 발견·수정했다 (원래는 cat1 1페이지만
+수집하고 무한루프로 헛돌던 상태):
+
+1. **pageIndex 무한루프**: `extract-ids` 가 `$('페이지 초기화').first()` 노드참조로 현재 페이지를
+   계산했는데 n8n 캐싱 탓에 항상 1 → `check-next` 가 영원히 `hasNext=true`.
+   → 목록 HTML 의 현재페이지 hidden input(`name="pageIndex" value="N"`) 파싱으로 교체.
+2. **중첩 splitInBatches 미재처리**: 내부 item 루프가 page2·cat2 항목을 done 으로 흘려보냄.
+   → **수집/처리 분리**. 카테고리×페이지 루프는 plcyBizId 를 카테고리 컨텍스트와 함께
+   `$getWorkflowStaticData('global').collected` 에 누적만 하고, 카테고리 루프 완료 후
+   `collect-all`(수집 결과 펼치기) 이 전부 펼쳐 **단일 splitInBatches** 로 일괄 처리.
+
+흐름: `카테고리 루프 → (페이지 루프: fetch-list → extract-ids[누적] → check-next → next-page)`
+→ 카테고리 done → `collect-all` → `loop-policies(단일) → detail → parse → pick-link → enrichment-meta → promote → backend`.
+detail/parse 는 각 항목이 들고 있는 `detailBase/detailSuffix` 를 사용한다.
+
 ## 배포 직후 (워크플로우만)
 
 1. n8n 워크플로우 1회 수동 실행
@@ -43,6 +60,10 @@ plan 의 초기 가정(`catPath`/`catKey` 만 치환, 동일 `ctList.do`)이 실
 | `NO_LINK` | SKIPPED | `NO_LINK` |
 | `FETCH_FAILED` | FAILED | `FETCH_FAILED` |
 | `TOO_SHORT` | FAILED | `TOO_SHORT` |
+
+> **2026-05-30 로컬 관측**: 실제 백엔드는 `TOO_SHORT` → **SKIPPED** 로 매핑한다 (위 표의 FAILED 와 다름).
+> `FETCH_FAILED` → FAILED 는 일치. 백엔드 무변경이라 이건 기존 매핑이며, 의도(짧은 본문은 enrichment
+> skip)가 합리적이면 표를 SKIPPED 로 정정하고, 아니면 아래 "어긋남" 절차로 후속 spec 분리.
 
 ### 어긋남 발견 시
 
@@ -86,3 +107,24 @@ cd ../enrichment-merge && node verify.mjs
 cd ../promote-attachments && node verify.mjs
 ```
 세 디렉토리 모두 통과해야 한다 (인라인 jsCode 와 fixture 가 동일 알고리즘).
+
+## E2E 검증 결과 (2026-05-30 로컬, 웹훅 운영모드)
+
+TEST 사본(`youth-seoul-crawl.TEST.json`, gitignore — 수동/웹훅 트리거 + 페이지당 5건·2페이지 캡)을
+n8n 에 import → 웹훅 트리거로 운영모드 실행해 검증.
+
+- **수집/처리**: cat1 page1(5) + page2(5) + cat2 page1(5) = **15건 적재, 양 카테고리 모두**
+  (서울 자체 + 중앙정부/타지역: 농식품 바우처·청년예술인 적립계좌·국가기술자격 응시료 등).
+- **본문 정제**: 주석/`---` dash 잔재 0, 짧은 본문 0.
+- **처리단계**: INGESTION·RULE·GUIDE·RAG_INDEXING 전부 SUCCESS.
+- **ENRICHMENT**: ref페이지(youthConts.do 등) 내용이 짧/실패라 SKIPPED·FAILED 혼재 (데이터 의존, 파이프라인 정상).
+
+### CLI vs 웹훅 주의
+
+`n8n execute --id` (CLI) 는 splitInBatches 루프를 반복 실행하지 않아 첫 페이지만 처리된다.
+루프 검증은 워크플로우를 **active** 로 두고 **웹훅/수동 트리거(운영모드)** 로 실행해야 한다.
+(CLI 실행 시 task broker 포트 충돌은 `N8N_RUNNERS_TASK_BROKER_PORT` 를 바꿔 회피.)
+
+### 환경 요건
+
+- `docker-compose.yml`: `NODE_FUNCTION_ALLOW_BUILTIN=crypto,https,http` (pick-link 의 `require('http')`).
