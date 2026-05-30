@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [\n  { json: { catKey: '2309150002', catPath: 'plcyInfo',      catLabel: '서울 자체' } },\n  { json: { catKey: '2309160001', catPath: 'youthPlcyInfo', catLabel: '중앙정부/타지역' } }\n];"
+        "jsCode": "return [\n  { json: { catKey: '2309150002', catLabel: '서울 자체', listBase: 'https://youth.seoul.go.kr/infoData/plcyInfo/ctList.do?key=2309150002&tabKind=002', listSuffix: '&orderBy=regYmd+desc&blueWorksYn=N&sw=', detailBase: 'https://youth.seoul.go.kr/infoData/plcyInfo/view.do', detailSuffix: '&tab=001&key=2309150002&tabKind=002' } },\n  { json: { catKey: '2309160001', catLabel: '중앙정부/타지역', listBase: 'https://youth.seoul.go.kr/infoData/youthPlcyInfo/list.do?key=2309160001', listSuffix: '', detailBase: 'https://youth.seoul.go.kr/infoData/youthPlcyInfo/view.do', detailSuffix: '&key=2309160001' } }\n];"
       },
       "id": "init-category",
       "name": "카테고리 초기화",
@@ -51,7 +51,7 @@
     },
     {
       "parameters": {
-        "url": "=https://youth.seoul.go.kr/infoData/plcyInfo/ctList.do?key=2309150002&tabKind=002&pageIndex={{ $json.pageIndex }}&orderBy=regYmd+desc&blueWorksYn=N&sw=",
+        "url": "={{ $('카테고리별 순차 처리').first().json.listBase }}&pageIndex={{ $json.pageIndex }}{{ $('카테고리별 순차 처리').first().json.listSuffix }}",
         "options": {
           "response": {
             "response": {
@@ -79,7 +79,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const html = $input.first().json.data;\nconst pageIndex = $('페이지 초기화').first().json.pageIndex \n  || $('다음 페이지 이동').first().json.pageIndex\n  || 1;\n\n// goView('V202600006') 패턴에서 plcyBizId 추출\nconst regex = /goView\\('([A-Z]\\d+)'\\)/g;\nconst ids = [];\nlet match;\nwhile ((match = regex.exec(html)) !== null) {\n  ids.push(match[1]);\n}\n\n// 마지막 페이지 번호 추출: fn_egov_link_page(67) 에서 최대값\nconst pageRegex = /fn_egov_link_page\\((\\d+)\\)/g;\nlet maxPage = 1;\nlet pageMatch;\nwhile ((pageMatch = pageRegex.exec(html)) !== null) {\n  const p = parseInt(pageMatch[1]);\n  if (p > maxPage) maxPage = p;\n}\n\n// 총 건수 추출: (총 <strong class=\"fc-blue\">332</strong>건)\nconst totalMatch = html.match(/총\\s*<strong[^>]*>(\\d+)<\\/strong>\\s*건/);\nconst totalCount = totalMatch ? parseInt(totalMatch[1]) : 0;\n\nconst items = ids.map(id => ({\n  json: {\n    plcyBizId: id,\n    currentPage: pageIndex,\n    lastPage: maxPage,\n    totalCount: totalCount\n  }\n}));\n\nif (items.length === 0) {\n  return [{ json: { empty: true, currentPage: pageIndex, lastPage: maxPage } }];\n}\n\nreturn items;"
+        "jsCode": "const html = $input.first().json.data;\nconst pageIndex = $('페이지 초기화').first().json.pageIndex \n  || $('다음 페이지 이동').first().json.pageIndex\n  || 1;\n\n// goView('V202600006') / goView('20260528005400113227') 패턴에서 plcyBizId 추출 (양 카테고리)\nconst regex = /goView\\('([A-Za-z0-9]+)'\\)/g;\nconst ids = [];\nlet match;\nwhile ((match = regex.exec(html)) !== null) {\n  ids.push(match[1]);\n}\n\n// 마지막 페이지 번호 추출: fn_egov_link_page(67) 에서 최대값\nconst pageRegex = /fn_egov_link_page\\((\\d+)\\)/g;\nlet maxPage = 1;\nlet pageMatch;\nwhile ((pageMatch = pageRegex.exec(html)) !== null) {\n  const p = parseInt(pageMatch[1]);\n  if (p > maxPage) maxPage = p;\n}\n\n// 총 건수 추출: (총 <strong class=\"fc-blue\">332</strong>건)\nconst totalMatch = html.match(/총\\s*<strong[^>]*>(\\d+)<\\/strong>\\s*건/);\nconst totalCount = totalMatch ? parseInt(totalMatch[1]) : 0;\n\nconst items = ids.map(id => ({\n  json: {\n    plcyBizId: id,\n    currentPage: pageIndex,\n    lastPage: maxPage,\n    totalCount: totalCount\n  }\n}));\n\nif (items.length === 0) {\n  return [{ json: { empty: true, currentPage: pageIndex, lastPage: maxPage } }];\n}\n\nreturn items;"
       },
       "id": "extract-ids",
       "name": "plcyBizId 추출",
@@ -111,7 +111,7 @@
     },
     {
       "parameters": {
-        "url": "=https://youth.seoul.go.kr/infoData/plcyInfo/view.do?plcyBizId={{ $json.plcyBizId }}&tab=001&key=2309150002&tabKind=002",
+        "url": "={{ $('카테고리별 순차 처리').first().json.detailBase }}?plcyBizId={{ $json.plcyBizId }}{{ $('카테고리별 순차 처리').first().json.detailSuffix }}",
         "options": {
           "response": {
             "response": {
