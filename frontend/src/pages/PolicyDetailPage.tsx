@@ -694,7 +694,7 @@ export default function PolicyDetailPage() {
           {/* Group 3: 신청하기 */}
           <PolicyGroupHeader group={POLICY_GROUPS[2]} />
 
-          {/* 공식 신청 페이지 CTA — 데스크톱에서도 노출 (모바일 하단바는 lg:hidden) */}
+          {/* 공식 신청 페이지 CTA — 데스크톱 전용 (모바일은 하단바 PolicyMobileBottomBar 가 동일 링크 제공) */}
           <PolicyApplyCta applyUrl={policy.applyUrl} sourceUrl={policy.sourceUrl} />
 
           {/* 신청방법 — 가이드 기반 bokjiro-style 카드 */}
