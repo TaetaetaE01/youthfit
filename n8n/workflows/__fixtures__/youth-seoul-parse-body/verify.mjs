@@ -1,4 +1,4 @@
-import { extractByTh, extractRefUrls, extractSelfAttachments } from './parse-body.mjs';
+import { extractByTh, extractRefUrls, extractSelfAttachments, extractApplyUrl, extractReferenceSites } from './parse-body.mjs';
 import { readFile, readdir } from 'node:fs/promises';
 import { deepStrictEqual } from 'node:assert/strict';
 
@@ -50,6 +50,8 @@ async function runDir(dir, fn) {
 await runDir('cases-extract-by-th', (html, meta) => extractByTh(html, meta?.thText || ''));
 await runDir('cases-ref-urls', html => extractRefUrls(html));
 await runDir('cases-self-attachments', html => extractSelfAttachments(html));
+await runDir('cases-apply-url', html => extractApplyUrl(html));
+await runDir('cases-reference-sites', html => extractReferenceSites(html));
 
 if (failed > 0) {
   console.error(`\n${failed} case(s) failed (passed ${passed})`);

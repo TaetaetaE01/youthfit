@@ -46,6 +46,46 @@ export function extractRefUrls(html) {
   return urls.slice(0, 3);
 }
 
+const APPLY_SECTION = '신청 사이트';
+const REFERENCE_SECTIONS = ['관련 사이트', '참고 사이트 Ⅰ', '참고 사이트 Ⅱ'];
+
+function firstHref(td) {
+  const m = td.match(/href="(https?:\/\/[^"]+)"/i);
+  return m ? m[1] : null;
+}
+
+function tdByTh(html, thText) {
+  const escTh = thText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('<th[^>]*>' + escTh + '</th>\\s*<td[^>]*>([\\s\\S]*?)</td>', 'i');
+  const m = html.match(re);
+  return m ? m[1] : null;
+}
+
+export function extractApplyUrl(html) {
+  if (!html) return null;
+  const td = tdByTh(html, APPLY_SECTION);
+  return td ? firstHref(td) : null;
+}
+
+export function extractReferenceSites(html) {
+  if (!html) return [];
+  const out = [];
+  const seen = new Set();
+  for (const th of REFERENCE_SECTIONS) {
+    const td = tdByTh(html, th);
+    if (!td) continue;
+    const hrefRe = /href="(https?:\/\/[^"]+)"/gi;
+    let hm;
+    while ((hm = hrefRe.exec(td)) !== null) {
+      const u = hm[1];
+      if (seen.has(u)) continue;
+      seen.add(u);
+      out.push({ name: th.replace(/\s*[ⅠⅡ]\s*$/, '').trim(), url: u });
+    }
+  }
+  return out;
+}
+
 const ATTACHMENT_EXT_PATTERN = /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)(\?|$|#)/i;
 const BASE_ORIGIN = 'https://youth.seoul.go.kr';
 
