@@ -66,3 +66,4 @@ credentials/
 
 ### Worktrees ###
 .worktrees/
+n8n/workflows/youth-seoul-crawl.TEST.json
