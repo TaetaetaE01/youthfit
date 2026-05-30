@@ -1,0 +1,6 @@
+{
+  "policy": {
+    "refUrls": ["https://a.example.com", "https://b.example.com"]
+  },
+  "fetchResults": []
+}

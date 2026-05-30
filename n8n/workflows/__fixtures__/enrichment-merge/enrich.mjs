@@ -35,6 +35,23 @@ function normalizeUrlKey(u) {
 }
 
 export function selectUrls(policy) {
+  // 1) 명시 refUrls[] 가 있으면 우선 사용 (youth-seoul-crawl)
+  if (policy && Array.isArray(policy.refUrls)) {
+    const seen = new Set();
+    const out = [];
+    for (const u of policy.refUrls) {
+      if (typeof u !== 'string') continue;
+      const trimmed = u.trim();
+      if (!trimmed) continue;
+      const key = normalizeUrlKey(trimmed);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(trimmed);
+      if (out.length >= MAX_URLS) break;
+    }
+    return out;
+  }
+  // 2) fallback: 온통청년 키 기반
   const candidates = [policy?.aplyUrlAddr, policy?.refUrlAddr1, policy?.refUrlAddr2]
     .map(s => (typeof s === 'string' ? s.trim() : ''))
     .filter(Boolean);
