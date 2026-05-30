@@ -20,6 +20,27 @@
     },
     {
       "parameters": {
+        "jsCode": "return [\n  { json: { catKey: '2309150002', catPath: 'plcyInfo',      catLabel: '서울 자체' } },\n  { json: { catKey: '2309160001', catPath: 'youthPlcyInfo', catLabel: '중앙정부/타지역' } }\n];"
+      },
+      "id": "init-category",
+      "name": "카테고리 초기화",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [110, 200]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "category-loop",
+      "name": "카테고리별 순차 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [110, 0]
+    },
+    {
+      "parameters": {
         "jsCode": "// 초기 페이지 설정\nreturn [{ json: { pageIndex: 1 } }];"
       },
       "id": "init-page",
@@ -219,6 +240,17 @@
   "connections": {
     "매일 새벽 3시 실행": {
       "main": [
+        [{ "node": "카테고리 초기화", "type": "main", "index": 0 }]
+      ]
+    },
+    "카테고리 초기화": {
+      "main": [
+        [{ "node": "카테고리별 순차 처리", "type": "main", "index": 0 }]
+      ]
+    },
+    "카테고리별 순차 처리": {
+      "main": [
+        [{ "node": "크롤링 완료", "type": "main", "index": 0 }],
         [{ "node": "페이지 초기화", "type": "main", "index": 0 }]
       ]
     },
@@ -271,7 +303,7 @@
     "다음 페이지 존재?": {
       "main": [
         [{ "node": "다음 페이지 이동", "type": "main", "index": 0 }],
-        [{ "node": "크롤링 완료", "type": "main", "index": 0 }]
+        [{ "node": "카테고리별 순차 처리", "type": "main", "index": 0 }]
       ]
     },
     "다음 페이지 이동": {
