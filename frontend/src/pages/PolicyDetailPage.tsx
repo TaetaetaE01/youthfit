@@ -47,6 +47,7 @@ import { DecisionMetaGrid } from '@/components/policy/decision/DecisionMetaGrid'
 import { PolicyToc } from '@/components/policy/navigation/PolicyToc';
 import { PolicyMobileNav } from '@/components/policy/navigation/PolicyMobileNav';
 import { PolicyMobileBottomBar } from '@/components/policy/navigation/PolicyMobileBottomBar';
+import { PolicyApplyCta } from '@/components/policy/PolicyApplyCta';
 import { usePolicyScrollSpy } from '@/components/policy/navigation/usePolicyScrollSpy';
 
 // ---------------------------------------------------------------------------
@@ -692,6 +693,9 @@ export default function PolicyDetailPage() {
 
           {/* Group 3: 신청하기 */}
           <PolicyGroupHeader group={POLICY_GROUPS[2]} />
+
+          {/* 공식 신청 페이지 CTA — 데스크톱에서도 노출 (모바일 하단바는 lg:hidden) */}
+          <PolicyApplyCta applyUrl={policy.applyUrl} sourceUrl={policy.sourceUrl} />
 
           {/* 신청방법 — 가이드 기반 bokjiro-style 카드 */}
           {guide?.applyMethod && (
