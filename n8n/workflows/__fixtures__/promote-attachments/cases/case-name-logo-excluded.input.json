@@ -1,0 +1,24 @@
+{
+  "source": { "url": "https://example.com/p/3", "type": "YOUTH_CENTER", "fetchedAt": "2026-05-30T00:00:00" },
+  "rawData": {
+    "externalId": "P-3",
+    "title": "샘플 3",
+    "summary": "s",
+    "body": "b",
+    "category": "교육",
+    "region": "서울특별시",
+    "attachments": [],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/3",
+      "fetchedAt": "2026-05-30T00:00:00",
+      "extractor": "regex",
+      "confidence": null,
+      "status": "OK",
+      "sections": null,
+      "extraAttachments": [
+        { "name": "공고문.pdf", "url": "https://ex.com/file/notice.pdf" },
+        { "name": "기관 로고.pdf", "url": "https://ex.com/file/logo.pdf" }
+      ]
+    }
+  }
+}
