@@ -86,6 +86,39 @@ export function extractReferenceSites(html) {
   return out;
 }
 
+// 본문 구성 섹션: th 라벨 → 본문 라벨. 청년몽땅정보통 상세의 의미있는 텍스트 칸을
+// 페이지 자연 순서대로 담는다. 값이 빈 칸은 buildBody 에서 스킵한다.
+// (정책 유형·사업신청기간·각종 사이트 URL 은 별도 필드로 처리하므로 제외)
+const BODY_SECTIONS = [
+  { th: '정책 소개', label: '사업개요' },
+  { th: '주관 기관', label: '주관기관' },
+  { th: '운영기관', label: '운영기관' },
+  { th: '지원 내용', label: '지원내용' },
+  { th: '지원규모', label: '지원규모' },
+  { th: '사업운영기간', label: '사업운영기간' },
+  { th: '연령', label: '지원대상' },
+  { th: '참여요건', label: '참여요건' },
+  { th: '학력', label: '학력' },
+  { th: '전공요건', label: '전공요건' },
+  { th: '취업상태', label: '취업상태' },
+  { th: '특화분야 요건', label: '특화분야요건' },
+  { th: '추가단서 사항', label: '추가단서' },
+  { th: '참여제한 대상', label: '참여제한' },
+  { th: '신청절차', label: '신청방법' },
+  { th: '심사 및 발표', label: '심사·발표' },
+  { th: '제출서류', label: '제출서류' },
+  { th: '기타사항', label: '기타사항' },
+];
+
+export function buildBody(html) {
+  const parts = [];
+  for (const s of BODY_SECTIONS) {
+    const v = extractByTh(html, s.th);
+    if (v) parts.push(s.label + ': ' + v);
+  }
+  return parts.join('\n');
+}
+
 const ATTACHMENT_EXT_PATTERN = /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)(\?|$|#)/i;
 const BASE_ORIGIN = 'https://youth.seoul.go.kr';
 
