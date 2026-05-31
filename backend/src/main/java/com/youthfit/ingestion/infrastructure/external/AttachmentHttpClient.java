@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.time.Duration;
 
 @Component
@@ -29,15 +30,23 @@ public class AttachmentHttpClient implements AttachmentDownloader {
     @Override
     public DownloadedFile download(String url, long maxBytes) {
         try {
+            // 응답 Content-Type 을 파싱하지 않고 raw 바이트를 직접 읽는다.
+            // 일부 공공 사이트(youth.seoul.go.kr)는 'application-download' 같은
+            // 슬래시 없는 비표준 MIME 을 내려주는데, retrieve().body() 경로는
+            // 이를 MediaType 으로 파싱하려다 InvalidMediaTypeException 으로 실패한다.
             byte[] body = restClient.get()
-                    .uri(url)
-                    .retrieve()
-                    .body(byte[].class);
-            if (body == null) throw new DownloadException("empty body: " + url, null);
+                    .uri(URI.create(url))
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new DownloadException("http " + response.getStatusCode().value() + ": " + url, null);
+                        }
+                        return response.getBody().readAllBytes();
+                    });
+            if (body == null || body.length == 0) throw new DownloadException("empty body: " + url, null);
             if (body.length > maxBytes) throw new OversizedException("size=" + body.length + " > max=" + maxBytes);
             String contentType = guessContentType(url);
             return new DownloadedFile(new ByteArrayInputStream(body), body.length, contentType);
-        } catch (OversizedException e) {
+        } catch (OversizedException | DownloadException e) {
             throw e;
         } catch (Exception e) {
             throw new DownloadException("download failed: " + url, e);
