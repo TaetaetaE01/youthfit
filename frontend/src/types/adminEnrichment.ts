@@ -20,6 +20,17 @@ export type ReferenceSiteSource = 'AUTO' | 'ADMIN';
 
 export type JobStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
 
+export type AttachmentStatus =
+  | 'PENDING'
+  | 'DOWNLOADING'
+  | 'DOWNLOADED'
+  | 'EXTRACTING'
+  | 'EXTRACTED'
+  | 'FAILED'
+  | 'SKIPPED';
+
+export type AttachmentSkipReason = 'SCANNED_PDF' | 'UNSUPPORTED_MIME' | 'OVERSIZED';
+
 /** UrlResponse */
 export interface ReferenceSite {
   name: string;
@@ -89,6 +100,18 @@ export interface EnrichmentDetail {
   sections: EnrichmentSections | null;
 }
 
+/** PolicyEnrichmentDetailResponse.AttachmentResponse */
+export interface AttachmentView {
+  id: number;
+  name: string;
+  mediaType: string | null;
+  status: AttachmentStatus;
+  skipReason: AttachmentSkipReason | null;
+  error: string | null;
+  retryCount: number;
+  hasText: boolean;
+}
+
 /** PolicyEnrichmentDetailResponse */
 export interface PolicyEnrichmentDetail {
   policyId: number;
@@ -97,6 +120,7 @@ export interface PolicyEnrichmentDetail {
   detailLevel: DetailLevel;
   referenceSites: ReferenceSite[];
   recentJobs: EnrichmentJobView[];
+  attachments: AttachmentView[];
   needsReview: boolean;
 }
 

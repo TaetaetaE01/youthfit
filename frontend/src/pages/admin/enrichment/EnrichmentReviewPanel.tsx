@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePolicyDetail, useUpdateReferenceSites, useCreateJob } from '@/hooks/useAdminEnrichment';
 import { EnrichmentReferenceSiteEditor } from './EnrichmentReferenceSiteEditor';
 import { EnrichmentJobBadge } from '@/components/admin/enrichment/EnrichmentJobBadge';
+import { AttachmentStatusBadge } from '@/components/admin/enrichment/AttachmentStatusBadge';
 import type { ReferenceSite } from '@/types/adminEnrichment';
 
 interface Props {
@@ -81,6 +82,31 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
           initialSites={data.referenceSites}
           onSave={(sites: ReferenceSite[]) => updateSites.mutate(sites)}
         />
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold mb-1">첨부파일 ({data.attachments.length})</h3>
+        <ul className="text-xs space-y-1">
+          {data.attachments.map((a) => (
+            <li key={a.id} className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <AttachmentStatusBadge status={a.status} />
+                <span className="truncate" title={a.name}>
+                  {a.name}
+                </span>
+              </div>
+              {a.status === 'FAILED' && a.error && (
+                <p className="text-rose-600 break-all">
+                  실패(재시도 {a.retryCount}): {a.error}
+                </p>
+              )}
+              {a.status === 'SKIPPED' && a.skipReason && (
+                <p className="text-amber-600">건너뜀: {a.skipReason}</p>
+              )}
+            </li>
+          ))}
+          {data.attachments.length === 0 && <li className="text-gray-500">첨부 없음</li>}
+        </ul>
       </section>
 
       <section>
