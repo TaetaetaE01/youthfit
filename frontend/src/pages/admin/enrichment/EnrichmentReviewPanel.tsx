@@ -55,6 +55,7 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
   const latestJob = data.recentJobs[0];
   const hasActiveJob = !!latestJob && (latestJob.status === 'PENDING' || latestJob.status === 'RUNNING');
   const disabled = data.referenceSites.length === 0 || hasActiveJob;
+  const attachments = data.attachments ?? [];
 
   return (
     <aside className="p-4 space-y-4 border-l w-[420px]">
@@ -85,9 +86,9 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold mb-1">첨부파일 ({data.attachments.length})</h3>
+        <h3 className="text-sm font-semibold mb-1">첨부파일 ({attachments.length})</h3>
         <ul className="text-xs space-y-1">
-          {data.attachments.map((a) => (
+          {attachments.map((a) => (
             <li key={a.id} className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <AttachmentStatusBadge status={a.status} />
@@ -105,7 +106,7 @@ export function EnrichmentReviewPanel({ policyId }: Props) {
               )}
             </li>
           ))}
-          {data.attachments.length === 0 && <li className="text-gray-500">첨부 없음</li>}
+          {attachments.length === 0 && <li className="text-gray-500">첨부 없음</li>}
         </ul>
       </section>
 

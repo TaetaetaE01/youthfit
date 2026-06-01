@@ -110,6 +110,16 @@ describe('EnrichmentReviewPanel — 재크롤 버튼 비활성 조건', () => {
     expect(screen.getByText(/SCANNED_PDF/)).toBeInTheDocument();
   });
 
+  test('attachments 필드가 없는(구버전 백엔드) 응답에도 패널이 크래시하지 않는다', async () => {
+    // 백/프 독립 배포 — 프런트가 먼저 배포되면 구버전 응답에 attachments 가 없다.
+    const detail = baseDetail();
+    delete (detail as Partial<PolicyEnrichmentDetail>).attachments;
+    vi.spyOn(api, 'fetchPolicyDetail').mockResolvedValue(detail as PolicyEnrichmentDetail);
+    renderWithClient(<EnrichmentReviewPanel policyId={1} />);
+
+    expect(await screen.findByRole('button', { name: /재크롤/ })).toBeInTheDocument();
+  });
+
   test('RUNNING 잡이 있으면 비활성', async () => {
     const runningJob: EnrichmentJobView = {
       id: 1,

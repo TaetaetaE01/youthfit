@@ -120,7 +120,8 @@ export interface PolicyEnrichmentDetail {
   detailLevel: DetailLevel;
   referenceSites: ReferenceSite[];
   recentJobs: EnrichmentJobView[];
-  attachments: AttachmentView[];
+  // 신규 백엔드 응답에만 존재 — 백/프 독립 배포 시 구버전 응답엔 없을 수 있어 optional.
+  attachments?: AttachmentView[];
   needsReview: boolean;
 }
 
