@@ -12,8 +12,11 @@
 - 정책 유형(category)·사업신청기간(applyStart/End)·각종 사이트 URL(applyUrl/referenceSites)은 별도 필드로 처리하므로 `BODY_SECTIONS` 에서 제외한다.
 
 ## extractSelfAttachments 동작 메모
-- 첨부 후보는 **a[href] 의 확장자**(pdf/hwp/hwpx/doc(x)/xls(x)/zip)로만 판정한다.
-- `download.do?fileId=1` 처럼 href 에 확장자가 없는 링크는 링크 텍스트가 `*.pdf` 여도 제외된다 (spec §5.1 의 의도).
+- 첨부 후보는 두 경우로 판정한다:
+  1. **a[href] 의 확장자**(pdf/hwp/hwpx/doc(x)/xls(x)/zip), 또는
+  2. **다운로드성 href**(download/filedown/attach/getfile/cnncSn/atchFile) **+ 링크 텍스트의 확장자**.
+- 따라서 `download.do?fileId=1` 처럼 href 에 확장자가 없어도, 링크 텍스트가 `2026년 공고문.pdf` 면 첨부로 잡는다.
+- 단 다운로드성 href 라도 **링크 텍스트에도 확장자가 없으면 제외**한다(오탐 방지). 이미지(.png 등)는 첨부 확장자가 아니므로 제외.
 
 ## 실행
 ```bash

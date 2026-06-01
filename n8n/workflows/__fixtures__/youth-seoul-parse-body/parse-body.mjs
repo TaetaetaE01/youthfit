@@ -120,6 +120,10 @@ export function buildBody(html) {
 }
 
 const ATTACHMENT_EXT_PATTERN = /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)(\?|$|#)/i;
+// 링크 텍스트에 드러난 확장자 (예: "2026년 공고문.pdf")
+const ATTACHMENT_TEXT_EXT_PATTERN = /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)\b/i;
+// 확장자가 URL 에 없는 정적 다운로드 링크 (예: download.do?fileId=1)
+const DOWNLOAD_KW_PATTERN = /(download|filedown|attach|getfile|cnncsn|atchfile)/i;
 const BASE_ORIGIN = 'https://youth.seoul.go.kr';
 
 export function extractSelfAttachments(html) {
@@ -130,13 +134,17 @@ export function extractSelfAttachments(html) {
   let lm;
   while ((lm = linkRe.exec(html)) !== null) {
     const href = lm[1];
-    if (!ATTACHMENT_EXT_PATTERN.test(href)) continue;
+    const text = lm[2].replace(/<[^>]+>/g, '').trim().slice(0, 200);
+    // href 확장자가 직접 있거나, 다운로드성 href + 링크 텍스트에 확장자가 있으면 첨부로 본다.
+    // 후자는 youth.seoul 의 download.do?fileId=1 처럼 확장자 없는 정적 링크를 잡기 위함.
+    const looksLikeFile = ATTACHMENT_EXT_PATTERN.test(href)
+      || (DOWNLOAD_KW_PATTERN.test(href) && ATTACHMENT_TEXT_EXT_PATTERN.test(text));
+    if (!looksLikeFile) continue;
     const abs = /^https?:\/\//i.test(href)
       ? href
       : BASE_ORIGIN + (href.startsWith('/') ? href : '/' + href);
     if (seen.has(abs)) continue;
     seen.add(abs);
-    const text = lm[2].replace(/<[^>]+>/g, '').trim().slice(0, 200);
     out.push({ name: text || abs.split('/').pop(), url: abs });
   }
   return out;
