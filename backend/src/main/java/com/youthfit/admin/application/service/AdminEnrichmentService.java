@@ -12,9 +12,11 @@ import com.youthfit.policy.application.service.AdminEnrichmentQueryService;
 import com.youthfit.policy.application.service.EnrichmentJobService;
 import com.youthfit.policy.domain.model.EnrichmentJob;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.model.PolicyReferenceSite;
 import com.youthfit.policy.domain.model.PolicyReferenceSiteSource;
 import com.youthfit.policy.domain.repository.EnrichmentJobRepository;
+import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.policy.domain.service.PolicyReferenceSiteMerger;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class AdminEnrichmentService {
     private final EnrichmentJobService jobService;
     private final PolicyRepository policyRepository;
     private final EnrichmentJobRepository jobRepository;
+    private final PolicyAttachmentRepository attachmentRepository;
     private final PolicyReferenceSiteMerger referenceSiteMerger;
 
     @Transactional(readOnly = true)
@@ -61,7 +64,8 @@ public class AdminEnrichmentService {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new YouthFitException(ErrorCode.NOT_FOUND, "Policy not found: " + policyId));
         List<EnrichmentJob> jobs = jobRepository.findRecentByPolicyId(policyId, 5);
-        return PolicyEnrichmentDetailResponse.of(policy, jobs, queryService.needsReview(policy));
+        List<PolicyAttachment> attachments = attachmentRepository.findByPolicyId(policyId);
+        return PolicyEnrichmentDetailResponse.of(policy, jobs, queryService.needsReview(policy), attachments);
     }
 
     @Transactional

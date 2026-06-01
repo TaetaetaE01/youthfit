@@ -92,4 +92,19 @@ class AttachmentDownloadServiceTest {
 
         verify(stateService).markFailed(eq(4L), contains("timeout"));
     }
+
+    @Test
+    void downloadOne_실패시_원인_예외_체인까지_사유에_기록한다() {
+        // 바깥 예외 메시지만 저장하면 admin 에서 진짜 원인을 못 본다.
+        // (예: 'download failed' 만 보이고 실제 원인 InvalidMediaType 이 유실)
+        when(repository.findById(5L)).thenReturn(Optional.of(attachment));
+        when(downloader.download(anyString(), anyLong()))
+                .thenThrow(new AttachmentDownloader.DownloadException(
+                        "download failed: http://x/a.pdf",
+                        new IllegalStateException("Invalid mime type: does not contain '/'")));
+
+        sut.downloadOne(5L);
+
+        verify(stateService).markFailed(eq(5L), contains("does not contain"));
+    }
 }

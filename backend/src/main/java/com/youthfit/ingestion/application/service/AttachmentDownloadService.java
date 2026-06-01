@@ -79,8 +79,8 @@ public class AttachmentDownloadService {
             stateService.markSkipped(attachmentId, SkipReason.OVERSIZED);
             log.info("attachment oversized skipped: id={}", attachmentId);
         } catch (Exception e) {
-            stateService.markFailed(attachmentId, e.getClass().getSimpleName() + ": " + safeMessage(e));
-            log.warn("attachment download failed: id={} err={}", attachmentId, e.getMessage());
+            stateService.markFailed(attachmentId, describeChain(e));
+            log.warn("attachment download failed: id={} err={}", attachmentId, describeChain(e));
         }
     }
 
@@ -109,8 +109,23 @@ public class AttachmentDownloadService {
         };
     }
 
-    private static String safeMessage(Throwable t) {
-        String m = t.getMessage();
-        return m == null ? "no message" : (m.length() > 200 ? m.substring(0, 200) : m);
+    private static final int ERROR_MAX_LENGTH = 480;
+
+    /**
+     * 예외 cause 체인을 'Outer: msg &lt;- Cause: msg' 형태로 직렬화한다.
+     * 바깥 예외 메시지만 남기면 admin 에서 진짜 원인(예: InvalidMediaType)을 못 보기 때문.
+     */
+    private static String describeChain(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        Throwable c = t;
+        for (int depth = 0; c != null && depth < 5; depth++) {
+            if (sb.length() > 0) sb.append(" <- ");
+            sb.append(c.getClass().getSimpleName());
+            if (c.getMessage() != null) sb.append(": ").append(c.getMessage());
+            if (c.getCause() == c) break;
+            c = c.getCause();
+        }
+        String s = sb.toString();
+        return s.length() > ERROR_MAX_LENGTH ? s.substring(0, ERROR_MAX_LENGTH) : s;
     }
 }

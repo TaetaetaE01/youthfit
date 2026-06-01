@@ -1,0 +1,16 @@
+{
+  "source": { "url": "https://example.com/p/5", "type": "YOUTH_SEOUL_CRAWL", "fetchedAt": "2026-05-30T00:00:00" },
+  "rawData": {
+    "externalId": "P-5", "title": "샘플 5", "summary": "s", "body": "b",
+    "category": "복지", "region": "서울특별시",
+    "attachments": [],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/5",
+      "fetchedAt": "2026-05-30T00:00:00",
+      "extractor": "regex", "confidence": null, "status": "OK", "sections": null,
+      "extraAttachments": [
+        { "name": "파일", "url": "https://ex.com/file/a.pdf" }
+      ]
+    }
+  }
+}

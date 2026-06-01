@@ -1,10 +1,13 @@
 package com.youthfit.admin.presentation.dto.response;
 
+import com.youthfit.policy.domain.model.AttachmentStatus;
 import com.youthfit.policy.domain.model.DetailLevel;
 import com.youthfit.policy.domain.model.EnrichmentJob;
 import com.youthfit.policy.domain.model.EnrichmentStatus;
 import com.youthfit.policy.domain.model.Policy;
+import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.model.PolicyEnrichment;
+import com.youthfit.policy.domain.model.SkipReason;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,8 +22,37 @@ public record PolicyEnrichmentDetailResponse(
         DetailLevel detailLevel,
         List<UrlResponse> referenceSites,
         List<EnrichmentJobResponse> recentJobs,
+        List<AttachmentResponse> attachments,
         boolean needsReview
 ) {
+    /**
+     * 첨부 다운로드·추출 결과. status=FAILED 면 error 에, SKIPPED 면 skipReason 에 사유가 담긴다.
+     */
+    public record AttachmentResponse(
+            Long id,
+            String name,
+            String mediaType,
+            AttachmentStatus status,
+            SkipReason skipReason,
+            String error,
+            int retryCount,
+            boolean hasText
+    ) {
+        public static AttachmentResponse of(PolicyAttachment a) {
+            String text = a.getExtractedText();
+            return new AttachmentResponse(
+                    a.getId(),
+                    a.getName(),
+                    a.getMediaType(),
+                    a.getExtractionStatus(),
+                    a.getSkipReason(),
+                    a.getExtractionError(),
+                    a.getExtractionRetryCount(),
+                    text != null && !text.isBlank()
+            );
+        }
+    }
+
     public record EnrichmentResponse(
             EnrichmentStatus status,
             Double confidence,
@@ -67,13 +99,17 @@ public record PolicyEnrichmentDetailResponse(
         }
     }
 
-    public static PolicyEnrichmentDetailResponse of(Policy policy, List<EnrichmentJob> recentJobs, boolean needsReview) {
+    public static PolicyEnrichmentDetailResponse of(Policy policy, List<EnrichmentJob> recentJobs,
+                                                    boolean needsReview, List<PolicyAttachment> attachments) {
         List<UrlResponse> sites = policy.getReferenceSites() == null
                 ? List.of()
                 : policy.getReferenceSites().stream().map(UrlResponse::of).toList();
         List<EnrichmentJobResponse> jobs = recentJobs == null
                 ? List.of()
                 : recentJobs.stream().map(EnrichmentJobResponse::of).toList();
+        List<AttachmentResponse> atts = attachments == null
+                ? List.of()
+                : attachments.stream().map(AttachmentResponse::of).toList();
         return new PolicyEnrichmentDetailResponse(
                 policy.getId(),
                 policy.getTitle(),
@@ -81,6 +117,7 @@ public record PolicyEnrichmentDetailResponse(
                 policy.getDetailLevel(),
                 sites,
                 jobs,
+                atts,
                 needsReview
         );
     }
