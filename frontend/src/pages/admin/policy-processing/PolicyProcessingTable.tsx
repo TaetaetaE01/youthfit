@@ -6,6 +6,7 @@ import type {
   ProcessingStep,
 } from '@/types/adminPolicyProcessing';
 import { cn } from '@/lib/cn';
+import { formatKstDateTime, formatRelative } from '@/lib/datetime';
 import { CompletenessBadge } from './CompletenessBadge';
 import { SourceBadges } from './SourceBadges';
 
@@ -82,8 +83,11 @@ export function PolicyProcessingTable({ items, expandedIds, onToggle, renderDeta
                       ? `${item.references.succeeded}/${item.references.total}`
                       : '—'}
                   </td>
-                  <td className={cn(TD_BASE, 'tabular-nums text-neutral-500')}>
-                    {formatRelative(item.updatedAt)}
+                  <td
+                    className={cn(TD_BASE, 'tabular-nums whitespace-nowrap text-neutral-500')}
+                    title={formatRelative(item.updatedAt)}
+                  >
+                    {formatKstDateTime(item.updatedAt)}
                   </td>
                 </tr>
                 {isExpanded && renderDetail && (
@@ -142,11 +146,3 @@ function attachmentTone(a: AttachmentSummary): string {
   return 'text-amber-600';
 }
 
-function formatRelative(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diffMs / 60000);
-  if (min < 60) return `${min}m`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
