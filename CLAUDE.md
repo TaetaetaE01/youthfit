@@ -74,3 +74,30 @@ youthfit/
 - **Plan Mode** 는 큰 리팩토링이나 위험한 변경 전에 읽기 중심으로 범위를 파악하고 계획을 세울 때 유용하다.
 - **Custom Subagents** 는 반복적으로 역할 분리가 필요할 때만 선택적으로 도입한다.
 - 장기 유지보수 가치가 충분하지 않다면 기능별 에이전트 규칙을 여기에 추가하지 않는다.
+
+## 서브에이전트 오케스트레이션 (subagent-driven-development 매핑)
+
+`.claude/agents/` 에 YouthFit 맞춤 커스텀 서브에이전트 4종이 있다. 슈퍼파워스
+`subagent-driven-development` 흐름을 실행할 때, 기본 `general-purpose` 대신 아래
+매핑으로 **슬롯별 하이브리드**로 사용한다. (커스텀 에이전트의 system prompt = 컨벤션·
+model·tools 고정 신분, 슈퍼파워스 per-task 프롬프트 = 이번 작업 지시 — 둘은 교체가
+아니라 한 디스패치 안에서 합쳐진다.)
+
+**백엔드 태스크**
+- implementer → `backend-developer` (sonnet, 컨벤션 주입 구현 워커)
+- code-quality reviewer / final reviewer → `backend-reviewer` (opus, 읽기전용 심층 리뷰)
+- spec-compliance reviewer → `general-purpose` 유지 (스펙 일치 점검은 도메인 컨벤션 불필요)
+
+**프론트엔드 태스크**
+- implementer → `frontend-developer` (sonnet)
+- code-quality reviewer / final reviewer → `frontend-reviewer` (opus, 읽기전용)
+- spec-compliance reviewer → `general-purpose` 유지
+
+**리뷰 게이트 2종은 별개 개념 — 혼동 금지**
+- `backend-reviewer` / `frontend-reviewer`: **구현 흐름 내부** 의 도메인별 리뷰
+  (code-quality·final 슬롯). 백/프 한쪽만 본다.
+- `/cr` 의 `code-reviewer`: **PR 작성 시점** 의 BE+FE 통합 셀프리뷰 게이트
+  (`create-pr` 스킬 0단계). 브랜치 전체 diff 를 base 와 비교한다.
+- 두 리뷰는 **순차적 별개 단계**다(구현 final 리뷰 → 이후 PR 작성 시 `/cr`). 택일 아님.
+
+**주의**: `.claude/agents/` 새 파일은 `.gitignore` 때문에 `git add -f` 로 커밋해야 한다.
