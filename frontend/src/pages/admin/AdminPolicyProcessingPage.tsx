@@ -36,6 +36,7 @@ export default function AdminPolicyProcessingPage() {
     () => ({
       q: searchParams.get('q') ?? undefined,
       region: searchParams.get('region') ?? undefined,
+      sourceType: searchParams.get('sourceType') ?? undefined,
       filter: (searchParams.get('filter') as Filter | null) ?? 'ALL',
       sort: (searchParams.get('sort') as Sort | null) ?? 'UPDATED_DESC',
       page: Number(searchParams.get('page') ?? 0),
@@ -54,6 +55,7 @@ export default function AdminPolicyProcessingPage() {
     const sp = new URLSearchParams();
     if (next.q) sp.set('q', next.q);
     if (next.region) sp.set('region', next.region);
+    if (next.sourceType) sp.set('sourceType', next.sourceType);
     if (next.filter && next.filter !== 'ALL') sp.set('filter', next.filter);
     if (next.sort && next.sort !== 'UPDATED_DESC') sp.set('sort', next.sort);
     if (next.page && next.page > 0) sp.set('page', String(next.page));
