@@ -7,6 +7,7 @@ import type {
 } from '@/types/adminPolicyProcessing';
 import { cn } from '@/lib/cn';
 import { CompletenessBadge } from './CompletenessBadge';
+import { SourceBadges } from './SourceBadges';
 
 const STEP_ORDER: ProcessingStep[] = ['INGESTION', 'ENRICHMENT', 'GUIDE', 'RULE', 'RAG_INDEXING'];
 
@@ -59,7 +60,12 @@ export function PolicyProcessingTable({ items, expandedIds, onToggle, renderDeta
                   <td className={cn(TD_BASE, 'tabular-nums text-neutral-900')}>
                     {item.policyId}
                   </td>
-                  <td className={cn(TD_BASE, 'text-neutral-900')}>{item.title}</td>
+                  <td className={cn(TD_BASE, 'text-neutral-900')}>
+                    <div className="flex flex-col gap-1">
+                      <span>{item.title}</span>
+                      <SourceBadges sources={item.sources} />
+                    </div>
+                  </td>
                   <td className={TD_BASE}>
                     <CompletenessBadge value={item.completeness} />
                   </td>
