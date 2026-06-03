@@ -18,6 +18,7 @@ function mockItem(policyId: number, overrides: Partial<PolicyProcessingItem> = {
     },
     attachments: { total: 3, extracted: 3, embedded: 3 },
     references: { total: 0, succeeded: 0 },
+    sources: [],
     updatedAt: '2026-05-29T03:00:00Z',
     ...overrides,
   };
