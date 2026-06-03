@@ -39,6 +39,13 @@ export interface ReferenceSummary {
   succeeded: number;
 }
 
+export interface SourceTag {
+  /** 백엔드 SourceType#name() — 'YOUTH_SEOUL_CRAWL' | 'BOKJIRO_CENTRAL' | 'YOUTH_CENTER' */
+  code: string;
+  /** 한글 표시명 */
+  label: string;
+}
+
 export interface PolicyProcessingItem {
   policyId: number;
   title: string;
@@ -47,6 +54,7 @@ export interface PolicyProcessingItem {
   stepStatuses: Partial<Record<ProcessingStep, ProcessingStatus>>;
   attachments: AttachmentSummary;
   references: ReferenceSummary;
+  sources: SourceTag[];
   updatedAt: string;
 }
 
@@ -120,6 +128,7 @@ export interface ReprocessResult {
 export interface PolicyProcessingListParams {
   q?: string;
   region?: string;
+  sourceType?: string;
   filter?: Filter;
   sort?: Sort;
   page?: number;
