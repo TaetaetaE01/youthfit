@@ -338,6 +338,23 @@
         660,
         360
       ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youth-seoul-manual",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "manual-webhook-trigger",
+      "name": "수동 실행 트리거",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "youth-seoul-manual-trigger"
     }
   ],
   "connections": {
@@ -554,6 +571,17 @@
         [
           {
             "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "수동 실행 트리거": {
+      "main": [
+        [
+          {
+            "node": "카테고리 초기화",
             "type": "main",
             "index": 0
           }
