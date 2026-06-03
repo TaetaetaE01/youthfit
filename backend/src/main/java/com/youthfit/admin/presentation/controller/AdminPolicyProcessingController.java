@@ -55,6 +55,7 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
         PolicyProcessingListCommand command = new PolicyProcessingListCommand(
                 q,
                 region,
+                null, // sourceType — Task 5 에서 파라미터로 교체
                 parseFilter(filter),
                 parseSort(sort),
                 page,

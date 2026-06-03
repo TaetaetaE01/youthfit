@@ -12,6 +12,7 @@ import com.youthfit.admin.application.dto.PolicyProcessingStatsResult;
 import com.youthfit.admin.application.dto.ReferenceDetailResult;
 import com.youthfit.admin.application.dto.ReferenceSummaryResult;
 import com.youthfit.admin.application.dto.ReprocessResult;
+import com.youthfit.admin.application.dto.SourceTagResult;
 import com.youthfit.admin.application.dto.StepDetailResult;
 import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import com.youthfit.common.event.PolicyReprocessRequestedEvent;
@@ -29,9 +30,11 @@ import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.model.PolicyProcessingStep;
 import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyProcessingStepRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.service.RagIndexingService;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
@@ -67,6 +70,7 @@ import java.util.Set;
 public class AdminPolicyProcessingService {
 
     private final PolicyRepository policyRepository;
+    private final PolicySourceRepository policySourceRepository;
     private final PolicyProcessingStepRepository stepRepository;
     private final PolicyAttachmentRepository attachmentRepository;
     private final PolicyDocumentRepository documentRepository;
@@ -100,7 +104,7 @@ public class AdminPolicyProcessingService {
         Page<Policy> policyPage = policyRepository.findForAdminProcessing(
                 command.query(),
                 command.region(),
-                null, // TODO(Task 4): command.sourceType()
+                command.sourceType(),
                 toSpringSort(command.sort()),
                 PageRequest.of(command.page(), command.size())
         );
@@ -114,6 +118,8 @@ public class AdminPolicyProcessingService {
                 attachmentRepository.aggregateExtractionByPolicyIds(policyIds);
         Map<Long, Long> embedMap =
                 documentRepository.countAttachmentEmbeddingsByPolicyIds(policyIds);
+        Map<Long, List<SourceType>> sourceMap =
+                policySourceRepository.findSourceTypesByPolicyIds(policyIds);
 
         List<PolicyProcessingItemResult> items = policyPage.getContent().stream().map(p -> {
             Map<ProcessingStep, ProcessingStatus> stepStatuses =
@@ -121,6 +127,11 @@ public class AdminPolicyProcessingService {
             AttachmentExtractionCounts attachCounts =
                     attachMap.getOrDefault(p.getId(), AttachmentExtractionCounts.empty());
             long embeddedCount = embedMap.getOrDefault(p.getId(), 0L);
+
+            List<SourceTagResult> sources =
+                    sourceMap.getOrDefault(p.getId(), List.of()).stream()
+                            .map(SourceTagResult::from)
+                            .toList();
 
             return new PolicyProcessingItemResult(
                     p.getId(),
@@ -131,6 +142,7 @@ public class AdminPolicyProcessingService {
                     new AttachmentSummaryResult(attachCounts.total(), attachCounts.extracted(), embeddedCount),
                     // 참고 사이트 결과는 Phase D 의 ENRICHMENT detail_json 채택 이후 채워진다.
                     ReferenceSummaryResult.placeholder(),
+                    sources,
                     p.getUpdatedAt()
             );
         }).toList();

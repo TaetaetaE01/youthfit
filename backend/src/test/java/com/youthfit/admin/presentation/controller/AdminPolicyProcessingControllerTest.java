@@ -99,6 +99,7 @@ class AdminPolicyProcessingControllerTest {
                 Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
                 new AttachmentSummaryResult(0, 0, 0),
                 ReferenceSummaryResult.placeholder(),
+                List.of(),
                 LocalDateTime.now()
         );
         when(service.findProcessingPolicies(any())).thenReturn(
