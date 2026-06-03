@@ -61,6 +61,16 @@ function inferMediaType(item) {
   return null;
 }
 
+const NAME_WHITELIST_PATTERN = /(공고|안내|모집|요강|신청서|계획서|FAQ|Q&A|가이드|설명|일정|참가|운영|평가|선정|채용|지원|보고서|양식|서식|자료|다운로드|붙임|별첨|결과|명단|목록)/i;
+const NAME_BLACKLIST_PATTERN = /(로고|배너|아이콘|썸네일|포스터|광고|favicon)/i;
+
+function isInformationalName(name) {
+  if (typeof name !== 'string' || !name) return true;     // 이름이 없으면 통과 (확장자 매핑이 이미 OK)
+  if (NAME_BLACKLIST_PATTERN.test(name)) return false;
+  if (NAME_WHITELIST_PATTERN.test(name)) return true;
+  return name.length >= 5;                                 // 보수적 fallback
+}
+
 export function promote(input) {
   const enrichment = input?.rawData?.enrichment;
   const extras = enrichment?.extraAttachments;
@@ -80,6 +90,7 @@ export function promote(input) {
     if (!ex || typeof ex.url !== 'string') continue;
     const mediaType = inferMediaType(ex);
     if (!mediaType) continue;
+    if (!isInformationalName(ex.name)) continue;
     const key = ex.url.toLowerCase();
     if (existingUrls.has(key)) continue;
     merged.push({ name: ex.name, url: ex.url, mediaType });

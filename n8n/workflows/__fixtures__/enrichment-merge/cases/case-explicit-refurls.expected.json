@@ -1,0 +1,8 @@
+{
+  "selectedUrls": ["https://a.example.com", "https://b.example.com"],
+  "merged": {
+    "cleanedText": "",
+    "extraAttachments": [],
+    "status": "FETCH_FAILED"
+  }
+}

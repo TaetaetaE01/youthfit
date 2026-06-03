@@ -1,0 +1,20 @@
+{
+  "source": { "url": "https://example.com/p/4", "type": "YOUTH_SEOUL_CRAWL", "fetchedAt": "2026-05-30T00:00:00" },
+  "rawData": {
+    "externalId": "P-4", "title": "샘플 4", "summary": "s", "body": "b",
+    "category": "복지", "region": "서울특별시",
+    "attachments": [
+      { "name": "모집 요강.hwp", "url": "https://ex.com/file/qual.hwp", "mediaType": "application/x-hwp" },
+      { "name": "FAQ.pdf", "url": "https://ex.com/file/faq.pdf", "mediaType": "application/pdf" }
+    ],
+    "enrichment": {
+      "sourceUrl": "https://gov.example.com/p/4",
+      "fetchedAt": "2026-05-30T00:00:00",
+      "extractor": "regex", "confidence": null, "status": "OK", "sections": null,
+      "extraAttachments": [
+        { "name": "모집 요강.hwp", "url": "https://ex.com/file/qual.hwp" },
+        { "name": "FAQ.pdf", "url": "https://ex.com/file/faq.pdf" }
+      ]
+    }
+  }
+}
