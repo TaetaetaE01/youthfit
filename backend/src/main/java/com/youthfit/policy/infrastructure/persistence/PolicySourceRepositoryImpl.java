@@ -5,6 +5,7 @@ import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,23 @@ public class PolicySourceRepositoryImpl implements PolicySourceRepository {
         Map<String, String> result = new HashMap<>(rows.size());
         for (Object[] row : rows) {
             result.put((String) row[0], (String) row[1]);
+        }
+        return result;
+    }
+
+    @Override
+    public Map<Long, List<SourceType>> findSourceTypesByPolicyIds(List<Long> policyIds) {
+        if (policyIds == null || policyIds.isEmpty()) {
+            return Map.of();
+        }
+        List<PolicySource> all = jpaRepository.findAllByPolicyIdInOrderByIdAsc(policyIds);
+        Map<Long, List<SourceType>> result = new HashMap<>();
+        for (PolicySource source : all) {
+            List<SourceType> types =
+                    result.computeIfAbsent(source.getPolicy().getId(), k -> new ArrayList<>());
+            if (!types.contains(source.getSourceType())) {
+                types.add(source.getSourceType());
+            }
         }
         return result;
     }

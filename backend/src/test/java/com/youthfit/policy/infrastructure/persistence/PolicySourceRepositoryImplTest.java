@@ -104,4 +104,65 @@ class PolicySourceRepositoryImplTest {
         then(jpaRepository).should(never()).findAllByPolicyIdInOrderByIdAsc(any());
     }
 
+    // ---- findSourceTypesByPolicyIds ----
+
+    @Test
+    @DisplayName("정책별_출처타입_목록을_일괄조회한다")
+    void 정책별_출처타입_목록을_일괄조회한다() {
+        Policy p1 = mock(Policy.class);
+        Policy p2 = mock(Policy.class);
+        given(p1.getId()).willReturn(1L);
+        given(p2.getId()).willReturn(2L);
+
+        PolicySource s1 = mock(PolicySource.class);
+        PolicySource s2 = mock(PolicySource.class);
+        PolicySource s3 = mock(PolicySource.class);
+        given(s1.getPolicy()).willReturn(p1);
+        given(s1.getSourceType()).willReturn(SourceType.YOUTH_SEOUL_CRAWL);
+        given(s2.getPolicy()).willReturn(p1);
+        given(s2.getSourceType()).willReturn(SourceType.BOKJIRO_CENTRAL);
+        given(s3.getPolicy()).willReturn(p2);
+        given(s3.getSourceType()).willReturn(SourceType.YOUTH_CENTER);
+
+        given(jpaRepository.findAllByPolicyIdInOrderByIdAsc(List.of(1L, 2L)))
+                .willReturn(List.of(s1, s2, s3));
+
+        Map<Long, List<SourceType>> result =
+                sut.findSourceTypesByPolicyIds(List.of(1L, 2L));
+
+        assertThat(result.get(1L))
+                .containsExactly(SourceType.YOUTH_SEOUL_CRAWL, SourceType.BOKJIRO_CENTRAL);
+        assertThat(result.get(2L)).containsExactly(SourceType.YOUTH_CENTER);
+    }
+
+    @Test
+    @DisplayName("빈_입력은_빈_맵을_반환한다")
+    void 빈_입력은_빈_맵을_반환한다() {
+        assertThat(sut.findSourceTypesByPolicyIds(List.of())).isEmpty();
+        then(jpaRepository).should(never()).findAllByPolicyIdInOrderByIdAsc(any());
+    }
+
+    @Test
+    @DisplayName("같은_정책에_동일_출처_중복시_한_번만_담는다")
+    void 같은_정책에_동일_출처_중복시_한_번만_담는다() {
+        Policy p1 = mock(Policy.class);
+        given(p1.getId()).willReturn(1L);
+
+        PolicySource s1 = mock(PolicySource.class);
+        PolicySource s2 = mock(PolicySource.class);
+        given(s1.getPolicy()).willReturn(p1);
+        given(s1.getSourceType()).willReturn(SourceType.YOUTH_SEOUL_CRAWL);
+        given(s2.getPolicy()).willReturn(p1);
+        given(s2.getSourceType()).willReturn(SourceType.YOUTH_SEOUL_CRAWL);
+
+        given(jpaRepository.findAllByPolicyIdInOrderByIdAsc(List.of(1L)))
+                .willReturn(List.of(s1, s2));
+
+        Map<Long, List<SourceType>> result =
+                sut.findSourceTypesByPolicyIds(List.of(1L));
+
+        assertThat(result.get(1L)).containsExactly(SourceType.YOUTH_SEOUL_CRAWL);
+        assertThat(result.get(1L)).hasSize(1);
+    }
+
 }
