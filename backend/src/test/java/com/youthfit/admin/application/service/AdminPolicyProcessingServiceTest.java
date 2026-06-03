@@ -25,9 +25,12 @@ import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.model.PolicyProcessingStep;
 import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
+import com.youthfit.admin.application.dto.SourceTagResult;
+import com.youthfit.policy.domain.model.SourceType;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
 import com.youthfit.policy.domain.repository.PolicyProcessingStepRepository;
 import com.youthfit.policy.domain.repository.PolicyRepository;
+import com.youthfit.policy.domain.repository.PolicySourceRepository;
 import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.service.RagIndexingService;
@@ -73,6 +76,7 @@ import static org.mockito.Mockito.when;
 class AdminPolicyProcessingServiceTest {
 
     @Mock private PolicyRepository policyRepository;
+    @Mock private PolicySourceRepository policySourceRepository;
     @Mock private PolicyProcessingStepRepository stepRepository;
     @Mock private PolicyAttachmentRepository attachmentRepository;
     @Mock private PolicyDocumentRepository documentRepository;
@@ -86,7 +90,7 @@ class AdminPolicyProcessingServiceTest {
     @InjectMocks private AdminPolicyProcessingService service;
 
     private static final PolicyProcessingListCommand DEFAULT_COMMAND = new PolicyProcessingListCommand(
-            null, null, PolicyProcessingFilter.ALL, PolicyProcessingSort.UPDATED_DESC, 0, 50);
+            null, null, null, PolicyProcessingFilter.ALL, PolicyProcessingSort.UPDATED_DESC, 0, 50);
 
     @Test
     @DisplayName("RAG SUCCESS + 첨부 0건이면 완성도는 COMPLETE 다")
@@ -551,7 +555,7 @@ class AdminPolicyProcessingServiceTest {
         Policy p2 = mockPolicy(2L, "정책2", "11");
         Policy p3 = mockPolicy(3L, "정책3", "11");
         Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
-        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
         // p1 → RAG FAILED → INCOMPLETE
         // p2, p3 → RAG SUCCESS, 첨부 없음 → COMPLETE
@@ -562,9 +566,10 @@ class AdminPolicyProcessingServiceTest {
         ));
         given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of());
         given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of());
+        given(policySourceRepository.findSourceTypesByPolicyIds(anyList())).willReturn(Map.of());
 
         PolicyProcessingListResult result = service.findProcessingPolicies(new PolicyProcessingListCommand(
-                null, null, PolicyProcessingFilter.INCOMPLETE, PolicyProcessingSort.UPDATED_DESC, 0, 50));
+                null, null, null, PolicyProcessingFilter.INCOMPLETE, PolicyProcessingSort.UPDATED_DESC, 0, 50));
 
         assertThat(result.totalCount()).isEqualTo(3L); // SQL 모집단
         assertThat(result.filteredItemCount()).isEqualTo(1L); // INCOMPLETE 통과 1건
@@ -584,7 +589,7 @@ class AdminPolicyProcessingServiceTest {
         Policy p2 = mockPolicy(2L, "partial-policy", "11");
         Policy p3 = mockPolicy(3L, "incomplete-policy", "11");
         Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
-        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
         given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of(
                 1L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
@@ -597,9 +602,10 @@ class AdminPolicyProcessingServiceTest {
                 3L, AttachmentExtractionCounts.empty()
         ));
         given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of(2L, 1L));
+        given(policySourceRepository.findSourceTypesByPolicyIds(anyList())).willReturn(Map.of());
 
         PolicyProcessingListResult result = service.findProcessingPolicies(new PolicyProcessingListCommand(
-                null, null, PolicyProcessingFilter.ALL, PolicyProcessingSort.COMPLETENESS_ASC, 0, 50));
+                null, null, null, PolicyProcessingFilter.ALL, PolicyProcessingSort.COMPLETENESS_ASC, 0, 50));
 
         assertThat(result.items()).hasSize(3);
         assertThat(result.items().get(0).completeness())
@@ -697,7 +703,59 @@ class AdminPolicyProcessingServiceTest {
         lenient().when(policy.getRegionCode()).thenReturn(regionCode);
         Page<Policy> page = new PageImpl<>(List.of(policy));
         given(policyRepository.findForAdminProcessing(
-                isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+                isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
+        lenient().when(policySourceRepository.findSourceTypesByPolicyIds(anyList()))
+                .thenReturn(Map.of());
+    }
+
+    // ---- Task 4: 출처 태그 채우기 ----
+
+    @Test
+    @DisplayName("처리현황_목록의_각_항목에_출처_태그를_채운다")
+    void 처리현황_목록의_각_항목에_출처_태그를_채운다() {
+        // given: policyRepository.findForAdminProcessing(...) 가 policyId=1 단일 Policy 페이지 반환
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(1L);
+        lenient().when(policy.getTitle()).thenReturn("출처테스트정책");
+        lenient().when(policy.getRegionCode()).thenReturn("11");
+        Page<Policy> page = new PageImpl<>(List.of(policy));
+        given(policyRepository.findForAdminProcessing(
+                isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
+                .willReturn(page);
+        given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of());
+        given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of());
+        given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of());
+        given(policySourceRepository.findSourceTypesByPolicyIds(List.of(1L)))
+                .willReturn(Map.of(1L, List.of(SourceType.YOUTH_SEOUL_CRAWL, SourceType.BOKJIRO_CENTRAL)));
+
+        PolicyProcessingListResult result = service.findProcessingPolicies(DEFAULT_COMMAND);
+
+        assertThat(result.items().get(0).sources())
+                .extracting(SourceTagResult::code)
+                .containsExactly("YOUTH_SEOUL_CRAWL", "BOKJIRO_CENTRAL");
+        assertThat(result.items().get(0).sources().get(0).label()).isEqualTo("청년몽땅정보통");
+    }
+
+    @Test
+    @DisplayName("출처가_없는_정책은_빈_출처목록을_가진다")
+    void 출처가_없는_정책은_빈_출처목록을_가진다() {
+        Policy policy = mock(Policy.class);
+        lenient().when(policy.getId()).thenReturn(1L);
+        lenient().when(policy.getTitle()).thenReturn("출처없음정책");
+        lenient().when(policy.getRegionCode()).thenReturn("11");
+        Page<Policy> page = new PageImpl<>(List.of(policy));
+        given(policyRepository.findForAdminProcessing(
+                isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
+                .willReturn(page);
+        given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of());
+        given(attachmentRepository.aggregateExtractionByPolicyIds(anyList())).willReturn(Map.of());
+        given(documentRepository.countAttachmentEmbeddingsByPolicyIds(anyList())).willReturn(Map.of());
+        given(policySourceRepository.findSourceTypesByPolicyIds(List.of(1L)))
+                .willReturn(Map.of());
+
+        PolicyProcessingListResult result = service.findProcessingPolicies(DEFAULT_COMMAND);
+
+        assertThat(result.items().get(0).sources()).isEmpty();
     }
 }

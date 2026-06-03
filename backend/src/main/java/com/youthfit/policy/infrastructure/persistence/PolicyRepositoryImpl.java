@@ -100,7 +100,8 @@ public class PolicyRepositoryImpl implements PolicyRepository {
     }
 
     @Override
-    public Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable) {
+    public Page<Policy> findForAdminProcessing(String query, String region, SourceType sourceType,
+                                               Sort sort, Pageable pageable) {
         Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 sort == null ? Sort.unsorted() : sort);
         // JPQL 의 :query / :region 은 null 대신 "" 을 sentinel 로 사용한다.
@@ -108,7 +109,7 @@ public class PolicyRepositoryImpl implements PolicyRepository {
         // `lower(bytea) does not exist` 에러를 던지기 때문 (PolicyJpaRepository 의 Javadoc 참조).
         String queryParam = orEmpty(normalizeKeyword(query));
         String regionParam = orEmpty(normalizeRegion(region));
-        return jpaRepository.findForAdminProcessing(queryParam, regionParam, effective);
+        return jpaRepository.findForAdminProcessing(queryParam, regionParam, sourceType, effective);
     }
 
     private static String orEmpty(String value) {
