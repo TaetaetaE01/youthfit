@@ -322,7 +322,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   YOUTH_SEOUL_CRAWL: '청년몽땅정보통',
 };
 
-const SOURCE_TYPE_VALUES: readonly SourceType[] = [
+export const SOURCE_TYPE_VALUES: readonly SourceType[] = [
   'YOUTH_CENTER',
   'BOKJIRO_CENTRAL',
   'YOUTH_SEOUL_CRAWL',

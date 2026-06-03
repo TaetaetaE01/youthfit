@@ -1,13 +1,18 @@
 import type { SourceTag } from '@/types/adminPolicyProcessing';
+import type { SourceType } from '@/types/policy';
 import { cn } from '@/lib/cn';
 
-/** 출처 code → 테두리/텍스트 색. 알 수 없는 코드는 중립 색으로 폴백. */
-const SOURCE_STYLE: Record<string, string> = {
+/**
+ * 출처 code → 테두리/텍스트 색.
+ * Record<SourceType, …> 로 선언해 SourceType 에 출처가 추가되면 누락 키가 컴파일 에러로 드러난다.
+ */
+const SOURCE_STYLE: Record<SourceType, string> = {
   YOUTH_SEOUL_CRAWL: 'border-blue-300 text-blue-700',
   BOKJIRO_CENTRAL: 'border-green-300 text-green-700',
   YOUTH_CENTER: 'border-purple-300 text-purple-700',
 };
 
+/** 타입상으론 도달 불가지만, 백엔드가 새 출처를 보내는 런타임 상황을 위한 안전망. */
 const FALLBACK_STYLE = 'border-neutral-300 text-neutral-600';
 const EMPTY_STYLE = 'border-neutral-200 text-neutral-400';
 

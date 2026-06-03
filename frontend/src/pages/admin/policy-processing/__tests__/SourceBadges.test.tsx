@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { SourceType } from '@/types/policy';
 import { SourceBadges } from '../SourceBadges';
 
 describe('SourceBadges', () => {
@@ -21,8 +22,9 @@ describe('SourceBadges', () => {
     expect(screen.getByText('출처없음')).toBeInTheDocument();
   });
 
-  it('알 수 없는 코드는 라벨을 그대로 중립 색으로 렌더한다', () => {
-    render(<SourceBadges sources={[{ code: 'UNKNOWN', label: '기타' }]} />);
+  it('타입에 없는 코드(런타임)에도 라벨을 그대로 중립 색으로 렌더한다', () => {
+    // 백엔드가 SourceType 에 새 출처를 추가했지만 프런트 타입이 아직 안 좁혀진 런타임 상황을 모사.
+    render(<SourceBadges sources={[{ code: 'UNKNOWN' as SourceType, label: '기타' }]} />);
     expect(screen.getByText('기타')).toBeInTheDocument();
   });
 });
