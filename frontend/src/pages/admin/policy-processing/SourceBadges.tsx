@@ -29,14 +29,16 @@ interface Props {
  * 출처가 여러 개면 전부 나열하고, 없으면 "출처없음" 중립 뱃지를 보여준다.
  */
 export function SourceBadges({ sources }: Props) {
-  if (sources.length === 0) {
+  // 백엔드가 아직 sources 필드를 내려주지 않는 응답(구버전/부분 응답)에도 렌더가 깨지지 않도록 방어.
+  const list = sources ?? [];
+  if (list.length === 0) {
     return (
       <span className={cn(BADGE_BASE, EMPTY_STYLE)}>출처없음</span>
     );
   }
   return (
     <span className="flex flex-wrap gap-1">
-      {sources.map((s) => (
+      {list.map((s) => (
         <span
           key={s.code}
           className={cn(BADGE_BASE, SOURCE_STYLE[s.code] ?? FALLBACK_STYLE)}

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SourceType } from '@/types/policy';
+import type { SourceTag } from '@/types/adminPolicyProcessing';
 import { SourceBadges } from '../SourceBadges';
 
 describe('SourceBadges', () => {
@@ -19,6 +20,12 @@ describe('SourceBadges', () => {
 
   it('출처가 없으면 출처없음 뱃지를 렌더한다', () => {
     render(<SourceBadges sources={[]} />);
+    expect(screen.getByText('출처없음')).toBeInTheDocument();
+  });
+
+  it('sources 가 undefined(구버전 백엔드 응답)여도 크래시 없이 출처없음을 렌더한다', () => {
+    // 백엔드가 아직 sources 필드를 내려주지 않는 경우를 모사. 렌더가 throw 하면 안 된다.
+    render(<SourceBadges sources={undefined as unknown as SourceTag[]} />);
     expect(screen.getByText('출처없음')).toBeInTheDocument();
   });
 
