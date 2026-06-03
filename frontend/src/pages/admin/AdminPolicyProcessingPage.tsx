@@ -18,6 +18,7 @@ import type {
   ProcessingStep,
   Sort,
 } from '@/types/adminPolicyProcessing';
+import { isSourceType } from '@/types/policy';
 
 /**
  * 어드민 정책 처리 현황 대시보드 페이지.
@@ -32,18 +33,19 @@ import type {
  */
 export default function AdminPolicyProcessingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const params = useMemo<PolicyProcessingListParams>(
-    () => ({
+  const params = useMemo<PolicyProcessingListParams>(() => {
+    // 잘못된 sourceType(북마크/직접 편집된 URL)은 백엔드 400 을 유발하므로 조용히 무시(전체 출처)한다.
+    const rawSource = searchParams.get('sourceType');
+    return {
       q: searchParams.get('q') ?? undefined,
       region: searchParams.get('region') ?? undefined,
-      sourceType: searchParams.get('sourceType') ?? undefined,
+      sourceType: isSourceType(rawSource) ? rawSource : undefined,
       filter: (searchParams.get('filter') as Filter | null) ?? 'ALL',
       sort: (searchParams.get('sort') as Sort | null) ?? 'UPDATED_DESC',
       page: Number(searchParams.get('page') ?? 0),
       size: Number(searchParams.get('size') ?? 50),
-    }),
-    [searchParams],
-  );
+    };
+  }, [searchParams]);
 
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [reprocessFor, setReprocessFor] = useState<{ id: number; title: string } | null>(null);
