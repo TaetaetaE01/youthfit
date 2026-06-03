@@ -90,7 +90,10 @@
       "position": [
         440,
         0
-      ]
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -162,7 +165,10 @@
       "position": [
         1320,
         100
-      ]
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
