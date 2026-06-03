@@ -50,6 +50,8 @@ public interface AdminPolicyProcessingApi {
             @RequestParam(required = false) String q,
             @Parameter(description = "지역 코드 필터")
             @RequestParam(required = false) String region,
+            @Parameter(description = "출처 타입 필터 (YOUTH_SEOUL_CRAWL/BOKJIRO_CENTRAL/YOUTH_CENTER)")
+            @RequestParam(required = false) String sourceType,
             @Parameter(description = "처리 상태 필터")
             @RequestParam(defaultValue = "ALL") String filter,
             @Parameter(description = "정렬")
