@@ -50,6 +50,7 @@ function cleanParams(params: PolicyProcessingListParams): Record<string, string>
   const out: Record<string, string> = {};
   if (params.q) out.q = params.q;
   if (params.region) out.region = params.region;
+  if (params.sourceType) out.sourceType = params.sourceType;
   if (params.filter) out.filter = params.filter;
   if (params.sort) out.sort = params.sort;
   if (params.page !== undefined) out.page = String(params.page);

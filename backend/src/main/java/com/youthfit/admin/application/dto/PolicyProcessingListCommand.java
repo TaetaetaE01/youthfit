@@ -1,8 +1,11 @@
 package com.youthfit.admin.application.dto;
 
+import com.youthfit.policy.domain.model.SourceType;
+
 public record PolicyProcessingListCommand(
     String query,
     String region,
+    SourceType sourceType,
     PolicyProcessingFilter filter,
     PolicyProcessingSort sort,
     int page,

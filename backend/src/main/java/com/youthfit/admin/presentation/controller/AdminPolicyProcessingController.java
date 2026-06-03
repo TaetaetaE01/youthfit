@@ -13,6 +13,7 @@ import com.youthfit.admin.presentation.dto.response.ReprocessResponse;
 import com.youthfit.common.exception.ErrorCode;
 import com.youthfit.common.exception.YouthFitException;
 import com.youthfit.policy.domain.model.ProcessingStep;
+import com.youthfit.policy.domain.model.SourceType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,7 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
     public ResponseEntity<PolicyProcessingListResponse> getPolicies(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String region,
+            @RequestParam(required = false) String sourceType,
             @RequestParam(defaultValue = "ALL") String filter,
             @RequestParam(defaultValue = "UPDATED_DESC") String sort,
             @RequestParam(defaultValue = "0") int page,
@@ -55,6 +57,7 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
         PolicyProcessingListCommand command = new PolicyProcessingListCommand(
                 q,
                 region,
+                parseSourceType(sourceType),
                 parseFilter(filter),
                 parseSort(sort),
                 page,
@@ -90,6 +93,24 @@ public class AdminPolicyProcessingController implements AdminPolicyProcessingApi
         } catch (IllegalArgumentException e) {
             throw new YouthFitException(ErrorCode.INVALID_INPUT,
                     "지원하지 않는 sort: " + raw);
+        }
+    }
+
+    /**
+     * {@code sourceType} 쿼리 파라미터를 {@link SourceType} 으로 변환.
+     *
+     * <p>null/빈 문자열은 "출처 필터 없음"(null) 으로 처리한다.
+     * 잘못된 값이면 {@link ErrorCode#INVALID_INPUT} 으로 400 응답을 던진다.</p>
+     */
+    private static SourceType parseSourceType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return SourceType.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new YouthFitException(ErrorCode.INVALID_INPUT,
+                    "지원하지 않는 sourceType: " + raw);
         }
     }
 

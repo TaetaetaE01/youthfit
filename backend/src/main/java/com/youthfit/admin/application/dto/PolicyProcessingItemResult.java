@@ -5,6 +5,7 @@ import com.youthfit.policy.domain.model.ProcessingStatus;
 import com.youthfit.policy.domain.model.ProcessingStep;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 public record PolicyProcessingItemResult(
@@ -15,5 +16,6 @@ public record PolicyProcessingItemResult(
     Map<ProcessingStep, ProcessingStatus> stepStatuses,
     AttachmentSummaryResult attachments,
     ReferenceSummaryResult references,
+    List<SourceTagResult> sources,
     LocalDateTime updatedAt
 ) {}

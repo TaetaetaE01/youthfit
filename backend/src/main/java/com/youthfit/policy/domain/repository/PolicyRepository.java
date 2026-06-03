@@ -64,7 +64,8 @@ public interface PolicyRepository {
      * @param pageable 페이지·사이즈 정보 (Sort 는 무시되고 위의 sort 가 적용된다)
      * @return Policy 페이지
      */
-    Page<Policy> findForAdminProcessing(String query, String region, Sort sort, Pageable pageable);
+    Page<Policy> findForAdminProcessing(String query, String region, SourceType sourceType,
+                                        Sort sort, Pageable pageable);
 
     /**
      * 어드민 정책 처리 현황 KPI 집계용 전체 정책 조회.

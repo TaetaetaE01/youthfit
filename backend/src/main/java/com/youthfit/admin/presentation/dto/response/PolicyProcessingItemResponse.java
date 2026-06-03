@@ -5,6 +5,7 @@ import com.youthfit.admin.domain.model.PolicyProcessingCompleteness;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,8 @@ public record PolicyProcessingItemResponse(
         Map<String, String> stepStatuses,
         @Schema(description = "첨부 집계") AttachmentSummaryResponse attachments,
         @Schema(description = "참조 사이트 집계") ReferenceSummaryResponse references,
+        @Schema(description = "정책 출처 태그 목록 (여러 소스가 묶이면 전부)")
+        List<SourceTagResponse> sources,
         @Schema(description = "처리 단계 최근 갱신 시각") LocalDateTime updatedAt
 ) {
     public static PolicyProcessingItemResponse from(PolicyProcessingItemResult r) {
@@ -43,6 +46,7 @@ public record PolicyProcessingItemResponse(
                 stepStatuses,
                 AttachmentSummaryResponse.from(r.attachments()),
                 ReferenceSummaryResponse.from(r.references()),
+                r.sources().stream().map(SourceTagResponse::from).toList(),
                 r.updatedAt()
         );
     }

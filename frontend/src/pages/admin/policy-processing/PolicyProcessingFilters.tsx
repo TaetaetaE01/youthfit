@@ -3,6 +3,8 @@ import type {
   PolicyProcessingListParams,
   Sort,
 } from '@/types/adminPolicyProcessing';
+import type { SourceType } from '@/types/policy';
+import { SOURCE_LABELS, SOURCE_TYPE_VALUES } from '@/types/policy';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -45,6 +47,24 @@ export function PolicyProcessingFilters({ params, onChange, chipCounts }: Props)
           <option value="UPDATED_DESC">업데이트 최신순</option>
           <option value="COMPLETENESS_ASC">완성도 미흡순</option>
           <option value="ID_ASC">ID 순</option>
+        </select>
+        <select
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
+          value={params.sourceType ?? ''}
+          onChange={(e) =>
+            onChange({
+              ...params,
+              sourceType: (e.target.value || undefined) as SourceType | undefined,
+              page: 0,
+            })
+          }
+        >
+          <option value="">전체 출처</option>
+          {SOURCE_TYPE_VALUES.map((t) => (
+            <option key={t} value={t}>
+              {SOURCE_LABELS[t]}
+            </option>
+          ))}
         </select>
       </div>
       <div className="flex items-center gap-2 flex-wrap">

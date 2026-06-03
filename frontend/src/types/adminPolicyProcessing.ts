@@ -10,6 +10,8 @@
  *   직렬화하지만 `string` 으로 받는다 (도메인 enum 누수 방지를 위한 의도된 평탄화).
  */
 
+import type { SourceType } from '@/types/policy';
+
 export type ProcessingStep = 'INGESTION' | 'ENRICHMENT' | 'GUIDE' | 'RULE' | 'RAG_INDEXING';
 
 export type ProcessingStatus = 'PENDING' | 'IN_PROGRESS' | 'SUCCESS' | 'SKIPPED' | 'FAILED';
@@ -39,6 +41,13 @@ export interface ReferenceSummary {
   succeeded: number;
 }
 
+export interface SourceTag {
+  /** 백엔드 SourceType#name() — 닫힌 집합. `@/types/policy` 의 SourceType 와 1:1 대응. */
+  code: SourceType;
+  /** 한글 표시명 */
+  label: string;
+}
+
 export interface PolicyProcessingItem {
   policyId: number;
   title: string;
@@ -47,6 +56,7 @@ export interface PolicyProcessingItem {
   stepStatuses: Partial<Record<ProcessingStep, ProcessingStatus>>;
   attachments: AttachmentSummary;
   references: ReferenceSummary;
+  sources: SourceTag[];
   updatedAt: string;
 }
 
@@ -120,6 +130,7 @@ export interface ReprocessResult {
 export interface PolicyProcessingListParams {
   q?: string;
   region?: string;
+  sourceType?: SourceType;
   filter?: Filter;
   sort?: Sort;
   page?: number;
