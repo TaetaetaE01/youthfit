@@ -100,6 +100,7 @@ public class AdminPolicyProcessingService {
         Page<Policy> policyPage = policyRepository.findForAdminProcessing(
                 command.query(),
                 command.region(),
+                null, // TODO(Task 4): command.sourceType()
                 toSpringSort(command.sort()),
                 PageRequest.of(command.page(), command.size())
         );

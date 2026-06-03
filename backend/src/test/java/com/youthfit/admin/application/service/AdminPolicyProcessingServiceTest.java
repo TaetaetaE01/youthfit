@@ -551,7 +551,7 @@ class AdminPolicyProcessingServiceTest {
         Policy p2 = mockPolicy(2L, "정책2", "11");
         Policy p3 = mockPolicy(3L, "정책3", "11");
         Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
-        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
         // p1 → RAG FAILED → INCOMPLETE
         // p2, p3 → RAG SUCCESS, 첨부 없음 → COMPLETE
@@ -584,7 +584,7 @@ class AdminPolicyProcessingServiceTest {
         Policy p2 = mockPolicy(2L, "partial-policy", "11");
         Policy p3 = mockPolicy(3L, "incomplete-policy", "11");
         Page<Policy> page = new PageImpl<>(List.of(p1, p2, p3), Pageable.ofSize(50), 3L);
-        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+        given(policyRepository.findForAdminProcessing(isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
         given(stepRepository.findLatestStatusMapByPolicyIds(anyList())).willReturn(Map.of(
                 1L, Map.of(ProcessingStep.RAG_INDEXING, ProcessingStatus.SUCCESS),
@@ -697,7 +697,7 @@ class AdminPolicyProcessingServiceTest {
         lenient().when(policy.getRegionCode()).thenReturn(regionCode);
         Page<Policy> page = new PageImpl<>(List.of(policy));
         given(policyRepository.findForAdminProcessing(
-                isNull(), isNull(), any(Sort.class), any(Pageable.class)))
+                isNull(), isNull(), any(), any(Sort.class), any(Pageable.class)))
                 .willReturn(page);
     }
 }
