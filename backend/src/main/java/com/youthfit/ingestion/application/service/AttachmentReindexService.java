@@ -2,6 +2,9 @@ package com.youthfit.ingestion.application.service;
 
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
+import com.youthfit.ingestion.application.dto.command.AttachmentEmbeddingJudgeCommand;
+import com.youthfit.ingestion.application.dto.result.AttachmentEmbeddingResult;
+import com.youthfit.ingestion.application.port.AttachmentEmbeddingJudge;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -17,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -30,11 +34,15 @@ public class AttachmentReindexService {
     private static final Pattern PAGE_SENTINEL =
             Pattern.compile("\\f<page=([^>]+)>\\n");
 
+    private static final int MIN_ATTACHMENTS_FOR_GATE = 2;
+    private static final int PREVIEW_CHARS = 1500;
+
     private final PolicyRepository policyRepository;
     private final PolicyAttachmentRepository attachmentRepository;
     private final RagIndexingService ragIndexingService;
     private final ApplicationEventPublisher eventPublisher;
     private final CostGuard costGuard;
+    private final AttachmentEmbeddingJudge embeddingJudge;
 
     @Setter
     @Value("${attachment.reindex.max-content-kb:200}")
@@ -54,7 +62,8 @@ public class AttachmentReindexService {
         Long resolvedId = policy.getId();
 
         List<PolicyAttachment> attachments = attachmentRepository.findExtractedByPolicyId(resolvedId);
-        String merged = mergeContent(policy, attachments);
+        List<PolicyAttachment> selected = selectForEmbedding(policy, attachments);
+        String merged = mergeContent(policy, selected);
 
         IndexPolicyDocumentCommand cmd = new IndexPolicyDocumentCommand(resolvedId, merged, policy.getEnrichment());
         IndexingResult result = ragIndexingService.indexPolicyDocument(cmd);
@@ -64,6 +73,61 @@ public class AttachmentReindexService {
             eventPublisher.publishEvent(new PolicyAttachmentReindexedEvent(resolvedId));
             log.info("attachment reindex event published: policyId={}", resolvedId);
         }
+    }
+
+    /**
+     * 첨부 ≥2개일 때 LLM 게이트로 임베딩 가치를 판정하고,
+     * 포함 판정(또는 미판정·1개 이하)인 첨부만 반환한다.
+     */
+    List<PolicyAttachment> selectForEmbedding(Policy policy, List<PolicyAttachment> attachments) {
+        if (attachments.size() < MIN_ATTACHMENTS_FOR_GATE) {
+            return attachments;
+        }
+        List<PolicyAttachment> undecided = attachments.stream()
+                .filter(a -> a.getEmbeddingIncluded() == null)
+                .toList();
+        if (!undecided.isEmpty()) {
+            judgeAndPersist(policy, undecided);
+        }
+        // embeddingIncluded == false 인 것만 제외. null(판정 안 됨)·true 는 포함.
+        return attachments.stream()
+                .filter(a -> !Boolean.FALSE.equals(a.getEmbeddingIncluded()))
+                .toList();
+    }
+
+    private void judgeAndPersist(Policy policy, List<PolicyAttachment> undecided) {
+        try {
+            AttachmentEmbeddingResult result = embeddingJudge.judge(toCommand(policy, undecided));
+            for (PolicyAttachment a : undecided) {
+                AttachmentEmbeddingResult.AttachmentDecision d =
+                        result.findByAttachmentId(a.getId()).orElse(null);
+                if (d == null) {
+                    a.decideEmbedding(true, "gate-no-decision"); // 누락 → 보수적 포함
+                } else {
+                    a.decideEmbedding(d.embed(), d.reason());
+                }
+                attachmentRepository.save(a);
+            }
+        } catch (Exception e) {
+            log.warn("attachment embedding gate 실패, fail-open 으로 전체 포함: policyId={} err={}",
+                    policy.getId(), e.toString());
+            for (PolicyAttachment a : undecided) {
+                a.decideEmbedding(true, "gate-failed: " + e.getClass().getSimpleName());
+                attachmentRepository.save(a);
+            }
+        }
+    }
+
+    private AttachmentEmbeddingJudgeCommand toCommand(Policy policy, List<PolicyAttachment> undecided) {
+        List<AttachmentEmbeddingJudgeCommand.AttachmentItem> items = new ArrayList<>();
+        for (PolicyAttachment a : undecided) {
+            String text = a.getExtractedText() == null ? "" : a.getExtractedText();
+            String preview = text.length() > PREVIEW_CHARS ? text.substring(0, PREVIEW_CHARS) : text;
+            items.add(new AttachmentEmbeddingJudgeCommand.AttachmentItem(a.getId(), a.getName(), preview));
+        }
+        String summary = policy.getBody() == null ? "" :
+                (policy.getBody().length() > 300 ? policy.getBody().substring(0, 300) : policy.getBody());
+        return new AttachmentEmbeddingJudgeCommand(policy.getTitle(), summary, items);
     }
 
     String mergeContent(Policy policy, List<PolicyAttachment> attachments) {
