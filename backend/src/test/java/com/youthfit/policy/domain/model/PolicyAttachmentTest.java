@@ -136,10 +136,49 @@ class PolicyAttachmentTest {
     }
 
     @Test
-    void markPendingReextraction_은_PENDING_상태에서_호출하면_예외() {
+    void markPendingReextraction_은_SKIPPED에서도_허용() {
         PolicyAttachment a = newAttachment();
-        assertThatThrownBy(a::markPendingReextraction)
-                .isInstanceOf(IllegalStateException.class);
+        a.markDownloading();
+        a.markDownloaded("k", "h");
+        a.markExtracting();
+        a.markSkipped(SkipReason.SCANNED_PDF);
+        a.markPendingReextraction();
+        assertThat(a.getExtractionStatus()).isEqualTo(AttachmentStatus.PENDING);
+        assertThat(a.getSkipReason()).isNull();
+    }
+
+    @Test
+    void markPendingReextraction_은_PENDING_상태에서_호출하면_멱등_noop() {
+        PolicyAttachment a = newAttachment();
+        a.markPendingReextraction();
+        assertThat(a.getExtractionStatus()).isEqualTo(AttachmentStatus.PENDING);
+        assertThat(a.getExtractionRetryCount()).isZero();
+    }
+
+    @Test
+    void markPendingReextraction_은_진행중_상태에서_호출하면_noop으로_상태_보존() {
+        // DOWNLOADING (in-flight) → 그대로
+        PolicyAttachment downloading = newAttachment();
+        downloading.markDownloading();
+        downloading.markPendingReextraction();
+        assertThat(downloading.getExtractionStatus()).isEqualTo(AttachmentStatus.DOWNLOADING);
+
+        // DOWNLOADED (다운로드 완료·추출 전) → 그대로, 이미 받은 storageKey/fileHash 보존
+        PolicyAttachment downloaded = newAttachment();
+        downloaded.markDownloading();
+        downloaded.markDownloaded("k", "h");
+        downloaded.markPendingReextraction();
+        assertThat(downloaded.getExtractionStatus()).isEqualTo(AttachmentStatus.DOWNLOADED);
+        assertThat(downloaded.getStorageKey()).isEqualTo("k");
+        assertThat(downloaded.getFileHash()).isEqualTo("h");
+
+        // EXTRACTING (in-flight) → 그대로
+        PolicyAttachment extracting = newAttachment();
+        extracting.markDownloading();
+        extracting.markDownloaded("k", "h");
+        extracting.markExtracting();
+        extracting.markPendingReextraction();
+        assertThat(extracting.getExtractionStatus()).isEqualTo(AttachmentStatus.EXTRACTING);
     }
 
     @Test
