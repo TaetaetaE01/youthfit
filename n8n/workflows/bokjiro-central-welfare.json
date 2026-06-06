@@ -17,7 +17,10 @@
       "name": "매일 새벽 3시 실행",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -30,7 +33,10 @@
       "name": "수동 실행 트리거",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 200],
+      "position": [
+        0,
+        200
+      ],
       "webhookId": "bokjiro-manual-trigger"
     },
     {
@@ -41,7 +47,10 @@
       "name": "페이지 초기화",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -49,12 +58,30 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "serviceKey", "value": "={{ $env.BOKJIRO_SERVICE_KEY }}" },
-            { "name": "callTp", "value": "L" },
-            { "name": "pageNo", "value": "={{ $json.pageNo }}" },
-            { "name": "numOfRows", "value": "30" },
-            { "name": "srchKeyCode", "value": "001" },
-            { "name": "lifeArray", "value": "004" }
+            {
+              "name": "serviceKey",
+              "value": "={{ $env.BOKJIRO_SERVICE_KEY }}"
+            },
+            {
+              "name": "callTp",
+              "value": "L"
+            },
+            {
+              "name": "pageNo",
+              "value": "={{ $json.pageNo }}"
+            },
+            {
+              "name": "numOfRows",
+              "value": "30"
+            },
+            {
+              "name": "srchKeyCode",
+              "value": "001"
+            },
+            {
+              "name": "lifeArray",
+              "value": "004"
+            }
           ]
         },
         "options": {
@@ -84,17 +111,23 @@
       "name": "목록 API 호출",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const xml = $input.first().json.data || '';\nconst pageNo = $('페이지 초기화').first()?.json?.pageNo\n  || $('다음 페이지 이동').first()?.json?.pageNo\n  || 1;\n\n// resultCode 확인\nconst codeMatch = xml.match(/<resultCode>([^<]+)<\\/resultCode>/);\nconst resultCode = codeMatch ? codeMatch[1].trim() : '';\nif (resultCode && resultCode !== '0') {\n  const msgMatch = xml.match(/<resultMessage>([^<]+)<\\/resultMessage>/);\n  const msg = msgMatch ? msgMatch[1].trim() : '';\n  throw new Error(`복지로 API error: ${resultCode} ${msg}`);\n}\n\nconst totalCount = parseInt((xml.match(/<totalCount>([^<]+)<\\/totalCount>/) || [,'0'])[1], 10) || 0;\nconst numOfRows = 30;\nconst lastPage = Math.max(1, Math.ceil(totalCount / numOfRows));\n\n// servList 블록별로 servId 추출\nconst blockRegex = /<servList>([\\s\\S]*?)<\\/servList>/g;\nconst items = [];\nlet m;\nwhile ((m = blockRegex.exec(xml)) !== null) {\n  const idMatch = m[1].match(/<servId>([^<]+)<\\/servId>/);\n  if (idMatch) {\n    items.push({ json: { servId: idMatch[1].trim(), pageNo, lastPage, totalCount } });\n  }\n}\n\nif (items.length === 0) {\n  return [{ json: { empty: true, pageNo, lastPage, totalCount } }];\n}\nreturn items;"
+        "jsCode": "const xml = $input.first().json.data || '';\nconst pageNo = $('페이지 초기화').first()?.json?.pageNo\n  || $('다음 페이지 이동').first()?.json?.pageNo\n  || 1;\n\n// resultCode 확인\nconst codeMatch = xml.match(/<resultCode>([^<]+)<\\/resultCode>/);\nconst resultCode = codeMatch ? codeMatch[1].trim() : '';\nif (resultCode && resultCode !== '0') {\n  const msgMatch = xml.match(/<resultMessage>([^<]+)<\\/resultMessage>/);\n  const msg = msgMatch ? msgMatch[1].trim() : '';\n  throw new Error(`복지로 API error: ${resultCode} ${msg}`);\n}\n\nconst totalCount = parseInt((xml.match(/<totalCount>([^<]+)<\\/totalCount>/) || [,'0'])[1], 10) || 0;\nconst numOfRows = 30;\nconst lastPage = Math.max(1, Math.ceil(totalCount / numOfRows));\n\n// servList 블록별로 servId 추출\nconst blockRegex = /<servList>([\\s\\S]*?)<\\/servList>/g;\nconst items = [];\nlet m;\nwhile ((m = blockRegex.exec(xml)) !== null) {\n  const idMatch = m[1].match(/<servId>([^<]+)<\\/servId>/);\n  // 생애주기(lifeArray) 기반 청년 필터\n  const laMatch = m[1].match(/<lifeArray>([^<]*)<\\/lifeArray>/);\n  const lifeArray = laMatch ? laMatch[1].trim() : '';\n  const stages = lifeArray.split(/[,\\uFF0C]/).map(s => s.trim()).filter(Boolean);\n  // 청년 전용만: lifeArray 가 '청년' 단독 태그 (청소년·아동·중장년·노년 혼합 제외, 데이터 품질상 高정밀 우선)\n  const isYouth = stages.length === 1 && stages[0] === '청년';\n  if (idMatch && isYouth) {\n    items.push({ json: { servId: idMatch[1].trim(), lifeArray, pageNo, lastPage, totalCount } });\n  }\n}\n\nif (items.length === 0) {\n  return [{ json: { empty: true, pageNo, lastPage, totalCount } }];\n}\nreturn items;"
       },
       "id": "extract-servids",
       "name": "servId 추출",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
@@ -105,7 +138,10 @@
       "name": "정책별 순차 처리",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -116,7 +152,10 @@
       "name": "1초 대기",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1100, 100]
+      "position": [
+        1100,
+        100
+      ]
     },
     {
       "parameters": {
@@ -124,9 +163,18 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "serviceKey", "value": "={{ $env.BOKJIRO_SERVICE_KEY }}" },
-            { "name": "callTp", "value": "D" },
-            { "name": "servId", "value": "={{ $json.servId }}" }
+            {
+              "name": "serviceKey",
+              "value": "={{ $env.BOKJIRO_SERVICE_KEY }}"
+            },
+            {
+              "name": "callTp",
+              "value": "D"
+            },
+            {
+              "name": "servId",
+              "value": "={{ $json.servId }}"
+            }
           ]
         },
         "options": {
@@ -156,7 +204,10 @@
       "name": "상세 API 호출",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 100]
+      "position": [
+        1320,
+        100
+      ]
     },
     {
       "parameters": {
@@ -166,7 +217,10 @@
       "name": "상세 XML 파싱",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 100]
+      "position": [
+        1540,
+        100
+      ]
     },
     {
       "parameters": {
@@ -175,8 +229,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Internal-Api-Key", "value": "={{ $env.INTERNAL_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
@@ -190,7 +250,10 @@
       "name": "백엔드 API 전송",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 100]
+      "position": [
+        1760,
+        100
+      ]
     },
     {
       "parameters": {
@@ -200,7 +263,10 @@
       "name": "다음 페이지 확인",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, -200]
+      "position": [
+        1100,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -229,7 +295,10 @@
       "name": "다음 페이지 존재?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1320, -200]
+      "position": [
+        1320,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -239,7 +308,10 @@
       "name": "다음 페이지 이동",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -300]
+      "position": [
+        1540,
+        -300
+      ]
     },
     {
       "parameters": {
@@ -249,63 +321,314 @@
       "name": "수집 완료",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -100]
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies/external-hashes",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "BOKJIRO_CENTRAL"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "bokjiro-fetch-external-hashes",
+      "name": "외부 hash 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "executeOnce": true,
+      "position": [
+        720,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hashMap = $('외부 hash 조회').first().json || {};\nconst items = $('servId 추출').all();\nconst out = [];\nfor (const item of items) {\n  const p = item.json;\n  if (p.empty) continue;            // 빈 페이지 캐리어 제외\n  if (hashMap[p.servId] == null) {  // DB 에 아직 없는 신규 servId 만 (상세 API 쿼터 절약)\n    out.push({ json: p });\n  }\n}\n// 이 페이지에 신규 청년 정책이 없으면 빈 캐리어로 pagination 유지\nif (out.length === 0) {\n  const f = (items[0] && items[0].json) || {};\n  return [{ json: { empty: true, pageNo: f.pageNo, lastPage: f.lastPage, totalCount: f.totalCount } }];\n}\nreturn out;\n"
+      },
+      "id": "bokjiro-filter-new-servid",
+      "name": "신규 servId 필터",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-servid",
+              "leftValue": "={{ $json.servId ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bokjiro-if-has-servid",
+      "name": "상세 대상 여부",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        120
+      ]
     }
   ],
   "connections": {
     "매일 새벽 3시 실행": {
-      "main": [[{ "node": "페이지 초기화", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "페이지 초기화",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "수동 실행 트리거": {
-      "main": [[{ "node": "페이지 초기화", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "페이지 초기화",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "페이지 초기화": {
-      "main": [[{ "node": "목록 API 호출", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "목록 API 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "목록 API 호출": {
-      "main": [[{ "node": "servId 추출", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "servId 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "servId 추출": {
-      "main": [[{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "외부 hash 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "정책별 순차 처리": {
       "main": [
-        [{ "node": "다음 페이지 확인", "type": "main", "index": 0 }],
-        [{ "node": "1초 대기", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "다음 페이지 확인",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "상세 대상 여부",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "1초 대기": {
-      "main": [[{ "node": "상세 API 호출", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "상세 API 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "상세 API 호출": {
-      "main": [[{ "node": "상세 XML 파싱", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "상세 XML 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "상세 XML 파싱": {
-      "main": [[{ "node": "백엔드 API 전송", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "백엔드 API 전송",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "백엔드 API 전송": {
-      "main": [[{ "node": "정책별 순차 처리", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "다음 페이지 확인": {
-      "main": [[{ "node": "다음 페이지 존재?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "다음 페이지 존재?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "다음 페이지 존재?": {
       "main": [
-        [{ "node": "다음 페이지 이동", "type": "main", "index": 0 }],
-        [{ "node": "수집 완료", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "다음 페이지 이동",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "수집 완료",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "다음 페이지 이동": {
-      "main": [[{ "node": "목록 API 호출", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "목록 API 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "외부 hash 조회": {
+      "main": [
+        [
+          {
+            "node": "신규 servId 필터",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "신규 servId 필터": {
+      "main": [
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상세 대상 여부": {
+      "main": [
+        [
+          {
+            "node": "1초 대기",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
   "tags": [
-    { "name": "api-ingest" },
-    { "name": "bokjiro" },
-    { "name": "youth-policy" }
+    {
+      "name": "api-ingest"
+    },
+    {
+      "name": "bokjiro"
+    },
+    {
+      "name": "youth-policy"
+    }
   ],
   "meta": {
     "instanceId": "youthfit"
