@@ -121,9 +121,24 @@ YouthFit 백엔드의 JPA 엔티티 및 테이블 스키마 레퍼런스. 모듈
 ### 2.2 PolicyAttachment — `policy_attachment`
 정책 첨부파일(공고문 PDF 등).
 
-- `policy_id` (FK, `@ManyToOne`)
-- `name`(300), `url`(1000), `media_type`(100)
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| policy_id | BIGINT FK | |
+| name | VARCHAR(300) | 파일명 |
+| url | VARCHAR(1000) | 원본 다운로드 URL |
+| media_type | VARCHAR(100) | MIME 타입 |
+| extraction_status | VARCHAR(20) enum | `AttachmentStatus` — PENDING/DOWNLOADING/DOWNLOADED/EXTRACTING/EXTRACTED/SKIPPED/FAILED |
+| storage_key | VARCHAR(500) | S3/로컬 저장 키 |
+| file_hash | VARCHAR(64) | 다운로드 파일 해시 |
+| extracted_text | TEXT | 추출된 텍스트 |
+| extraction_retry_count | INT | 재시도 횟수 |
+| extraction_error | VARCHAR(500) | 최근 에러 메시지 |
+| skip_reason | VARCHAR(30) enum | `SkipReason` — 추출 스킵 사유 |
+| embedding_included | BOOLEAN nullable | LLM 게이트 판정 결과 (null=미판정, true=포함, false=제외). 재추출(markExtracted) 시 null 로 리셋됨. |
+| embedding_decision_reason | VARCHAR(500) | 게이트 판정 사유 (최대 500자 truncate) |
+
 - `assignTo(Policy)` 는 **패키지 프라이빗** — 외부 모듈이 직접 연결 못 하게 한다. 반드시 `Policy.replaceAttachments()` 경로로 부착.
+- **게이트 캐시**: `embedding_included` 가 non-null 이면 이미 판정된 것으로 간주해 LLM 재호출하지 않는다. 첨부 텍스트가 재추출되면 `markExtracted()` 가 `null` 로 리셋해 다음 인덱싱에서 재판정한다.
 
 ### 2.3 PolicySource — `policy_source`
 정책의 외부 수집원(청년정책 API, 복지로 등) 원천 데이터 보관.
