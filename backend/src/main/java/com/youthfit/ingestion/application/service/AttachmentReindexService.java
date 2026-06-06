@@ -78,6 +78,10 @@ public class AttachmentReindexService {
     /**
      * 첨부 ≥2개일 때 LLM 게이트로 임베딩 가치를 판정하고,
      * 포함 판정(또는 미판정·1개 이하)인 첨부만 반환한다.
+     *
+     * <p>부분 재판정(partial re-judge): 재추출로 일부 첨부만 미판정(null)이 되면 그 첨부만 게이트로 보낸다.
+     * 이미 판정된(non-null) 첨부의 결과는 유지된다(캐시). 전체 일괄 재판정은 하지 않는다 —
+     * markExtracted 시 해당 첨부 판정만 리셋되는 변경감지 정책과 일관된 의도된 동작이다.
      */
     List<PolicyAttachment> selectForEmbedding(Policy policy, List<PolicyAttachment> attachments) {
         if (attachments.size() < MIN_ATTACHMENTS_FOR_GATE) {

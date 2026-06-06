@@ -191,4 +191,60 @@ class AttachmentReindexServiceGateTest {
                     .contains("attachment-id=10").contains("attachment-id=11");
         }
     }
+
+    @Nested
+    @DisplayName("부분 캐시")
+    class PartialCache {
+
+        @Test
+        @DisplayName("하나는 이미 false 판정, 다른 하나는 미판정 — 게이트는 호출되고 미판정 1개만 전달되며 false 판정 첨부는 머지에서 제외된다")
+        void partiallyDecidedCallsGateForUndecidedOnlyAndExcludesPreDecidedFalse() {
+            PolicyAttachment a10 = extracted(10L, "사업안내.hwp", "지원대상-금액-일정");
+            PolicyAttachment a11 = extracted(11L, "동의서.hwp", "개인정보수집동의");
+            a11.decideEmbedding(false, "이전 판정");  // a11 은 이미 false 판정
+            given(attachmentRepository.findExtractedByPolicyId(1L)).willReturn(List.of(a10, a11));
+            given(embeddingJudge.judge(any())).willReturn(new AttachmentEmbeddingResult(List.of(
+                    new AttachmentDecision(10L, true, "실질 내용"))));
+
+            service.reindex(1L);
+
+            // 게이트는 반드시 호출된다 (a10 이 미판정이므로)
+            verify(embeddingJudge).judge(any());
+            // a11(pre-decided false)은 머지에서 제외, a10(embed=true)은 포함
+            ArgumentCaptor<IndexPolicyDocumentCommand> captor =
+                    ArgumentCaptor.forClass(IndexPolicyDocumentCommand.class);
+            verify(ragIndexingService).indexPolicyDocument(captor.capture());
+            String content = captor.getValue().content();
+            assertThat(content).contains("attachment-id=10");
+            assertThat(content).doesNotContain("attachment-id=11");
+        }
+    }
+
+    @Nested
+    @DisplayName("gate-no-decision")
+    class GateNoDecision {
+
+        @Test
+        @DisplayName("LLM 이 일부 id 를 누락 반환하면 누락 첨부는 보수적 포함(gate-no-decision)으로 저장되고 머지에 포함된다")
+        void missingDecisionFallsBackToConservativeInclude() {
+            PolicyAttachment a10 = extracted(10L, "사업안내.hwp", "지원대상-금액-일정");
+            PolicyAttachment a11 = extracted(11L, "동의서.hwp", "개인정보수집동의");
+            given(attachmentRepository.findExtractedByPolicyId(1L)).willReturn(List.of(a10, a11));
+            // 게이트가 a10 만 반환하고 a11 은 누락
+            given(embeddingJudge.judge(any())).willReturn(new AttachmentEmbeddingResult(List.of(
+                    new AttachmentDecision(10L, true, "실질 내용"))));
+
+            service.reindex(1L);
+
+            // a11 은 gate-no-decision 으로 보수적 포함 저장
+            assertThat(a11.getEmbeddingIncluded()).isTrue();
+            verify(attachmentRepository).save(a11);
+            // 머지 content 에 a10·a11 모두 포함
+            ArgumentCaptor<IndexPolicyDocumentCommand> captor =
+                    ArgumentCaptor.forClass(IndexPolicyDocumentCommand.class);
+            verify(ragIndexingService).indexPolicyDocument(captor.capture());
+            String content = captor.getValue().content();
+            assertThat(content).contains("attachment-id=10").contains("attachment-id=11");
+        }
+    }
 }
