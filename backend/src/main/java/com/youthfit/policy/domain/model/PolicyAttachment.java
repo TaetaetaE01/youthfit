@@ -111,10 +111,10 @@ public class PolicyAttachment extends BaseTimeEntity {
     }
 
     public void markPendingReextraction() {
-        if (extractionStatus != AttachmentStatus.EXTRACTED
-                && extractionStatus != AttachmentStatus.SKIPPED
-                && extractionStatus != AttachmentStatus.FAILED) {
-            throw invalidTransition(AttachmentStatus.PENDING);
+        // 재적재 시 정책의 모든 첨부에 일괄 호출되는 best-effort 동작이므로,
+        // 이미 대기/진행 중인 첨부는 멱등 no-op 으로 두어 재적재를 깨뜨리지 않는다.
+        if (extractionStatus == AttachmentStatus.PENDING || extractionStatus.isInFlight()) {
+            return;
         }
         this.extractionStatus = AttachmentStatus.PENDING;
         this.extractionRetryCount = 0;
