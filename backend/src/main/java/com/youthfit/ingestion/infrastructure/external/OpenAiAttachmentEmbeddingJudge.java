@@ -83,7 +83,11 @@ public class OpenAiAttachmentEmbeddingJudge implements AttachmentEmbeddingJudge 
             throw new IllegalStateException("attachment-gate 응답이 비어 있음");
         }
         publishCostEvent(response);
-        String content = response.get("choices").get(0).get("message").get("content").asText();
+        JsonNode message = response.get("choices").get(0).path("message");
+        String content = message.path("content").asText(null);
+        if (content == null || content.isBlank()) {
+            throw new IllegalStateException("attachment-gate 응답에 content 없음");
+        }
         return parseContent(content);
     }
 
@@ -123,7 +127,8 @@ public class OpenAiAttachmentEmbeddingJudge implements AttachmentEmbeddingJudge 
             }
             return new AttachmentEmbeddingResult(out);
         } catch (Exception e) {
-            throw new IllegalStateException("attachment-gate JSON 파싱 실패: " + json, e);
+            log.warn("attachment-gate JSON 파싱 실패: payload={}", json);
+            throw new IllegalStateException("attachment-gate JSON 파싱 실패", e);
         }
     }
 
