@@ -34,14 +34,18 @@
 
 ### 1-1. 워크플로우 목록
 
-`n8n/workflows/` 디렉토리에 4 개의 워크플로우가 있다.
+`n8n/workflows/` 디렉토리에 6 개의 워크플로우가 있다.
 
 | 파일 | 소스 | 트리거 | 용도 |
 |------|------|--------|------|
-| `youth-seoul-crawl.json` | 청년몽땅정보통 (youth.seoul.go.kr) | 매일 03:00 cron | 서울시 청년 정책 일반 수집 |
+| `youth-seoul-city.json` | 청년몽땅정보통 — 서울시 (`ctList`/tabKind=002) | 매일 03:00 cron + Webhook | 서울시 자체 청년 정책 수집 |
+| `youth-seoul-district.json` | 청년몽땅정보통 — 자치구 (`guList`/tabKind=003) | 매일 03:00 cron + Webhook | 서울 자치구(구별) 청년 정책 수집 |
+| `youth-seoul-external.json` | 청년몽땅정보통 — 중앙·타지역 (`youthPlcyInfo`) | 매일 03:00 cron + Webhook | 중앙부처·타지역 청년 정책 수집 |
 | `youth-center-seoul.json` | 온라인청년센터 | 매일 03:00 cron | 중앙부처 정책 수집 |
 | `bokjiro-central-welfare.json` | 복지로 (bokjiro.go.kr) | 매일 03:00 cron + Webhook | 중앙부처 복지 정책 수집 |
 | `force-enrich.json` | (백엔드 콜백 전용) | Webhook | 특정 정책 enrichment 강제 재실행 |
+
+> **청년몽땅정보통(youth.seoul.go.kr) 은 카테고리별 3 워크플로우로 분리한다.** 단일 `youth-seoul-crawl.json` 이 카테고리 루프 버그로 1 페이지만 수집하던 문제를 해소하기 위해, 목록 endpoint·region·plcyBizId 형식만 다른 3 개로 나눴다. 세 워크플로우는 모두 `source_type=YOUTH_SEOUL_CRAWL`, `externalId=plcyBizId` 로 적재하고, 세션쿠키 없이 `pageIndex` GET 루프만으로 페이지네이션한다. 상세 페이지 구조(`<th scope="row">라벨</th><td>값</td>`)가 3 카테고리 전부 동일해 **상세 파서 1 개를 공유**한다.
 
 ### 1-2. 표준 수집 흐름 (youth-seoul 기준)
 
@@ -67,6 +71,20 @@
 (배치 끝나면) [다음 페이지 확인] → 다음 페이지 있으면 목록 요청 반복
 ```
 
+> 위 흐름은 청년몽땅 3 워크플로우 공통이다. 목록 endpoint·tabKind·region 만 카테고리별로 다르다.
+
+### 1-2-1. 청년몽땅 카테고리별 차이
+
+| 워크플로우 | 목록 endpoint | tabKind | region | plcyBizId 형식 | 2026 컷 |
+|---|---|---|---|---|---|
+| `youth-seoul-city` | `plcyInfo/ctList.do` | 002 | `서울특별시` 고정 | `V2026…` (영문+숫자) | `/^V?2026/` |
+| `youth-seoul-district` | `plcyInfo/guList.do` | 003 | 상세 정책 제목 끝 `(○○구)` 추출, 없으면 `서울특별시` | `2026…` (20 자리) | `/^V?2026/` |
+| `youth-seoul-external` | `youthPlcyInfo/list.do` | — | `타지역`/`전국`/시·도명 | `2026…` (20 자리) | `/^V?2026/` |
+
+- **세션쿠키 불필요**: 응답에 `YOUTHID`/`WMONID` 쿠키가 내려오지만 페이지네이션에 필요 없다. 단순 `pageIndex` GET 루프.
+- **공유 상세 파서**: 3 카테고리 상세가 `<th scope="row">` 라벨 구조로 동일. `support_target`(연령·참여요건·학력·전공·취업상태·특화분야·추가단서·참여제한 td 결합)을 `additionalQualification` 으로 적재.
+- **2026 컷오프**: 목록이 등록일 desc 정렬이므로 `/^V?2026/` 미매칭(2025↓) 출현 시 중단.
+
 ### 1-3. 운영 원칙
 
 - **User-Agent**: `YouthFit-Bot/1.0 (+https://youthfit.kr/bot)` (식별 가능한 봇)
@@ -80,14 +98,15 @@
 {
   "source": {
     "url": "https://youth.seoul.go.kr/.../view.do?plcyBizId=V202600006&...",
-    "type": "YOUTH_SEOUL",
+    "type": "YOUTH_SEOUL_CRAWL",
     "fetchedAt": "2026-05-26T03:00:00"
   },
   "rawData": {
+    "externalId": "V202600006",
     "title": "청년 월세 지원",
     "body": "사업개요: ...\n지원대상: ...\n지원내용: ...\n신청방법: ...\n제출서류: ...",
     "category": "복지",
-    "region": "서울",
+    "region": "서울특별시",
     "applyStart": "2026-04-01",
     "applyEnd": "2026-05-31"
   },
@@ -98,6 +117,10 @@
   }
 }
 ```
+
+> ⚠ `externalId` 는 **`rawData.externalId`** 에 둔다(`source` 가 아니다). 백엔드
+> `IngestPolicyRequest` 는 `rawData.externalId()` 만 읽고, `source` 는 `url`/`type`/`fetchedAt`
+> 만 갖는다. n8n 이 `externalId` 를 `source` 에 넣으면 적재 시 무시된다.
 
 ---
 
@@ -231,7 +254,9 @@ n8n 단계에서 정규식으로 못 뽑은 케이스를 위한 다단계 추출
 ## 5. 코드 위치 빠른 참조
 
 ### n8n
-- `n8n/workflows/youth-seoul-crawl.json` — 청년몽땅정보통 표준 수집
+- `n8n/workflows/youth-seoul-city.json` — 청년몽땅정보통 서울시 (`ctList`/tabKind=002)
+- `n8n/workflows/youth-seoul-district.json` — 청년몽땅정보통 자치구 (`guList`/tabKind=003)
+- `n8n/workflows/youth-seoul-external.json` — 청년몽땅정보통 중앙·타지역 (`youthPlcyInfo`)
 - `n8n/workflows/youth-center-seoul.json` — 온라인청년센터
 - `n8n/workflows/bokjiro-central-welfare.json` — 복지로
 - `n8n/workflows/force-enrich.json` — 강제 enrichment

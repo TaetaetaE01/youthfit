@@ -1,0 +1,680 @@
+{
+  "name": "youth-seoul-external",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "매일 새벽 3시 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youth-seoul-external-manual",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "manual-webhook-trigger",
+      "name": "수동 실행 트리거",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "youth-seoul-external-manual-trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 중앙/타지역 단일 카테고리 상수 인라인 (카테고리 루프 제거).\n// 호스트는 반드시 youth.seoul.go.kr (www 없음 — www 는 NXDOMAIN, N8N-1 실증).\n// 목록/상세 endpoint 는 youthPlcyInfo (서울시·자치구의 plcyInfo 와 다름). 실측 lastPage=1.\nreturn [{ json: {\n  pageIndex: 1,\n  listBase: 'https://youth.seoul.go.kr/infoData/youthPlcyInfo/list.do?key=2309160001',\n  detailBase: 'https://youth.seoul.go.kr/infoData/youthPlcyInfo/view.do',\n  detailSuffix: '&key=2309160001',\n  region: '타지역',\n  sourceType: 'YOUTH_SEOUL_CRAWL',\n} }];"
+      },
+      "id": "init-page",
+      "name": "페이지 초기화",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('페이지 초기화').first().json.listBase }}&pageIndex={{ $json.pageIndex }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            }
+          ]
+        }
+      },
+      "id": "fetch-list",
+      "name": "목록 페이지 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// 목록 HTML 에서 plcyBizId 수집 + 2026 컷오프 + lastPage 계산.\n// 목록은 등록일 desc 정렬이므로 2026 아닌 ID 출현 시 마지막 페이지로 간주.\nconst cat = $('페이지 초기화').first().json;\nconst html = $input.first().json.data || $input.first().json.body || '';\n\n// 현재 페이지 번호: 목록 hidden input 우선, 없으면 직전 입력의 pageIndex\nconst pageIdxMatch = html.match(/name=\"pageIndex\"[^>]*value=\"(\\d+)\"/);\nconst currentPage = pageIdxMatch ? parseInt(pageIdxMatch[1], 10) : ($json.pageIndex || 1);\n\n// goView('V202600006') 형식 ID 수집\nconst ids = [...html.matchAll(/goView\\('([A-Za-z0-9]+)'\\)/g)].map(m => m[1]);\n\n// 2026 판정: 서울시 'V2026…' (V + YYYY + 일련번호)\nconst is2026 = (id) => /^V?2026/.test(id);\nconst ids2026 = ids.filter(is2026);\nconst anyOlder = ids.some(id => !is2026(id));   // 2025↓ 출현 → 컷\n\n// 마지막 페이지: fn_egov_link_page(N) 최댓값\nconst pages = [...html.matchAll(/fn_egov_link_page\\((\\d+)\\)/g)].map(m => parseInt(m[1], 10));\nconst lastPage = pages.length ? Math.max(...pages) : currentPage;\n\n// plcyBizId 를 static data 에 누적 (item splitInBatches 없이)\nconst sd = $getWorkflowStaticData('global');\nif (!Array.isArray(sd.collected)) sd.collected = [];\nfor (const id of ids2026) sd.collected.push({ plcyBizId: id });\n\nconst cut = anyOlder || ids2026.length === 0;\nconst hasNext = !cut && currentPage < lastPage;\n\n// 페이지 루프 제어용 요약 1건만 emit\nreturn [{ json: {\n  currentPage,\n  lastPage,\n  hasNext,\n  collectedCount: sd.collected.length\n} }];\n"
+      },
+      "id": "extract-ids",
+      "name": "plcyBizId 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// plcyBizId 추출 emit 의 페이지 루프 신호를 그대로 통과.\nconst f = $input.first().json;\nreturn [{ json: { pageIndex: f.currentPage, currentPage: f.currentPage, lastPage: f.lastPage, hasNext: f.hasNext === true } }];"
+      },
+      "id": "check-next-page",
+      "name": "다음 페이지 확인",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-next",
+              "leftValue": "={{ $json.hasNext === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-next",
+      "name": "다음 페이지 존재?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 다음 페이지로 이동 (pageIndex+1).\nconst currentPage = $input.first().json.currentPage || $input.first().json.pageIndex || 1;\nreturn [{ json: { pageIndex: currentPage + 1 } }];"
+      },
+      "id": "next-page",
+      "name": "다음 페이지 이동",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies/external-hashes",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "YOUTH_SEOUL_CRAWL"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "fetch-external-hashes",
+      "name": "외부 hash 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "executeOnce": true,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// external-hash dedup: DB 에 아직 없는 신규 plcyBizId 만 상세 수집 대상으로.\nconst hashMap = $('외부 hash 조회').first().json || {};\nconst sd = $getWorkflowStaticData('global');\nconst items = Array.isArray(sd.collected) ? sd.collected : [];\nconst out = [];\nfor (const p of items) {\n  if (hashMap[p.plcyBizId] == null) out.push({ json: p }); // DB 미존재 신규만\n}\nsd.collected = []; // 다음 실행 위해 리셋\nif (out.length === 0) return [{ json: { empty: true } }]; // 빈 페이지 캐리어\nreturn out;\n"
+      },
+      "id": "filter-new-plcybizid",
+      "name": "신규 plcyBizId 필터",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-policies",
+      "name": "정책별 순차 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1760,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-plcybizid",
+              "leftValue": "={{ $json.plcyBizId ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-plcybizid",
+      "name": "상세 대상 여부",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-wait",
+      "name": "3초 대기 (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('페이지 초기화').first().json.detailBase }}?plcyBizId={{ $json.plcyBizId }}{{ $('페이지 초기화').first().json.detailSuffix }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "YouthFit-Bot/1.0 (+https://youthfit.kr/bot)"
+            }
+          ]
+        }
+      },
+      "id": "fetch-detail",
+      "name": "상세 페이지 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚠ 동기화 미러: n8n/workflows/__fixtures__/youth-seoul-detail/parse-plcyinfo.mjs 의\n//   parsePlcyInfoDetail 본문과 동일 알고리즘이어야 한다(README 동기화 책임).\n//   n8n code 노드는 import 불가 → 함수 본문을 인라인한다.\nconst plcyBizId = $('정책별 순차 처리').first().json.plcyBizId;\nconst init = $('페이지 초기화').first().json;\nconst region = init.region;\nconst sourceUrl = init.detailBase + '?plcyBizId=' + plcyBizId + init.detailSuffix;\nconst rawHtml = $input.first().json.data || $input.first().json.body || '';\n\nconst REF_LABELS = ['관련 사이트', '신청 사이트', '참고 사이트 Ⅰ', '참고 사이트 Ⅱ'];\nconst QUAL_LABELS = ['연령', '참여요건', '학력', '전공요건', '취업상태', '특화분야 요건', '추가단서 사항', '참여제한 대상'];\n\nconst BR_SENTINEL = ' BR ';\n\nfunction escapeRegExp(s) {\n  return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}\nfunction decodeEntities(text) {\n  return String(text)\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#0?39;/g, \"'\")\n    .replace(/&#x27;/gi, \"'\")\n    .replace(/&apos;/g, \"'\")\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&');\n}\nfunction decodeAndStrip(htmlFragment) {\n  let s = String(htmlFragment);\n  s = s.replace(/<br\\s*\\/?>/gi, BR_SENTINEL);\n  s = s.replace(/<[^>]+>/g, '');\n  s = decodeEntities(s);\n  return s;\n}\nfunction normalizeWhitespace(text) {\n  return String(text)\n    .replace(/\\s+/g, ' ')\n    .split(BR_SENTINEL)\n    .map((line) => line.trim())\n    .filter((line) => line.length > 0)\n    .join('\\n')\n    .trim();\n}\nfunction stripComments(html) {\n  return String(html).replace(/<!--[\\s\\S]*?-->/g, '');\n}\nfunction thValueRawHtml(html, label) {\n  const re = new RegExp(\n    '<th\\\\s+scope=\"row\">\\\\s*' + escapeRegExp(label) + '\\\\s*</th>\\\\s*<td[^>]*>([\\\\s\\\\S]*?)</td>'\n  );\n  const m = html.match(re);\n  return m ? m[1] : '';\n}\nfunction thValueRaw(html, label) {\n  return decodeAndStrip(thValueRawHtml(html, label));\n}\nfunction thValue(html, label) {\n  return normalizeWhitespace(thValueRaw(html, label));\n}\nfunction thLink(html, label) {\n  const inner = thValueRawHtml(html, label);\n  const m = inner.match(/href=\"([^\"]*)\"/);\n  if (!m) return '';\n  const href = decodeEntities(m[1]).trim();\n  if (!href || href.startsWith('javascript:') || href === '#') return '';\n  return href;\n}\nfunction extractTitle(html) {\n  const m = html.match(/<strong\\s+class=\"title\">([\\s\\S]*?)<\\/strong>/);\n  return m ? normalizeWhitespace(decodeAndStrip(m[1])) : '';\n}\nfunction absolutize(href, baseUrl) {\n  if (!href) return '';\n  try { return new URL(href, baseUrl).href; } catch (e) { return href; }\n}\nfunction extractAttachments(html, srcUrl) {\n  const headIdx = html.indexOf('<th scope=\"col\">파일 명</th>');\n  if (headIdx < 0) return [];\n  const tableEnd = html.indexOf('</table>', headIdx);\n  const region = tableEnd < 0 ? html.slice(headIdx) : html.slice(headIdx, tableEnd);\n  const out = [];\n  const re = /<a[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/a>/g;\n  let m;\n  while ((m = re.exec(region)) !== null) {\n    const href = decodeEntities(m[1]).trim();\n    if (!href || href.startsWith('javascript:') || href === '#') continue;\n    const name = normalizeWhitespace(decodeAndStrip(m[2]));\n    out.push({ name, url: absolutize(href, srcUrl) });\n  }\n  return out;\n}\nfunction pad2(n) { return String(n).padStart(2, '0'); }\nfunction extractDate(s) {\n  if (!s) return null;\n  const str = String(s);\n  let m = str.match(/(\\d{4})[.\\-/](\\d{1,2})[.\\-/](\\d{1,2})/);\n  if (m) return m[1] + '-' + pad2(m[2]) + '-' + pad2(m[3]);\n  m = str.match(/(\\d{4})(\\d{2})(\\d{2})/);\n  if (m) return m[1] + '-' + m[2] + '-' + m[3];\n  return null;\n}\nfunction parsePeriod(raw) {\n  const text = String(raw || '').trim();\n  if (!text) return { start: null, end: null };\n  const parts = text.split('~');\n  const start = extractDate(parts[0]);\n  const end = parts.length > 1 ? extractDate(parts[1]) : null;\n  return { start, end };\n}\nfunction joinNonEmpty(values, separator) {\n  return values.filter(Boolean).join(separator);\n}\n\n// --- 본문 ---\nconst doc = stripComments(rawHtml);\nconst title = extractTitle(doc);\nconst body = joinNonEmpty([thValue(doc, '정책 소개'), thValue(doc, '지원 내용')], '\\n\\n');\nconst additionalQualification = QUAL_LABELS.map((label) => {\n  const value = thValue(doc, label);\n  return value ? (label + ': ' + value) : '';\n}).filter(Boolean).join('\\n');\nconst applyPeriod = thValueRaw(doc, '사업신청기간'); // \"사업운영기간\"은 신청기간 아님 → 사용 안 함\nconst period = parsePeriod(applyPeriod);\nconst applyUrl = thLink(doc, '신청 사이트');\nconst refUrls = [];\nfor (const label of REF_LABELS) {\n  const url = thLink(doc, label);\n  if (url && !refUrls.includes(url)) refUrls.push(url);\n  if (refUrls.length >= 3) break;\n}\nconst selfAttachments = extractAttachments(doc, sourceUrl);\n\nconst rawData = {\n  externalId: plcyBizId,\n  title,\n  body,\n  category: '복지', // 백엔드 mapCategory 가 본문/태그로 재분류\n  region, // 호출자 주입 ('서울특별시')\n  additionalQualification, // support_target → 적합도 룰 생성\n  applyStart: period.start,\n  applyEnd: period.end,\n  applyUrl,\n  _refUrls: refUrls,\n  _selfAttachments: selfAttachments\n};\n\nreturn [{ json: { rawData, _sourceUrl: sourceUrl } }];"
+      },
+      "id": "parse-detail",
+      "name": "상세 데이터 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 동기화 책임: n8n/workflows/__fixtures__/enrichment-merge/enrich.mjs 와\n// 동일 알고리즘이어야 한다. 한 곳을 수정하면 다른 곳도 같은 변경을 반영해야 한다.\nconst cheerio = require('cheerio');\nconst https = require('https');\nconst http = require('http');\n\nconst MAX_URLS = 3;\nconst MAX_CLEANED_LEN = 16000;\nconst TEXT_SEPARATOR = '\\n\\n---\\n\\n';\nconst FETCH_TIMEOUT_MS = 10000;\nconst MAX_RESPONSE_BYTES = 2000000;\nconst PER_PAGE_CAP = 8000;\n\nfunction normalizeUrlKey(u) {\n  return u.toLowerCase().replace(/\\/+$/, '');\n}\n\nfunction selectUrls(policy) {\n  // 1) 명시 refUrls[] 가 있으면 우선 사용 (youth-seoul-crawl)\n  if (policy && Array.isArray(policy.refUrls)) {\n    const seen = new Set();\n    const out = [];\n    for (const u of policy.refUrls) {\n      if (typeof u !== 'string') continue;\n      const trimmed = u.trim();\n      if (!trimmed) continue;\n      const key = normalizeUrlKey(trimmed);\n      if (seen.has(key)) continue;\n      seen.add(key);\n      out.push(trimmed);\n      if (out.length >= MAX_URLS) break;\n    }\n    return out;\n  }\n  // 2) fallback: 온통청년 키 기반\n  const candidates = [policy?.aplyUrlAddr, policy?.refUrlAddr1, policy?.refUrlAddr2]\n    .map(s => (typeof s === 'string' ? s.trim() : ''))\n    .filter(Boolean);\n  const seen = new Set();\n  const out = [];\n  for (const u of candidates) {\n    const key = normalizeUrlKey(u);\n    if (seen.has(key)) continue;\n    seen.add(key);\n    out.push(u);\n    if (out.length >= MAX_URLS) break;\n  }\n  return out;\n}\n\nfunction mergeFetchResults(results) {\n  if (!Array.isArray(results) || results.length === 0) {\n    return { cleanedText: '', extraAttachments: [], status: 'FETCH_FAILED' };\n  }\n  const ok = results.filter(r => r && r.status == null);\n  if (ok.length === 0) {\n    const allTooShort = results.length > 0 && results.every(r => r && r.status === 'TOO_SHORT');\n    return {\n      cleanedText: '',\n      extraAttachments: [],\n      status: allTooShort ? 'TOO_SHORT' : 'FETCH_FAILED'\n    };\n  }\n  let cleanedText = ok.map(r => r.cleanedText || '').join(TEXT_SEPARATOR);\n  if (cleanedText.length > MAX_CLEANED_LEN) cleanedText = cleanedText.slice(0, MAX_CLEANED_LEN);\n  const seenAttachments = new Set();\n  const extraAttachments = [];\n  for (const r of ok) {\n    const items = Array.isArray(r.extraAttachments) ? r.extraAttachments : [];\n    for (const a of items) {\n      if (!a || typeof a.url !== 'string') continue;\n      const key = a.url.toLowerCase();\n      if (seenAttachments.has(key)) continue;\n      seenAttachments.add(key);\n      extraAttachments.push(a);\n    }\n  }\n  return { cleanedText, extraAttachments, status: null };\n}\n\nfunction absUrl(href, pageUrl) {\n  if (!href) return href;\n  if (/^https?:\\/\\//i.test(href)) return href;\n  const m = pageUrl.match(/^(https?:\\/\\/[^/]+)/);\n  const origin = m ? m[1] : '';\n  if (href.startsWith('//')) {\n    const proto = (pageUrl.match(/^(https?:)/) || ['', 'https:'])[1];\n    return proto + href;\n  }\n  if (href.startsWith('/')) return origin + href;\n  return origin + '/' + href.replace(/^\\.?\\//, '');\n}\n\nconst ONCLICK_DOWNLOAD_RULES = [\n  {\n    host: /(^|\\.)kofpi\\.or\\.kr$/i,\n    fnName: 'fnNotiDownload',\n    buildUrl: (origin, seq) => `${origin}/noti/download.do?fileSeq=${encodeURIComponent(seq)}`,\n  },\n];\n\nfunction isDummyHref(href) {\n  if (!href) return true;\n  const trimmed = href.trim();\n  return trimmed === '' || trimmed === '#' || /^javascript:/i.test(trimmed);\n}\n\nfunction escapeRegExp(s) {\n  return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}\n\nfunction resolveOnclickUrl(onclick, pageUrl) {\n  if (!onclick) return null;\n  const m = pageUrl.match(/^(https?:\\/\\/([^/]+))/);\n  if (!m) return null;\n  const origin = m[1];\n  const host = m[2];\n  for (const rule of ONCLICK_DOWNLOAD_RULES) {\n    if (!rule.host.test(host)) continue;\n    const fnRe = new RegExp('\\\\b' + escapeRegExp(rule.fnName) + \"\\\\s*\\\\(\\\\s*['\\\"]([^'\\\"]+)['\\\"]\\\\s*\\\\)\");\n    const am = onclick.match(fnRe);\n    if (!am) continue;\n    return rule.buildUrl(origin, am[1]);\n  }\n  return null;\n}\n\nfunction extractCleanedAndAttachments(rawHtml, pageUrl) {\n  const $ = cheerio.load(rawHtml);\n  $('script, style, nav, footer, aside, header, noscript').remove();\n  const root = $('main').first().length ? $('main').first()\n            : $('article').first().length ? $('article').first()\n            : $('[role=\"main\"]').first().length ? $('[role=\"main\"]').first()\n            : $('#content').first().length ? $('#content').first()\n            : $('body').first();\n  let cleaned = root.text().replace(/\\s+/g, ' ').trim();\n  if (cleaned.length > PER_PAGE_CAP) cleaned = cleaned.slice(0, PER_PAGE_CAP);\n\n  const seen = new Set();\n  const extras = [];\n  $('a[href]').each((_, el) => {\n    const $a = $(el);\n    const href = $a.attr('href') || '';\n    const onclick = $a.attr('onclick') || '';\n    const text = $a.text().trim();\n    const imgAlt = $a.find('img').first().attr('alt') || '';\n    const lowerHref = href.toLowerCase();\n    const extPattern = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)(\\?|$|#)/i;\n    const hasExt = extPattern.test(href);\n    const textHasExt = /\\.(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(text);\n    const imgIsFile = /^(pdf|hwp|hwpx|docx|xlsx|zip)$/i.test(imgAlt);\n    const hrefHasDownloadKw = /(download|filedown|attach)/i.test(lowerHref);\n    const looksLikeFile = hasExt || textHasExt || imgIsFile || (hrefHasDownloadKw && text.length > 0 && text.length < 200);\n    if (!looksLikeFile) return;\n    let url = absUrl(href, pageUrl);\n    if (isDummyHref(href)) {\n      const reconstructed = resolveOnclickUrl(onclick, pageUrl);\n      if (reconstructed) url = reconstructed;\n    }\n    if (seen.has(url)) return;\n    seen.add(url);\n    let name = text;\n    if (!name || name.length < 2) {\n      name = imgAlt ? `attachment.${imgAlt}` : url.split('/').pop().slice(0, 200);\n    }\n    name = name.replace(/\\s*미리보기\\s*$/, '').trim().slice(0, 200);\n    extras.push({ name, url });\n  });\n  return { cleaned, extras };\n}\n\nfunction httpGetText(url, hops) {\n  hops = hops || 0;\n  if (hops >= 5) return Promise.resolve({ ok: false });\n  return new Promise((resolve) => {\n    let lib;\n    try { lib = url.startsWith('https://') ? https : http; }\n    catch (e) { return resolve({ ok: false }); }\n    const req = lib.request(url, {\n      method: 'GET',\n      headers: {\n        'User-Agent': 'YouthFit-Bot/1.0 (+https://youthfit.kr/bot)',\n        'Accept': 'text/html,application/xhtml+xml',\n        'Accept-Encoding': 'identity'\n      },\n      timeout: FETCH_TIMEOUT_MS\n    }, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return httpGetText(absUrl(res.headers.location, url), hops + 1).then(resolve);\n      }\n      if (res.statusCode < 200 || res.statusCode >= 300) {\n        res.resume();\n        return resolve({ ok: false });\n      }\n      const chunks = [];\n      let total = 0;\n      res.on('data', c => {\n        total += c.length;\n        if (total > MAX_RESPONSE_BYTES) {\n          req.destroy();\n          resolve({ ok: false });\n          return;\n        }\n        chunks.push(c);\n      });\n      res.on('end', () => resolve({ ok: true, body: Buffer.concat(chunks).toString('utf8') }));\n    });\n    req.on('error', () => resolve({ ok: false }));\n    req.on('timeout', () => { req.destroy(); resolve({ ok: false }); });\n    req.end();\n  });\n}\n\nasync function fetchAndExtract(url) {\n  const res = await httpGetText(url);\n  if (!res.ok || !res.body) {\n    return { url, status: 'FETCH_FAILED', cleanedText: '', extraAttachments: [] };\n  }\n  try {\n    const { cleaned, extras } = extractCleanedAndAttachments(res.body, url);\n    return {\n      url,\n      status: cleaned.length < 200 ? 'TOO_SHORT' : null,\n      cleanedText: cleaned,\n      extraAttachments: extras\n    };\n  } catch (e) {\n    return { url, status: 'FETCH_FAILED', cleanedText: '', extraAttachments: [] };\n  }\n}\n\nconst p = $input.first().json;\nconst urls = selectUrls({ refUrls: Array.isArray(p?.rawData?._refUrls) ? p.rawData._refUrls : [] });\n\nif (urls.length === 0) {\n  return [{\n    json: {\n      ...p,\n      _enrichUrl: null,\n      _enrichUrls: [],\n      _cleanedText: '',\n      _extraAttachments: [],\n      _enrichmentStatus: 'NO_LINK'\n    }\n  }];\n}\n\nconst results = await Promise.all(urls.map(u => fetchAndExtract(u)));\nconst merged = mergeFetchResults(results);\n\nreturn [{\n  json: {\n    ...p,\n    _enrichUrl: urls[0],\n    _enrichUrls: urls,\n    _cleanedText: merged.cleanedText,\n    _extraAttachments: merged.extraAttachments,\n    _enrichmentStatus: merged.status\n  }\n}];"
+      },
+      "id": "pick-link",
+      "name": "참고사이트 fetch + 머지",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $input.first().json;\nconst e = {\n  sourceUrl: (p.rawData._refUrls && p.rawData._refUrls[0]) || null,\n  fetchedAt: new Date().toISOString().replace('Z', ''),\n  extractor: 'regex',\n  confidence: null,\n  status: p._enrichmentStatus === undefined ? 'FETCH_FAILED' : (p._enrichmentStatus ?? 'OK'),\n  sections: null,\n  extraAttachments: p._extraAttachments || [],\n  cleanedText: p._cleanedText || null\n};\nreturn [{ json: { ...p, rawData: { ...p.rawData, enrichment: e } } }];"
+      },
+      "id": "enrichment-meta",
+      "name": "enrichment 메타 합성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 동기화 책임: n8n/workflows/__fixtures__/promote-attachments/promote.mjs 와\n// 동일 알고리즘이어야 한다. 한 곳을 수정하면 다른 곳도 같은 변경을 반영해야 한다.\nconst EXT_TO_MEDIA_TYPE = {\n  pdf: 'application/pdf',\n  hwp: 'application/x-hwp',\n  hwpx: 'application/x-hwp',\n  doc: 'application/msword',\n  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n  xls: 'application/vnd.ms-excel',\n  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'\n};\n\nconst TEXT_EXT_PATTERN = /\\.(pdf|hwpx?|docx?|xlsx?)\\b/i;\nconst PAREN_EXT_PATTERN = /[\\(\\[]\\s*(pdf|hwpx?|docx?|xlsx?)\\s*[\\)\\]]/i;\nconst PATH_EXT_PATTERN = /(?:^|[^a-zA-Z])(pdf|hwpx?|docx?|xlsx?)(?:$|[^a-zA-Z])/i;\n// path-pattern fallback 은 다운로드 의도 키워드가 동반될 때만 활성화한다.\nconst PATH_DOWNLOAD_KEYWORD_PATTERN = /(?:download|filedown|attach|getfile|board)/i;\n\nfunction extractExt(url) {\n  if (typeof url !== 'string') return null;\n  const cleaned = url.split('#')[0].split('?')[0].toLowerCase();\n  const dotIdx = cleaned.lastIndexOf('.');\n  if (dotIdx === -1) return null;\n  return cleaned.slice(dotIdx + 1);\n}\n\nfunction mapExt(ext) {\n  if (!ext) return null;\n  return EXT_TO_MEDIA_TYPE[ext.toLowerCase()] || null;\n}\n\nfunction extractExtFromText(text) {\n  if (typeof text !== 'string' || text.length === 0) return null;\n  const m1 = text.match(TEXT_EXT_PATTERN);\n  if (m1) return m1[1].toLowerCase();\n  const m2 = text.match(PAREN_EXT_PATTERN);\n  if (m2) return m2[1].toLowerCase();\n  return null;\n}\n\nfunction extractExtFromPath(url) {\n  if (typeof url !== 'string') return null;\n  const path = url.split('?')[0].split('#')[0]\n    .replace(/([a-z])([A-Z])/g, '$1_$2')\n    .toLowerCase();\n  if (!PATH_DOWNLOAD_KEYWORD_PATTERN.test(path)) return null;\n  const m = path.match(PATH_EXT_PATTERN);\n  return m ? m[1].toLowerCase() : null;\n}\n\nfunction inferMediaType(item) {\n  const fromUrl = mapExt(extractExt(item.url));\n  if (fromUrl) return fromUrl;\n  const fromName = mapExt(extractExtFromText(item.name));\n  if (fromName) return fromName;\n  const fromPath = mapExt(extractExtFromPath(item.url));\n  if (fromPath) return fromPath;\n  return null;\n}\n\nconst NAME_WHITELIST_PATTERN = /(공고|안내|모집|요강|신청서|계획서|FAQ|Q&A|가이드|설명|일정|참가|운영|평가|선정|채용|지원|보고서|양식|서식|자료|다운로드|붙임|별첨|결과|명단|목록)/i;\nconst NAME_BLACKLIST_PATTERN = /(로고|배너|아이콘|썸네일|포스터|광고|favicon)/i;\nfunction isInformationalName(name) {\n  if (typeof name !== 'string' || !name) return true;\n  if (NAME_BLACKLIST_PATTERN.test(name)) return false;\n  if (NAME_WHITELIST_PATTERN.test(name)) return true;\n  return name.length >= 5;\n}\n\nconst input = $input.first().json;\nconst enrichment = input?.rawData?.enrichment;\nconst enrichmentExtras = Array.isArray(enrichment?.extraAttachments) ? enrichment.extraAttachments : [];\nconst selfExtras = Array.isArray(input?.rawData?._selfAttachments) ? input.rawData._selfAttachments : [];\nconst extras = [...enrichmentExtras, ...selfExtras];\nif (extras.length === 0) {\n  const { _selfAttachments, _refUrls, ...cleanRaw } = input.rawData || {};\n  return [{ json: { ...input, rawData: cleanRaw } }];\n}\nconst attachments = Array.isArray(input.rawData.attachments) ? input.rawData.attachments : [];\nconst existingUrls = new Set(\n  attachments\n    .map(a => (typeof a.url === 'string' ? a.url.toLowerCase() : null))\n    .filter(Boolean)\n);\nconst merged = [...attachments];\nfor (const ex of extras) {\n  if (!ex || typeof ex.url !== 'string') continue;\n  const mediaType = inferMediaType(ex);\n  if (!mediaType) continue;\n  if (!isInformationalName(ex.name)) continue;\n  const key = ex.url.toLowerCase();\n  if (existingUrls.has(key)) continue;\n  merged.push({ name: ex.name, url: ex.url, mediaType });\n  existingUrls.add(key);\n}\nconst { _selfAttachments, _refUrls, ...cleanRaw } = input.rawData;\nreturn [{ json: { ...input, rawData: { ...cleanRaw, attachments: merged } } }];"
+      },
+      "id": "promote-attachments",
+      "name": "attachments 승격",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// source type 정렬: 최종 payload 의 source 메타를 YOUTH_SEOUL_CRAWL 로 확정.\nconst p = $input.first().json;\nconst sourceUrl = p._sourceUrl || (p.rawData && p.rawData.applyUrl) || null;\nconst { _sourceUrl, ...rest } = p;\nreturn [{ json: {\n  ...rest,\n  source: {\n    type: 'YOUTH_SEOUL_CRAWL',\n    url: sourceUrl,\n    fetchedAt: new Date().toISOString().replace('Z', '')\n  }\n} }];"
+      },
+      "id": "build-source",
+      "name": "source 메타 정렬",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL || 'http://backend:8080' }}/api/internal/ingestion/policies",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Api-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-to-backend",
+      "name": "백엔드 API 전송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: '크롤링 완료', completedAt: new Date().toISOString().replace('Z', '') } }];"
+      },
+      "id": "complete",
+      "name": "크롤링 완료",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "매일 새벽 3시 실행": {
+      "main": [
+        [
+          {
+            "node": "페이지 초기화",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "수동 실행 트리거": {
+      "main": [
+        [
+          {
+            "node": "페이지 초기화",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "페이지 초기화": {
+      "main": [
+        [
+          {
+            "node": "목록 페이지 요청",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "목록 페이지 요청": {
+      "main": [
+        [
+          {
+            "node": "plcyBizId 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "plcyBizId 추출": {
+      "main": [
+        [
+          {
+            "node": "다음 페이지 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "다음 페이지 확인": {
+      "main": [
+        [
+          {
+            "node": "다음 페이지 존재?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "다음 페이지 존재?": {
+      "main": [
+        [
+          {
+            "node": "다음 페이지 이동",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "외부 hash 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "다음 페이지 이동": {
+      "main": [
+        [
+          {
+            "node": "목록 페이지 요청",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "외부 hash 조회": {
+      "main": [
+        [
+          {
+            "node": "신규 plcyBizId 필터",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "신규 plcyBizId 필터": {
+      "main": [
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "정책별 순차 처리": {
+      "main": [
+        [
+          {
+            "node": "크롤링 완료",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "상세 대상 여부",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상세 대상 여부": {
+      "main": [
+        [
+          {
+            "node": "3초 대기 (Rate Limit)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3초 대기 (Rate Limit)": {
+      "main": [
+        [
+          {
+            "node": "상세 페이지 요청",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상세 페이지 요청": {
+      "main": [
+        [
+          {
+            "node": "상세 데이터 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상세 데이터 파싱": {
+      "main": [
+        [
+          {
+            "node": "참고사이트 fetch + 머지",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "참고사이트 fetch + 머지": {
+      "main": [
+        [
+          {
+            "node": "enrichment 메타 합성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enrichment 메타 합성": {
+      "main": [
+        [
+          {
+            "node": "attachments 승격",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "attachments 승격": {
+      "main": [
+        [
+          {
+            "node": "source 메타 정렬",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "source 메타 정렬": {
+      "main": [
+        [
+          {
+            "node": "백엔드 API 전송",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "백엔드 API 전송": {
+      "main": [
+        [
+          {
+            "node": "정책별 순차 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "crawling"
+    },
+    {
+      "name": "youth-policy"
+    }
+  ],
+  "meta": {
+    "instanceId": "youthfit"
+  }
+}
