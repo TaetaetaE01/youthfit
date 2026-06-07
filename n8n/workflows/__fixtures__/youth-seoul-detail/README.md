@@ -15,6 +15,9 @@
   `*.expected.json` 과 `deepStrictEqual` 비교한다.
 - `cases-html/{city,district,external}-2026.*` — 케이스별 입력 HTML(상세 핵심 영역 축소본) ·
   주입 컨텍스트(meta) · 기대 출력.
+  - `district-2026` = 본청/전체 정책(제목에 구명 없음 → region `서울특별시`).
+  - `district-jungnang-2026` = 자치구 정책(제목 끝 `(중랑구)` → region `중랑구`).
+    footer 주소("중구 세종대로")를 일부러 포함해 **footer 오매칭이 아님**을 픽스처로 못박는다.
 - `samples/` — 축소 전 원본 상세 HTML(각 ~150KB). 케이스 input 의 출처.
 
 ### ctx (meta.json)
@@ -22,12 +25,19 @@
 ```jsonc
 {
   "plcyBizId": "V202600006",        // externalId 로 적재 (external-hash dedup 전제)
-  "region":    "서울특별시",          // 호출자 주입. city→'서울특별시', district→구명, external→'타지역' 등
+  "region":    "서울특별시",          // 호출자 주입. city→'서울특별시', district→구명(or 서울특별시), external→'타지역'
   "sourceUrl": "https://youth.seoul.go.kr/infoData/plcyInfo/view.do" // 첨부/상대링크 절대경로화 기준
 }
 ```
 
-`region` 은 파서가 하드코딩하지 않고 **호출 워크플로우가 목록에서 추출해 주입**한다.
+`parsePlcyInfoDetail` 의 `region` 은 파서가 하드코딩하지 않고 **`ctx.region` passthrough** 다.
+city/external 은 고정값(`서울특별시`/`타지역`)을 주입한다.
+
+**자치구는 다르다.** 자치구 워크플로우는 상세 파싱 후 `regionFromDistrictTitle(title)` 로 region 을
+덮어쓴다 — 정책 **제목 끝 괄호 `(○○구)`** 에서 구명을 잡고, 없으면 `서울특별시`(본청/전체 정책).
+⚠ footer 주소(예 "중구 세종대로")의 구명은 오매칭 소스이므로 절대 쓰지 않는다.
+`regionFromDistrictTitle` 는 `parse-plcyinfo.mjs` 에 export 돼 `verify.mjs` 단위 케이스로 검증된다
+(meta 의 district region 값은 워크플로우가 실제 주입할 `regionFromDistrictTitle(title)` 결과와 맞춘다).
 
 ## 실행
 

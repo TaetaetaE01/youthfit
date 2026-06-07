@@ -78,7 +78,7 @@
 | 워크플로우 | 목록 endpoint | tabKind | region | plcyBizId 형식 | 2026 컷 |
 |---|---|---|---|---|---|
 | `youth-seoul-city` | `plcyInfo/ctList.do` | 002 | `서울특별시` 고정 | `V2026…` (영문+숫자) | `/^V?2026/` |
-| `youth-seoul-district` | `plcyInfo/guList.do` | 003 | 구명 (목록에서 추출, 폴백=상세 정규식) | `2026…` (20 자리) | `/^V?2026/` |
+| `youth-seoul-district` | `plcyInfo/guList.do` | 003 | 상세 정책 제목 끝 `(○○구)` 추출, 없으면 `서울특별시` | `2026…` (20 자리) | `/^V?2026/` |
 | `youth-seoul-external` | `youthPlcyInfo/list.do` | — | `타지역`/`전국`/시·도명 | `2026…` (20 자리) | `/^V?2026/` |
 
 - **세션쿠키 불필요**: 응답에 `YOUTHID`/`WMONID` 쿠키가 내려오지만 페이지네이션에 필요 없다. 단순 `pageIndex` GET 루프.
@@ -99,14 +99,14 @@
   "source": {
     "url": "https://youth.seoul.go.kr/.../view.do?plcyBizId=V202600006&...",
     "type": "YOUTH_SEOUL_CRAWL",
-    "externalId": "V202600006",
     "fetchedAt": "2026-05-26T03:00:00"
   },
   "rawData": {
+    "externalId": "V202600006",
     "title": "청년 월세 지원",
     "body": "사업개요: ...\n지원대상: ...\n지원내용: ...\n신청방법: ...\n제출서류: ...",
     "category": "복지",
-    "region": "서울",
+    "region": "서울특별시",
     "applyStart": "2026-04-01",
     "applyEnd": "2026-05-31"
   },
@@ -117,6 +117,10 @@
   }
 }
 ```
+
+> ⚠ `externalId` 는 **`rawData.externalId`** 에 둔다(`source` 가 아니다). 백엔드
+> `IngestPolicyRequest` 는 `rawData.externalId()` 만 읽고, `source` 는 `url`/`type`/`fetchedAt`
+> 만 갖는다. n8n 이 `externalId` 를 `source` 에 넣으면 적재 시 무시된다.
 
 ---
 

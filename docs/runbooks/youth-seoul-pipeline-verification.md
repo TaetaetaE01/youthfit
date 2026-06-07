@@ -163,7 +163,12 @@ done
 docker exec -i <pg> psql -U <user> -d <db>   # psql 은 -i 필수
 ```
 
-- **region 분포** (서울시=서울특별시, 자치구=구명, 중앙/타지역=타지역/전국) + support_target 채움:
+- **region 분포** (서울시=`서울특별시` 고정, 자치구=상세 제목 끝 `(○○구)` 추출·없으면 `서울특별시`,
+  중앙/타지역=`타지역` 고정) + support_target 채움:
+
+  > ⚠ external(중앙/타지역) region 은 현재 **`타지역` 고정**이다. 전국/시·도(`전국`·시·도명)
+  > 분기는 **미구현** — 결과에 `타지역` 외 값은 나오지 않는다.
+
 
   ```sql
   SELECT region,
@@ -184,13 +189,21 @@ docker exec -i <pg> psql -U <user> -d <db>   # psql 은 -i 필수
   ```
   → `others = 0` 이어야 한다.
 
-- **external-hash 재실행 dedup** — 위 트리거를 1 회 더 실행한 뒤 `policy_source` 행 수가
-  늘지 않는지 확인 (동일 콘텐츠는 `source_hash` 일치로 `SKIPPED_DUPLICATE`):
+- **재실행 dedup** — 위 트리거를 1 회 더 실행한 뒤 `policy_source` 행 수가 늘지 않는지 확인:
 
   ```sql
   SELECT count(*) FROM policy_source WHERE source_type = 'YOUTH_SEOUL_CRAWL';
   ```
   → 1·2 회차 값이 동일해야 한다 (신규 등록분 외 증가 없음).
+
+  > dedup 은 **두 메커니즘이 별개**다 — 재실행 시 둘 다 작동해야 행 수가 그대로다:
+  > 1. **미존재 skip (신규 `plcyBizId` 필터)** — n8n 측 *상세 수집 전* 필터. `신규 plcyBizId 필터`
+  >    노드가 `/api/internal/ingestion/policies/external-hashes` 로 DB 의 기존 `plcyBizId` 맵을
+  >    받아 **DB 에 없는 신규 `plcyBizId` 만** 상세 fetch 대상으로 남긴다(이미 있는 정책은 상세
+  >    요청·적재를 아예 건너뛴다 → 네트워크 절약).
+  > 2. **동일 hash skip (`source_hash`)** — 백엔드 *적재 시점* 필터. 1번을 통과한 정책이라도
+  >    콘텐츠가 이전과 동일하면 `policy_source.source_hash` 일치로 `SKIPPED_DUPLICATE`. 콘텐츠가
+  >    바뀌었으면 hash 가 달라져 `policy` 갱신 + 신규 source 행이 적재된다.
 
 ### 3) 검증 후 구 워크플로우 로컬 비활성화
 
