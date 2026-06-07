@@ -3,7 +3,7 @@
 - 날짜: 2026-06-07
 - 대상: youth.seoul.go.kr (청년몽땅정보통)
 - 관련 plan: `docs/superpowers/plans/2026-06-06-mongttang-youth-crawl-redesign.md`
-- 샘플 HTML: `n8n/workflows/__fixtures__/youth-seoul-detail/samples/{city,district,external}-sample.html`
+- 샘플(축소본): `n8n/workflows/__fixtures__/youth-seoul-detail/cases-html/{city,district,external}-2026.input.html` (spike 원본 150KB HTML 은 검증 후 repo 에서 제거)
 
 ## 0. 도메인 정정 (중요)
 
