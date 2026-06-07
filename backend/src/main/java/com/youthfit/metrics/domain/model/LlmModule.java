@@ -6,5 +6,6 @@ public enum LlmModule {
     EMBEDDING,
     INGESTION,
     ELIGIBILITY,
-    QUERY_REWRITE
+    QUERY_REWRITE,
+    ATTACHMENT_GATE
 }

@@ -58,6 +58,12 @@ public class PolicyAttachment extends BaseTimeEntity {
     @Column(name = "skip_reason", length = 30)
     private SkipReason skipReason;
 
+    @Column(name = "embedding_included")
+    private Boolean embeddingIncluded;
+
+    @Column(name = "embedding_decision_reason", length = 500)
+    private String embeddingDecisionReason;
+
     @Builder
     private PolicyAttachment(String name, String url, String mediaType) {
         this.name = name;
@@ -95,6 +101,9 @@ public class PolicyAttachment extends BaseTimeEntity {
         this.extractionStatus = AttachmentStatus.EXTRACTED;
         this.extractedText = text;
         this.extractionError = null;
+        // 재추출 시 임베딩 가치 판정을 무효화하여 다음 인덱싱에서 재판정한다.
+        this.embeddingIncluded = null;
+        this.embeddingDecisionReason = null;
     }
 
     public void markSkipped(SkipReason reason) {
@@ -130,6 +139,11 @@ public class PolicyAttachment extends BaseTimeEntity {
     public void resetFailedToPending() {
         require(extractionStatus == AttachmentStatus.FAILED, AttachmentStatus.PENDING);
         this.extractionStatus = AttachmentStatus.PENDING;
+    }
+
+    public void decideEmbedding(boolean included, String reason) {
+        this.embeddingIncluded = included;
+        this.embeddingDecisionReason = truncate(reason);
     }
 
     private void require(boolean condition, AttachmentStatus target) {

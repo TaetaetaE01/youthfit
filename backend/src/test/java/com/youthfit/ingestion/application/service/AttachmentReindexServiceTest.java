@@ -3,6 +3,7 @@ package com.youthfit.ingestion.application.service;
 import com.youthfit.common.config.CostGuard;
 import com.youthfit.common.config.CostGuardProperties;
 import com.youthfit.common.event.PolicyAttachmentReindexedEvent;
+import com.youthfit.ingestion.application.port.AttachmentEmbeddingJudge;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.policy.domain.model.PolicyAttachment;
 import com.youthfit.policy.domain.repository.PolicyAttachmentRepository;
@@ -35,6 +36,7 @@ class AttachmentReindexServiceTest {
     @Mock private RagIndexingService ragIndexingService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Spy private CostGuard costGuard = new CostGuard(new CostGuardProperties(""));
+    @Mock private AttachmentEmbeddingJudge embeddingJudge;
     @InjectMocks private AttachmentReindexService sut;
 
     @BeforeEach
@@ -147,6 +149,9 @@ class AttachmentReindexServiceTest {
         when(a.getId()).thenReturn(id);
         when(a.getName()).thenReturn(name);
         when(a.getExtractedText()).thenReturn(text);
+        // 게이트 통합 후: 이미 판정된 것으로 처리하여 기존 테스트가 게이트 호출 없이 동작하도록.
+        // lenient 로 선언해 1개 첨부(게이트 미호출) 케이스에서 UnnecessaryStubbingException 방지.
+        lenient().when(a.getEmbeddingIncluded()).thenReturn(Boolean.TRUE);
         return a;
     }
 }

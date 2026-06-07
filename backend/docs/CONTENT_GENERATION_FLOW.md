@@ -310,12 +310,17 @@ EligibilityRule
        ↓
 [AttachmentReindexService.reindex(policyId)]
        ↓
-① 정책 본문 + 추출된 첨부 텍스트 머지 (cap 200KB)
+① 첨부 ≥2개 시 LLM 게이트(AttachmentEmbeddingJudge) 로 임베딩 가치 선별
+   - 이미 판정된 첨부(embedding_included non-null)는 재호출하지 않음 (캐시)
+   - embed=false 판정 첨부는 머지에서 제외; 판정 결과를 policy_attachment 에 영속화
+   - LLM 실패 시 fail-open: 미판정 첨부 전체를 embedded=true 로 저장 (콘텐츠 손실 방지)
+   ↓
+② 정책 본문 + 선별된 첨부 텍스트 머지 (cap 200KB)
    - "=== 정책 본문 ===" + body
-   - "=== 첨부 attachment-id=N name=... ===" + extracted text
+   - "=== 첨부 attachment-id=N name=... ===" + extracted text (포함 판정만)
    - 페이지 sentinel "\f<page=...>" → "--- page=... ---" 변환
    ↓
-② RagIndexingService.indexPolicyDocument(merged, enrichment)
+③ RagIndexingService.indexPolicyDocument(merged, enrichment)
    - DocumentChunker.computeHash(merged, enrichment) → 신규 hash
    - 기존 청크 hash 와 같으면 스킵
    - 다르면: 기존 청크 삭제 → QnaCacheInvalidator 호출 → 신규 청크 + 임베딩 저장
