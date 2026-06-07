@@ -22,14 +22,6 @@
   <br/>
 </div>
 
-<!-- TODO: 서비스 대표 이미지 / 데모 스크린샷 삽입 -->
-<!-- ![main](이미지_URL) -->
-<!-- ![screen1](이미지_URL) -->
-<!-- ![screen2](이미지_URL) -->
-
-
-
-
 ## 📌 기본 설명
 
 - **목표**
@@ -260,11 +252,3 @@ policy/                                          # 📋 정책 도메인
 > implementer 슬롯은 `*-developer`, code-quality/final 리뷰 슬롯은 `*-reviewer` 로
 > 매핑하여 하이브리드로 사용합니다. 구현 final 리뷰 → PR 작성 시 `/cr` 통합 리뷰는
 > **순차적 별개 단계**입니다. (자세한 매핑은 루트 `CLAUDE.md` 참고)
-
-## 🗂️ ERD
-<!-- TODO: ERD 이미지 삽입 -->
-<!-- ![erd](이미지_URL) -->
-
-## 🏗️ 아키텍처
-<!-- TODO: 아키텍처 다이어그램 삽입 -->
-<!-- ![architecture](이미지_URL) -->
