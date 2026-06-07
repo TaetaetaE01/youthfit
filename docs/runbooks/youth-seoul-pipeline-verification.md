@@ -128,3 +128,72 @@ n8n 에 import → 웹훅 트리거로 운영모드 실행해 검증.
 ### 환경 요건
 
 - `docker-compose.yml`: `NODE_FUNCTION_ALLOW_BUILTIN=crypto,https,http` (pick-link 의 `require('http')`).
+
+---
+
+## 3-카테고리 재설계 E2E (머지 전 필수)
+
+> spec: `docs/superpowers/specs/2026-06-06-mongttang-spike-findings.md`
+> plan: `docs/superpowers/plans/2026-06-06-mongttang-youth-crawl-redesign.md` (Task 6·7)
+
+단일 `youth-seoul-crawl.json`(카테고리 루프 버그로 1 페이지만 수집)을 카테고리별 3 개로
+분리했다: `youth-seoul-city`(서울시 `ctList`/tabKind=002), `youth-seoul-district`(자치구
+`guList`/tabKind=003), `youth-seoul-external`(중앙·타지역 `youthPlcyInfo`). 셋 다
+`source_type=YOUTH_SEOUL_CRAWL`, `externalId=plcyBizId`, 세션쿠키 불필요, 상세 파서 공유.
+
+> **이 E2E 는 PR 머지 전 사용자가 직접 수행한다.** 머지 = 신규 3 개 채택 + 구
+> `youth-seoul-crawl.json` 제거. PR 의 파일 변경은 구 워크플로우 제거뿐이고, 신규 검증과
+> 구 워크플로우 **로컬 비활성화**는 머지 전 이 절차에서 끝낸다.
+
+### 1) import + 재시작 후 웹훅 트리거
+
+n8n 워크플로우 재반영은 import + 재시작이 필수다(n8n-local-reimport-ops). 3 개를 import·active
+한 뒤 순차 트리거:
+
+```bash
+for c in city district external; do
+  curl -sS -X POST "http://localhost:5678/webhook/youth-seoul-${c}-manual" \
+    -H "Content-Type: application/json" -d '{}'
+done
+```
+
+### 2) 검증 쿼리 (psql)
+
+```bash
+docker exec -i <pg> psql -U <user> -d <db>   # psql 은 -i 필수
+```
+
+- **region 분포** (서울시=서울특별시, 자치구=구명, 중앙/타지역=타지역/전국) + support_target 채움:
+
+  ```sql
+  SELECT region,
+         count(*)                          AS total,
+         count(additional_qualification)   AS with_target
+  FROM policy p
+  JOIN policy_source s ON s.policy_id = p.id
+  WHERE s.source_type = 'YOUTH_SEOUL_CRAWL'
+  GROUP BY region ORDER BY total DESC;
+  ```
+
+- **2026 컷오프** — 2025↓ 미적재 (external_id 앞 4 자리가 2026 인지):
+
+  ```sql
+  SELECT count(*) FILTER (WHERE external_id ~ '^V?2026') AS y2026,
+         count(*) FILTER (WHERE external_id !~ '^V?2026') AS others
+  FROM policy_source WHERE source_type = 'YOUTH_SEOUL_CRAWL';
+  ```
+  → `others = 0` 이어야 한다.
+
+- **external-hash 재실행 dedup** — 위 트리거를 1 회 더 실행한 뒤 `policy_source` 행 수가
+  늘지 않는지 확인 (동일 콘텐츠는 `source_hash` 일치로 `SKIPPED_DUPLICATE`):
+
+  ```sql
+  SELECT count(*) FROM policy_source WHERE source_type = 'YOUTH_SEOUL_CRAWL';
+  ```
+  → 1·2 회차 값이 동일해야 한다 (신규 등록분 외 증가 없음).
+
+### 3) 검증 후 구 워크플로우 로컬 비활성화
+
+신규 3 개 검증이 끝나면 로컬 n8n 에서 구 `youth-seoul-crawl` 워크플로우를 **비활성화**한다
+(delete 제약은 n8n-local-reimport-ops 참고). 파일은 이미 PR 에서 제거됐으므로 로컬 인스턴스의
+active 상태만 정리하면 된다.
