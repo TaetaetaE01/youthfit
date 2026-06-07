@@ -36,7 +36,6 @@ out/
 
 ### VS Code ###
 .vscode/
-!/.idea/
 
 ### Frontend (Node.js) ###
 node_modules/
@@ -49,10 +48,11 @@ dist/
 credentials/
 
 ### Claude Code ###
-.claude/
-!.claude/agents/
-!.claude/commands/
-!.claude/rules/
+# .claude 디렉토리는 기본적으로 추적한다(agents·commands·rules·skills 공유).
+# 단, 머신별/런타임 산출물만 제외한다.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
 
 ### oh-my-claudecode ###
 .omc/

@@ -220,6 +220,47 @@ policy/                                          # 📋 정책 도메인
 - **common** : 공통 설정 및 횡단 관심사
   - 전체 모듈이 공유하는 config, 공통 응답 형식, 전역 예외 처리, 이벤트, OpenAI 클라이언트
 
+## 🤖 Claude Code 협업 구성 (`.claude`)
+
+이 프로젝트는 [Claude Code](https://claude.com/claude-code) 로 일관된 컨벤션·리뷰
+흐름을 유지합니다. `.claude/` 디렉토리에 팀 공용 에이전트·규칙·스킬을 버전 관리합니다.
+(`settings.local.json`·`scheduled_tasks.lock`·`worktrees/` 등 머신별/런타임 산출물은 제외)
+
+```bash
+.claude/
+├── 📁 agents/                    # 커스텀 서브에이전트 (역할별 신분: model·tools·컨벤션 고정)
+│   ├── 📄 backend-developer.md    # 백엔드 구현 워커 (sonnet)
+│   ├── 📄 backend-reviewer.md     # 백엔드 읽기전용 심층 리뷰 (opus)
+│   ├── 📄 frontend-developer.md   # 프론트 구현 워커 (sonnet)
+│   ├── 📄 frontend-reviewer.md    # 프론트 읽기전용 리뷰 (opus)
+│   ├── 📄 code-reviewer.md        # PR 시점 BE+FE 통합 셀프리뷰 게이트
+│   └── 📄 ui-ux-designer.md       # UI/UX 디자인 리뷰
+├── 📁 commands/                  # 커스텀 슬래시 커맨드
+│   └── 📄 cr.md                   # /cr — 브랜치 diff 셀프 리뷰
+├── 📁 rules/                     # 프로젝트 컨벤션 (CLAUDE.md 에서 @ 참조)
+│   ├── 📄 common.md               # 전사 공통 규칙
+│   ├── 📁 backend/                # 백엔드 규칙 (architecture·dto·lombok·naming·swagger)
+│   └── 📁 frontend/               # 프론트 규칙 (directory·state-management·styling)
+└── 📁 skills/                    # 재사용 스킬 (도메인 작업·생산성)
+    ├── 📁 spring-test/            # Java 21 + Spring Boot 4 테스트 작성
+    ├── 📁 create-pr/              # Conventional Commits 기반 PR 생성
+    ├── 📁 systematic-debugging/   # 체계적 디버깅 워크플로우
+    ├── 📁 troubleshooting-doc/    # 트러블슈팅·ADR 문서화
+    ├── 📁 agent-creator/          # 서브에이전트 설계·생성
+    ├── 📁 skill-creator/          # 스킬 생성·개선·평가
+    ├── 📁 frontend-design/        # 고품질 프론트 UI 생성
+    ├── 📁 senior-frontend/        # React·Next·TS·Tailwind 개발
+    ├── 📁 ui-design-system/       # 디자인 토큰·핸드오프
+    ├── 📁 ui-ux-pro-max/          # UI/UX 디자인 인텔리전스
+    ├── 📁 taste-skill/            # 랜딩페이지 디자인 엔진
+    └── 📁 output-skill/           # 완성형 산출물 강제 출력
+```
+
+> **서브에이전트 오케스트레이션**: 슈퍼파워스 `subagent-driven-development` 흐름에서
+> implementer 슬롯은 `*-developer`, code-quality/final 리뷰 슬롯은 `*-reviewer` 로
+> 매핑하여 하이브리드로 사용합니다. 구현 final 리뷰 → PR 작성 시 `/cr` 통합 리뷰는
+> **순차적 별개 단계**입니다. (자세한 매핑은 루트 `CLAUDE.md` 참고)
+
 ## 🗂️ ERD
 <!-- TODO: ERD 이미지 삽입 -->
 <!-- ![erd](이미지_URL) -->
