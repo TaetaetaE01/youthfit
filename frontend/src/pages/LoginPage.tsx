@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
 import { AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import logoWordmark from '@/assets/logo-wordmark.png';
 
 /* ─────────────────────── Kakao Logo SVG ─────────────────────── */
 
@@ -73,11 +74,8 @@ export default function LoginPage() {
       {/* Card */}
       <div className="w-full max-w-[400px] bg-white md:rounded-2xl md:shadow-card md:p-8 p-6 pt-16 md:pt-8">
         {/* Logo */}
-        <div className="flex flex-col items-center gap-2 mb-6">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-brand-100">
-            <div className="w-5 h-5 rounded-full bg-brand-800" />
-          </div>
-          <span className="text-base font-bold text-brand-800">YouthFit</span>
+        <div className="flex flex-col items-center mb-6">
+          <img src={logoWordmark} alt="YouthFit — 청년 정책의 모든 것" className="h-16 w-auto object-contain" />
         </div>
 
         {/* Title & Description */}

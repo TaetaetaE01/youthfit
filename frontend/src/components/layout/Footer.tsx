@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import logoSymbol from '@/assets/logo-symbol.png';
 
 export default function Footer() {
   return (
@@ -7,9 +8,7 @@ export default function Footer() {
         <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100">
-              <div className="h-2.5 w-2.5 rounded-full bg-brand-800" />
-            </div>
+            <img src={logoSymbol} alt="YouthFit 로고" className="h-7 w-7 object-contain" />
             <span className="text-[15px] font-bold tracking-tight text-gray-900">YouthFit</span>
           </Link>
 

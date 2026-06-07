@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfile } from '@/hooks/queries/useProfile';
+import logoWordmark from '@/assets/logo-wordmark.png';
 
 const NAV_LINKS = [
   { to: '/policies', label: '정책 목록' },
@@ -21,11 +22,8 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100">
-            <div className="h-3 w-3 rounded-full bg-brand-800" />
-          </div>
-          <span className="text-[17px] font-bold tracking-tight text-gray-900">YouthFit</span>
+        <Link to="/" className="flex items-center">
+          <img src={logoWordmark} alt="YouthFit — 청년 정책의 모든 것" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Nav links (desktop) */}
