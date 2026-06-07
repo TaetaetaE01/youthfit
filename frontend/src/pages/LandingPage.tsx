@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { User } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfile } from "@/hooks/queries/useProfile";
+import logoWordmark from "@/assets/logo-wordmark.png";
+import logoSymbol from "@/assets/logo-symbol.png";
 
 /* ──────────────────────────── Hooks ──────────────────────────── */
 
@@ -182,12 +184,9 @@ function Navbar() {
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100">
-            <div className="h-3 w-3 rounded-full bg-brand-800" />
-          </div>
-          <span className="text-[17px] font-bold text-gray-900 tracking-tight">YouthFit</span>
-        </div>
+        <Link to="/" className="flex items-center">
+          <img src={logoWordmark} alt="YouthFit — 청년 정책의 모든 것" className="h-10 w-auto object-contain" />
+        </Link>
 
         {/* Nav links (desktop) */}
         <nav className="hidden items-center gap-8 md:flex">
@@ -733,12 +732,10 @@ function Footer() {
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100">
-              <div className="h-2.5 w-2.5 rounded-full bg-brand-800" />
-            </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logoSymbol} alt="YouthFit 로고" className="h-7 w-7 object-contain" />
             <span className="text-[15px] font-bold text-gray-900 tracking-tight">YouthFit</span>
-          </div>
+          </Link>
 
           {/* 링크 */}
           <nav className="flex items-center gap-6">
