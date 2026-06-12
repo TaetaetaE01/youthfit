@@ -67,3 +67,6 @@ credentials/
 ### Worktrees ###
 .worktrees/
 n8n/workflows/youth-seoul-crawl.TEST.json
+
+### Local DB backups (시드 작업용 임시) ###
+.local-backups/
