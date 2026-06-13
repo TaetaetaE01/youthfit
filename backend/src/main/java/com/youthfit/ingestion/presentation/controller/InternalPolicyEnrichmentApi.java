@@ -21,9 +21,9 @@ public interface InternalPolicyEnrichmentApi {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "enrichment 적용 성공"),
-            @ApiResponse(responseCode = "400", description = "요청 바디 검증 실패"),
-            @ApiResponse(responseCode = "401", description = "Internal API Key 누락/불일치"),
-            @ApiResponse(responseCode = "404", description = "policyId 에 해당하는 정책 없음")
+            @ApiResponse(responseCode = "400", description = "요청 바디 검증 실패 (YF-001)"),
+            @ApiResponse(responseCode = "401", description = "Internal API Key 누락/불일치 (YF-002)"),
+            @ApiResponse(responseCode = "404", description = "policyId 에 해당하는 정책 없음 (YF-004)")
     })
     @SecurityRequirements
     ResponseEntity<Void> applyEnrichment(

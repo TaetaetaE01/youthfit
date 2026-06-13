@@ -32,8 +32,8 @@ public interface AdminEnrichmentApi {
     @Operation(summary = "Enrichment 검토 후보 목록")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     Page<EnrichmentCandidateResponse> getCandidates(
             @Parameter(description = "needsReview 만 필터, 기본 true")
@@ -49,17 +49,17 @@ public interface AdminEnrichmentApi {
     @Operation(summary = "Enrichment 검토 후보 현황 요약")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     EnrichmentCandidateSummaryResponse getCandidateSummary();
 
     @Operation(summary = "정책 enrichment 상세 + 최근 잡 이력")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족"),
-            @ApiResponse(responseCode = "404", description = "정책 없음")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @ApiResponse(responseCode = "404", description = "정책 없음 (YF-004)")
     })
     PolicyEnrichmentDetailResponse getPolicyDetail(
             @Parameter(description = "정책 id") @PathVariable Long policyId);
@@ -67,10 +67,10 @@ public interface AdminEnrichmentApi {
     @Operation(summary = "정책 참조 사이트(URL) 갱신")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "갱신 성공"),
-            @ApiResponse(responseCode = "400", description = "입력값 오류"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족"),
-            @ApiResponse(responseCode = "404", description = "정책 없음")
+            @ApiResponse(responseCode = "400", description = "입력값 오류 (YF-001)"),
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @ApiResponse(responseCode = "404", description = "정책 없음 (YF-004)")
     })
     ResponseEntity<Void> updateReferenceSites(
             @Parameter(description = "정책 id") @PathVariable Long policyId,
@@ -79,12 +79,12 @@ public interface AdminEnrichmentApi {
     @Operation(summary = "강제 enrichment 잡 생성")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "202", description = "잡이 큐에 들어감"),
-            @ApiResponse(responseCode = "400", description = "URL 누락 등 입력값 오류"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족"),
-            @ApiResponse(responseCode = "404", description = "정책 없음"),
-            @ApiResponse(responseCode = "409", description = "이미 진행 중인 잡 존재"),
-            @ApiResponse(responseCode = "429", description = "레이트 리밋 초과")
+            @ApiResponse(responseCode = "400", description = "URL 누락 등 입력값 오류 (YF-001)"),
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @ApiResponse(responseCode = "404", description = "정책 없음 (YF-004)"),
+            @ApiResponse(responseCode = "409", description = "이미 진행 중인 잡 존재 (YF-006)"),
+            @ApiResponse(responseCode = "429", description = "레이트 리밋 초과 (YF-007)")
     })
     ResponseEntity<JobAcceptedResponse> createJob(
             @Parameter(description = "정책 id") @PathVariable Long policyId,
@@ -94,9 +94,9 @@ public interface AdminEnrichmentApi {
     @Operation(summary = "EnrichmentJob 단건 조회")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족"),
-            @ApiResponse(responseCode = "404", description = "잡 없음")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @ApiResponse(responseCode = "404", description = "잡 없음 (YF-004)")
     })
     EnrichmentJobResponse getJob(
             @Parameter(description = "잡 id") @PathVariable Long jobId);

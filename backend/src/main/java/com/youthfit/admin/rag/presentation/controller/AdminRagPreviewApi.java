@@ -18,11 +18,11 @@ public interface AdminRagPreviewApi {
     @Operation(summary = "RAG preview — baseline 과 candidate 검색 결과 비교")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "미리보기 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 오류"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "정책 없음"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "레이트 리밋 초과 (Retry-After: 60)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 오류 (YF-001)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "정책 없음 (YF-004)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "레이트 리밋 초과 (Retry-After: 60, YF-008)")
     })
     ResponseEntity<ApiResponse<RagPreviewResponse>> preview(
             @Valid @RequestBody RagPreviewRequest request,

@@ -18,9 +18,9 @@ public interface InternalEnrichmentJobCallbackApi {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "콜백 처리 성공"),
-            @ApiResponse(responseCode = "400", description = "필수 필드(status) 누락 또는 유효하지 않은 값"),
-            @ApiResponse(responseCode = "401", description = "Internal API Key 누락 / 불일치"),
-            @ApiResponse(responseCode = "404", description = "해당 jobId 를 찾을 수 없음")
+            @ApiResponse(responseCode = "400", description = "필수 필드(status) 누락 또는 유효하지 않은 값 (YF-001)"),
+            @ApiResponse(responseCode = "401", description = "Internal API Key 누락 / 불일치 (YF-002)"),
+            @ApiResponse(responseCode = "404", description = "해당 jobId 를 찾을 수 없음 (YF-004)")
     })
     @SecurityRequirements
     ResponseEntity<Void> callback(

@@ -26,8 +26,8 @@ public interface AdminQnaCacheApi {
             description = "오늘/어제 hit률, 7일 평균 유사도 및 비용 절감 추정")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<ApiResponse<QnaCacheLookupKpiResponse>> kpi();
 
@@ -35,8 +35,8 @@ public interface AdminQnaCacheApi {
             description = "지정된 기간 내 날짜별 hit/miss 통계 및 평균 유사도")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<ApiResponse<List<QnaCacheLookupDailyStatsResponse>>> dailyStats(
             @Parameter(description = "조회 일수 (기본 14)") @RequestParam(defaultValue = "14") int days);
@@ -45,8 +45,8 @@ public interface AdminQnaCacheApi {
             description = "결과 타입, 정책, 시간 범위로 필터링 가능한 페이지네이션 목록")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<ApiResponse<Page<QnaCacheLookupSummaryResponse>>> list(
             @Parameter(description = "결과 필터 (HIT | MISS)") @RequestParam(required = false) LookupResultType result,
@@ -60,9 +60,9 @@ public interface AdminQnaCacheApi {
             description = "ID로 단건 lookup 로그의 상세 정보를 반환한다")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "로그 없음")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "로그 없음 (YF-004)")
     })
     ResponseEntity<ApiResponse<QnaCacheLookupDetailResponse>> detail(
             @Parameter(description = "lookup 로그 ID") @PathVariable Long id);
@@ -71,8 +71,8 @@ public interface AdminQnaCacheApi {
             description = "지정된 필터 조건으로 조회된 lookup 로그를 CSV 형식으로 다운로드")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CSV 다운로드 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     void exportCsv(
             @Parameter(description = "결과 필터 (HIT | MISS)") @RequestParam(required = false) LookupResultType result,
