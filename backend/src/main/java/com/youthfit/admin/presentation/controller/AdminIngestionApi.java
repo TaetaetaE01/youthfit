@@ -28,16 +28,16 @@ public interface AdminIngestionApi {
     @Operation(summary = "Ingestion KPI (어제 신규/실패 + 7일 평균)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<IngestionKpiResponse> getKpi();
 
     @Operation(summary = "일자별·source 별 stacked bar 통계")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<List<IngestionDailyStatsResponse>> getDailyStats(
             @Parameter(description = "조회 일수, 기본 14")
@@ -46,24 +46,24 @@ public interface AdminIngestionApi {
     @Operation(summary = "원천별 마지막 수신/7일 합계/실패율")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<List<IngestionSourceSummaryResponse>> getSourceSummaries();
 
     @Operation(summary = "24h 미수신 source 알람")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<List<IngestionStaleSourceResponse>> getStaleSources();
 
     @Operation(summary = "실패 항목 리스트 (필터 + 페이지네이션)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<Page<IngestionFailureSummaryResponse>> searchFailures(
             @RequestParam(required = false) String source,
@@ -76,9 +76,9 @@ public interface AdminIngestionApi {
     @Operation(summary = "실패 상세 (raw_payload 포함)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족"),
-            @ApiResponse(responseCode = "404", description = "항목 없음")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)"),
+            @ApiResponse(responseCode = "404", description = "항목 없음 (YF-004)")
     })
     ResponseEntity<IngestionFailureDetailResponse> getFailureDetail(
             @Parameter(description = "실패 항목 id") @PathVariable Long id);
@@ -86,8 +86,8 @@ public interface AdminIngestionApi {
     @Operation(summary = "실패 항목 재처리 (단건)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "재처리 결과"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "403", description = "권한 부족")
+            @ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<IngestionRetryResponse> retryFailure(@PathVariable Long id);
 }

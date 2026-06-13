@@ -14,8 +14,8 @@ public interface AdminDashboardApi {
             description = "발화된 액션 아이템과 6개 영역 카드 상태를 함께 반환한다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요 (YF-002)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 부족 (YF-003)")
     })
     ResponseEntity<ApiResponse<DashboardOverviewResponse>> getOverview();
 }
