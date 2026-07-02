@@ -65,6 +65,20 @@ detail/parse 는 각 항목이 들고 있는 `detailBase/detailSuffix` 를 사�
 > `FETCH_FAILED` → FAILED 는 일치. 백엔드 무변경이라 이건 기존 매핑이며, 의도(짧은 본문은 enrichment
 > skip)가 합리적이면 표를 SKIPPED 로 정정하고, 아니면 아래 "어긋남" 절차로 후속 spec 분리.
 
+## 참고사이트 fetch 개선 검증 (#157, #158 — 2026-07-02)
+
+재반영: 워크플로우 4종 재import + n8n 재시작 (n8n-local-reimport-ops 메모 참조).
+
+1. **#157 생존성**: external 탭 웹훅 실행 → 스킴 없는 href 정책(kofpi 계열)이
+   워크플로우를 중단시키지 않고, 이후 정책이 계속 수집되는지 실행 로그로 확인
+2. **자기 포털 필터**: 서울시 탭 정책의 enrichment 가 `NO_LINK` +
+   `fetchDiagnostics[].outcome=SELF_PORTAL` 로 적재되는지 (기존: TOO_SHORT)
+3. **cookie jar**: molit.go.kr 계열 참고사이트가 REDIRECT_LOOP 대신 OK 로 수집되는지
+4. **TLS**: fill4young.kinfa.or.kr 이 TLS_ERROR 없이 수집되는지 (Task 6 Step 4 선행)
+5. **진단 분포**: `SELECT (raw_json::jsonb)->'enrichment'->>'status', jsonb_array_elements((raw_json::jsonb)->'enrichment'->'fetchDiagnostics')->>'outcome', count(*) FROM policy_source WHERE source_type='YOUTH_SEOUL_CRAWL' GROUP BY 1,2;`
+   로 outcome 분포 확인 (psql 은 docker exec -i 필수)
+6. **회귀**: 온통청년(youth-center-seoul) 정상 수집 + guide 재생성 여부
+
 ### 어긋남 발견 시
 
 - 백엔드 `EnrichmentJobService` / `PolicyProcessingStep` 매핑이 청년서울 출처에서 누락되었을 가능성
