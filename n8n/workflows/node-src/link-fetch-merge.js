@@ -73,6 +73,37 @@ function isSelfPortalUrl(url) {
   return /(^|\.)youth\.seoul\.go\.kr$/i.test(m[1]);
 }
 
+// SSRF 가드: 내부 대역(사설/루프백/링크로컬/메타데이터/docker 서비스명)으로의 요청을 차단한다.
+// n8n 은 docker 네트워크 안에서 돌고 prod 는 EC2(IMDS)라, 크롤 URL·리다이렉트가
+// 내부 리소스로 향하면 안 된다. 리터럴 IP·알려진 내부 호스트명·단일 라벨 호스트를 막는다.
+// (공개 호스트명이 내부 IP 로 resolve 되는 DNS rebinding 은 이 순수 가드 범위 밖 —
+//  완전 방어는 dns.lookup 후 연결 IP 고정이 필요하며 별도 과제다.)
+function isInternalHost(url) {
+  const m = String(url).match(/^https?:\/\/([^/:?#]+)/i);
+  if (!m) return false;
+  let host = m[1].toLowerCase();
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+  if (host === 'metadata.google.internal') return true;
+  if (host === '::1' || host === '::') return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(host)) return true;
+  if (/^fe[89ab][0-9a-f]:/.test(host)) return true;
+  const mapped = host.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  const v4 = mapped ? mapped[1] : host;
+  const oct = v4.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (oct) {
+    const a = +oct[1], b = +oct[2];
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    return false;
+  }
+  if (/^(0x[0-9a-f]+|\d+)$/.test(host)) return true;
+  if (!host.includes('.')) return true;
+  return false;
+}
+
 // selectUrls 가 모은 후보를 정규화·필터링해 fetch 대상과 진단을 분리한다.
 function prepareUrls(candidates) {
   const urls = [];
@@ -89,6 +120,10 @@ function prepareUrls(candidates) {
     seen.add(key);
     if (isSelfPortalUrl(normalized)) {
       diagnostics.push({ url: normalized, outcome: 'SELF_PORTAL' });
+      continue;
+    }
+    if (isInternalHost(normalized)) {
+      diagnostics.push({ url: normalized, outcome: 'INVALID_URL' });
       continue;
     }
     urls.push(normalized);
@@ -276,9 +311,14 @@ function httpGetText(url, state) {
       if (cookie) headers['Cookie'] = cookie;
       req = lib.request(url, { method: 'GET', headers, timeout: FETCH_TIMEOUT_MS }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const nextUrl = absUrl(res.headers.location, url);
+          if (isInternalHost(nextUrl)) {
+            res.resume();
+            return resolve({ ok: false, outcome: 'INVALID_URL' });
+          }
           const jar = applySetCookies(state.jar, host, res.headers['set-cookie'] || []);
           res.resume();
-          return httpGetText(absUrl(res.headers.location, url), { hops: state.hops + 1, jar, visited: state.visited }).then(resolve);
+          return httpGetText(nextUrl, { hops: state.hops + 1, jar, visited: state.visited }).then(resolve);
         }
         if (res.statusCode < 200 || res.statusCode >= 300) {
           res.resume();
