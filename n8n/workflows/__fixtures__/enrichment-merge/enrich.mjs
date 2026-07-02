@@ -34,6 +34,49 @@ function normalizeUrlKey(u) {
   return u.toLowerCase().replace(/\/+$/, '');
 }
 
+// URL 정규화: 스킴 없는 도메인(`www.kofpi.or.kr`)에 https 를 부여한다 (#157).
+// URL 로 볼 수 없는 문자열은 null — 호출부가 INVALID_URL 로 기록한다.
+export function normalizeCandidateUrl(raw) {
+  if (typeof raw !== 'string') return null;
+  const u = raw.trim();
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith('//')) return 'https:' + u;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+([/:?#]|$)/i.test(u)) return 'https://' + u;
+  return null;
+}
+
+// 자기 포털(youth.seoul.go.kr)은 fetch 하지 않는다.
+// 메인은 인덱스 shell, content.do 는 WebGate JS 챌린지, view.do 는 타 정책 교차 오염원.
+export function isSelfPortalUrl(url) {
+  const m = String(url).match(/^https?:\/\/([^/:?#]+)/i);
+  if (!m) return false;
+  return /(^|\.)youth\.seoul\.go\.kr$/i.test(m[1]);
+}
+
+// selectUrls 가 모은 후보를 정규화·필터링해 fetch 대상과 진단을 분리한다.
+export function prepareUrls(candidates) {
+  const urls = [];
+  const diagnostics = [];
+  const seen = new Set();
+  for (const raw of Array.isArray(candidates) ? candidates : []) {
+    const normalized = normalizeCandidateUrl(raw);
+    if (!normalized) {
+      diagnostics.push({ url: String(raw).slice(0, 500), outcome: 'INVALID_URL' });
+      continue;
+    }
+    const key = normalizeUrlKey(normalized);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (isSelfPortalUrl(normalized)) {
+      diagnostics.push({ url: normalized, outcome: 'SELF_PORTAL' });
+      continue;
+    }
+    urls.push(normalized);
+  }
+  return { urls, diagnostics };
+}
+
 export function selectUrls(policy) {
   // 1) 명시 refUrls[] 가 있으면 우선 사용 (youth-seoul-crawl)
   if (policy && Array.isArray(policy.refUrls)) {
