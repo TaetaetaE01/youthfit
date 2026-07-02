@@ -45,6 +45,8 @@ dist/
 ### Secrets ###
 .env
 *.pem
+# 공개 CA 인증서 번들은 시크릿이 아니므로 추적 (n8n NODE_EXTRA_CA_CERTS)
+!n8n/certs/extra-ca.pem
 credentials/
 
 ### Claude Code ###
