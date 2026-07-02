@@ -75,7 +75,7 @@ detail/parse 는 각 항목이 들고 있는 `detailBase/detailSuffix` 를 사�
    `fetchDiagnostics[].outcome=SELF_PORTAL` 로 적재되는지 (기존: TOO_SHORT)
 3. **cookie jar**: molit.go.kr 계열 참고사이트가 REDIRECT_LOOP 대신 OK 로 수집되는지
 4. **TLS**: fill4young.kinfa.or.kr 이 TLS_ERROR 없이 수집되는지 (Task 6 Step 4 선행)
-5. **진단 분포**: `SELECT (raw_json::jsonb)->'enrichment'->>'status', jsonb_array_elements((raw_json::jsonb)->'enrichment'->'fetchDiagnostics')->>'outcome', count(*) FROM policy_source WHERE source_type='YOUTH_SEOUL_CRAWL' GROUP BY 1,2;`
+5. **진단 분포**: `SELECT p.enrichment->>'status', jsonb_array_elements(p.enrichment->'fetchDiagnostics')->>'outcome', count(*) FROM policy p JOIN policy_source s ON s.policy_id = p.id WHERE s.source_type='YOUTH_SEOUL_CRAWL' GROUP BY 1,2;`
    로 outcome 분포 확인 (psql 은 docker exec -i 필수)
 6. **회귀**: 온통청년(youth-center-seoul) 정상 수집 + guide 재생성 여부
 
