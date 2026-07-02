@@ -74,7 +74,10 @@ detail/parse 는 각 항목이 들고 있는 `detailBase/detailSuffix` 를 사�
 2. **자기 포털 필터**: 서울시 탭 정책의 enrichment 가 `NO_LINK` +
    `fetchDiagnostics[].outcome=SELF_PORTAL` 로 적재되는지 (기존: TOO_SHORT)
 3. **cookie jar**: molit.go.kr 계열 참고사이트가 REDIRECT_LOOP 대신 OK 로 수집되는지
-4. **TLS**: fill4young.kinfa.or.kr 이 TLS_ERROR 없이 수집되는지 (Task 6 Step 4 선행)
+4. **TLS**: fill4young.kinfa.or.kr 이 TLS_ERROR 없이 수집되는지.
+   중간 인증서는 노드 코드에 인라인해 `ca` 로 넘긴다(#160) — `NODE_EXTRA_CA_CERTS` 는
+   task runner 에 상속되지 않기 때문. runner env 재현 검증:
+   `docker exec youthfit-n8n env -u NODE_EXTRA_CA_CERTS ... node -e "https.get(kinfa, {ca:[...tls.rootCertificates, EXTRA]})"` → HTTP 200
 5. **진단 분포**:
    ```sql
    SELECT p.enrichment->>'status' AS status, d->>'outcome' AS outcome, count(*)

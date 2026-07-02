@@ -195,13 +195,21 @@ psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-21-policy-refe
 
 일부 공공기관 사이트(예: fill4young.kinfa.or.kr)는 중간 인증서를 보내지 않아
 Node.js 기본 검증이 `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 로 실패한다 (브라우저는 통과).
-검증 완화 대신 누락 중간 인증서를 `n8n/certs/extra-ca.pem` 번들에 추가하고
-`NODE_EXTRA_CA_CERTS` 로 주입한다 (docker-compose n8n 서비스: env `NODE_EXTRA_CA_CERTS=/certs/extra-ca.pem` + volume `./n8n/certs:/certs:ro`).
+검증 완화 대신 누락 중간 인증서를 신뢰 목록에 추가한다. fetchDiagnostics 의 TLS_ERROR
+분포로 대상 사이트를 발견한다.
+
+> **⚠ 인증서는 두 곳에 있다 (#160).** n8n 2.16 은 Code 노드를 별도 task runner 프로세스에서
+> 실행하고, 이 프로세스는 `NODE_EXTRA_CA_CERTS` 를 상속하지 않는다. 그래서 인증서를 두 경로로 둔다:
+> 1. `n8n/certs/extra-ca.pem` + `NODE_EXTRA_CA_CERTS` (docker-compose n8n: env `NODE_EXTRA_CA_CERTS=/certs/extra-ca.pem` + volume `./n8n/certs:/certs:ro`) — main 프로세스(HTTP Request 노드 등)용.
+> 2. `n8n/workflows/node-src/link-fetch-merge.js` 의 `EXTRA_CA_PEM` 인라인 상수 → `tls.rootCertificates` 와 합쳐 request `ca` 로 전달 — task runner 의 Code 노드 fetch 용. (`tls` 는 `NODE_FUNCTION_ALLOW_BUILTIN` 에 포함돼야 함 — #160.)
+>
+> **회전·추가 시 두 곳을 모두 갱신하고 sync 를 재실행해야 한다.** 한쪽만 고치면 task runner 가
+> 다시 TLS_ERROR 로 깨진다(= #160 재현). 아래 절차의 (5)·(6) 단계 필수.
 
 추가 절차: `openssl s_client -showcerts` 로 체인 확인 → leaf 의
 Authority Information Access(CA Issuers) URI 에서 중간 인증서 다운로드 →
-`openssl verify -untrusted` 로 이어짐 확인 → extra-ca.pem 에 PEM append →
-`docker compose up -d n8n` 재기동. fetchDiagnostics 의 TLS_ERROR 분포로 대상 발견.
+`openssl verify -untrusted` 로 이어짐 확인 → **① extra-ca.pem 에 append + ② 노드 인라인 상수 갱신 →
+sync 재실행** → `docker compose up -d n8n` + 워크플로우 재import.
 
 ```bash
 # 1) 서버가 보내는 체인 확인 (1 이면 leaf 만 → 중간 인증서 누락)
@@ -212,10 +220,18 @@ openssl x509 -in /tmp/leaf.pem -noout -text | grep -A3 'Authority Information Ac
 # 3) 중간 인증서 다운로드 (보통 DER) → PEM 변환 후 번들에 append
 curl -so /tmp/intermediate.crt '<CA Issuers URI>'
 openssl x509 -inform der -in /tmp/intermediate.crt >> n8n/certs/extra-ca.pem
-# 4) 루트까지 이어지는지 검증 (OK 여야 함) → n8n 재기동
+# 4) 루트까지 이어지는지 검증 (OK 여야 함)
 openssl verify -untrusted n8n/certs/extra-ca.pem /tmp/leaf.pem
+# 5) 노드 인라인 상수도 갱신 (task runner 용, #160) — link-fetch-merge.js 의 EXTRA_CA_PEM 을
+#    extra-ca.pem 과 동일 내용으로 교체 (여러 중간 인증서면 배열/추가 상수로 확장)
+# 6) 워크플로우 4개에 재주입 후 재기동·재import
+node n8n/workflows/node-src/sync-link-fetch-merge.mjs
 docker compose up -d n8n
 ```
 
 현재 번들 내용 (2026-07-02):
 - `GlobalSign RSA OV SSL CA 2018` (issuer: GlobalSign Root CA - R3) — `*.kinfa.or.kr` leaf 용. 만료 2028-11-21.
+  `n8n/certs/extra-ca.pem` 과 `link-fetch-merge.js` 의 `EXTRA_CA_PEM` 두 곳에 동일 사본으로 존재.
+
+> **참고**: `NODE_FUNCTION_ALLOW_BUILTIN` 에 `tls` 를 추가한 유일한 이유는 위 (2) 의
+> `require('tls')`(rootCertificates) 다 (#160). 인라인 CA 방식을 걷어내면 함께 축소 가능.
