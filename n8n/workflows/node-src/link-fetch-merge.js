@@ -21,7 +21,7 @@ function normalizeUrlKey(u) {
 }
 
 function selectUrls(policy) {
-  // 1) 명시 refUrls[] 가 있으면 우선 사용 (youth-seoul 몽땅 크롤)
+  // 1) 명시 refUrls[] 가 있으면 우선 사용 (youth-seoul-crawl)
   if (policy && Array.isArray(policy.refUrls)) {
     const seen = new Set();
     const out = [];
@@ -284,6 +284,7 @@ function httpGetText(url, state) {
           res.resume();
           return resolve({ ok: false, outcome: 'HTTP_' + res.statusCode });
         }
+        res.on('error', () => resolve({ ok: false, outcome: 'NETWORK' }));
         const chunks = [];
         let total = 0;
         res.on('data', c => {

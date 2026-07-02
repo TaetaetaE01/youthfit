@@ -1,5 +1,5 @@
-// 동기화 책임: 이 파일과 youth-center-seoul.json 의 "링크 fetch + 머지" 노드 jsCode 는
-// 동일 알고리즘이어야 한다. README.md 참고.
+// 동기화 책임: 단일 원본은 n8n/workflows/node-src/link-fetch-merge.js 다.
+// 이 파일은 그 순수 함수들의 미러이며 verify.mjs 로 검증한다. README.md 참고.
 
 const MAX_URLS = 3;
 const MAX_CLEANED_LEN = 16000;
