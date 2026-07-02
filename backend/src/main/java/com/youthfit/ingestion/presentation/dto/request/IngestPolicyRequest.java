@@ -109,6 +109,11 @@ public record IngestPolicyRequest(
                 : p.extraAttachments().stream()
                         .map(a -> new PolicyEnrichment.ExtraAttachment(a.name(), a.url()))
                         .toList();
+        List<PolicyEnrichment.FetchDiagnostic> diagnostics = p.fetchDiagnostics() == null
+                ? null
+                : p.fetchDiagnostics().stream()
+                        .map(d -> new PolicyEnrichment.FetchDiagnostic(d.url(), d.outcome()))
+                        .toList();
         return new PolicyEnrichment(
                 p.sourceUrl(),
                 p.fetchedAt().toInstant(ZoneOffset.UTC),
@@ -117,7 +122,8 @@ public record IngestPolicyRequest(
                 status,
                 sections,
                 atts,
-                p.cleanedText()
+                p.cleanedText(),
+                diagnostics
         );
     }
 
@@ -204,7 +210,21 @@ public record IngestPolicyRequest(
             @NotBlank String status,
             @Valid EnrichmentSectionsPayload sections,
             List<@Valid ExtraAttachmentPayload> extraAttachments,
-            String cleanedText                  // NEW — nullable, n8n 에서 cap 후 전달
+            String cleanedText,                 // nullable, n8n 에서 cap 후 전달
+            List<@Valid FetchDiagnosticPayload> fetchDiagnostics   // NEW — nullable (#158)
+    ) {
+        // 기존 호출부(테스트) 하위호환용 — 진단 없는 생성
+        public EnrichmentPayload(String sourceUrl, LocalDateTime fetchedAt, String extractor,
+                                  Double confidence, String status, EnrichmentSectionsPayload sections,
+                                  List<ExtraAttachmentPayload> extraAttachments, String cleanedText) {
+            this(sourceUrl, fetchedAt, extractor, confidence, status, sections,
+                    extraAttachments, cleanedText, null);
+        }
+    }
+
+    public record FetchDiagnosticPayload(
+            @NotBlank String url,
+            @NotBlank String outcome
     ) {}
 
     public record EnrichmentSectionsPayload(

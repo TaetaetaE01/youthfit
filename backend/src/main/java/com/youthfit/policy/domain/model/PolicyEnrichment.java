@@ -15,9 +15,18 @@ public record PolicyEnrichment(
         EnrichmentStatus status,
         Sections sections,
         List<ExtraAttachment> extraAttachments,
-        String cleanedText
+        String cleanedText,
+        List<FetchDiagnostic> fetchDiagnostics
 ) {
     public static final double EXPOSURE_CONFIDENCE_THRESHOLD = 0.6;
+
+    // 기존 호출부(운영 1곳 + 테스트 26곳) 하위호환용 — 진단 없는 생성
+    public PolicyEnrichment(String sourceUrl, Instant fetchedAt, String extractor,
+                             Double confidence, EnrichmentStatus status, Sections sections,
+                             List<ExtraAttachment> extraAttachments, String cleanedText) {
+        this(sourceUrl, fetchedAt, extractor, confidence, status, sections,
+                extraAttachments, cleanedText, null);
+    }
 
     @JsonIgnore
     public boolean isExposable() {
@@ -62,4 +71,7 @@ public record PolicyEnrichment(
     }
 
     public record ExtraAttachment(String name, String url) {}
+
+    /** URL 별 fetch 결과 진단 (#158). outcome: OK/SELF_PORTAL/INVALID_URL/HTTP_<n>/TIMEOUT/TLS_ERROR/REDIRECT_LOOP/OVERSIZE/TOO_SHORT/NETWORK */
+    public record FetchDiagnostic(String url, String outcome) {}
 }
