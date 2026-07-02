@@ -8,6 +8,41 @@
 const cheerio = require('cheerio');
 const https = require('https');
 const http = require('http');
+const tls = require('tls');
+
+// TLS 중간 인증서 보강 (#160). n8n 2.16 task runner 는 NODE_EXTRA_CA_CERTS 를
+// 상속하지 않아 컨테이너 env 로 주입한 번들이 Code 노드 fetch 에 닿지 않는다.
+// 그래서 누락된 중간 인증서(GlobalSign RSA OV SSL CA 2018 — kinfa.or.kr 등)를
+// 노드 코드에 인라인해 기본 root 목록과 합쳐 request 의 ca 로 직접 넘긴다.
+// 원본은 n8n/certs/extra-ca.pem. 만료 2028-11-21 (OPS.md 갱신 절차 참고).
+const EXTRA_CA_PEM = `-----BEGIN CERTIFICATE-----
+MIIETjCCAzagAwIBAgINAe5fIh38YjvUMzqFVzANBgkqhkiG9w0BAQsFADBMMSAw
+HgYDVQQLExdHbG9iYWxTaWduIFJvb3QgQ0EgLSBSMzETMBEGA1UEChMKR2xvYmFs
+U2lnbjETMBEGA1UEAxMKR2xvYmFsU2lnbjAeFw0xODExMjEwMDAwMDBaFw0yODEx
+MjEwMDAwMDBaMFAxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52
+LXNhMSYwJAYDVQQDEx1HbG9iYWxTaWduIFJTQSBPViBTU0wgQ0EgMjAxODCCASIw
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKdaydUMGCEAI9WXD+uu3Vxoa2uP
+UGATeoHLl+6OimGUSyZ59gSnKvuk2la77qCk8HuKf1UfR5NhDW5xUTolJAgvjOH3
+idaSz6+zpz8w7bXfIa7+9UQX/dhj2S/TgVprX9NHsKzyqzskeU8fxy7quRU6fBhM
+abO1IFkJXinDY+YuRluqlJBJDrnw9UqhCS98NE3QvADFBlV5Bs6i0BDxSEPouVq1
+lVW9MdIbPYa+oewNEtssmSStR8JvA+Z6cLVwzM0nLKWMjsIYPJLJLnNvBhBWk0Cq
+o8VS++XFBdZpaFwGue5RieGKDkFNm5KQConpFmvv73W+eka440eKHRwup08CAwEA
+AaOCASkwggElMA4GA1UdDwEB/wQEAwIBhjASBgNVHRMBAf8ECDAGAQH/AgEAMB0G
+A1UdDgQWBBT473/yzXhnqN5vjySNiPGHAwKz6zAfBgNVHSMEGDAWgBSP8Et/qC5F
+JK5NUPpjmove4t0bvDA+BggrBgEFBQcBAQQyMDAwLgYIKwYBBQUHMAGGImh0dHA6
+Ly9vY3NwMi5nbG9iYWxzaWduLmNvbS9yb290cjMwNgYDVR0fBC8wLTAroCmgJ4Yl
+aHR0cDovL2NybC5nbG9iYWxzaWduLmNvbS9yb290LXIzLmNybDBHBgNVHSAEQDA+
+MDwGBFUdIAAwNDAyBggrBgEFBQcCARYmaHR0cHM6Ly93d3cuZ2xvYmFsc2lnbi5j
+b20vcmVwb3NpdG9yeS8wDQYJKoZIhvcNAQELBQADggEBAJmQyC1fQorUC2bbmANz
+EdSIhlIoU4r7rd/9c446ZwTbw1MUcBQJfMPg+NccmBqixD7b6QDjynCy8SIwIVbb
+0615XoFYC20UgDX1b10d65pHBf9ZjQCxQNqQmJYaumxtf4z1s4DfjGRzNpZ5eWl0
+6r/4ngGPoJVpjemEuunl1Ig423g7mNA2eymw0lIYkN5SQwCuaifIFJ6GlazhgDEw
+fpolu4usBCOmmQDo8dIm7A9+O4orkjgTHY+GzYZSR+Y0fFukAj6KYXwidlNalFMz
+hriSqHKvoflShx8xpfywgVcvzfTO3PYkz6fiNJBonf6q8amaEsybwMbDqKWwIX7e
+SPY=
+-----END CERTIFICATE-----`;
+// ca 를 지정하면 기본 신뢰 목록이 대체되므로, Node 기본 root 에 중간 인증서를 더한다.
+const CA_BUNDLE = [...tls.rootCertificates, EXTRA_CA_PEM];
 
 const MAX_URLS = 3;
 const MAX_CLEANED_LEN = 16000;
@@ -309,7 +344,7 @@ function httpGetText(url, state) {
         'Accept-Encoding': 'identity'
       };
       if (cookie) headers['Cookie'] = cookie;
-      req = lib.request(url, { method: 'GET', headers, timeout: FETCH_TIMEOUT_MS }, (res) => {
+      req = lib.request(url, { method: 'GET', headers, timeout: FETCH_TIMEOUT_MS, ca: CA_BUNDLE }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           const nextUrl = absUrl(res.headers.location, url);
           if (isInternalHost(nextUrl)) {
