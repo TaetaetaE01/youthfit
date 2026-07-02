@@ -1,0 +1,1 @@
+{ "steps": [ { "apply": { "host": "www.molit.go.kr", "setCookie": ["WMONID=abc123; Path=/; HttpOnly", "SESSION=xyz; Path=/"] } }, { "header": { "host": "www.molit.go.kr" } } ] }

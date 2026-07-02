@@ -238,3 +238,29 @@ export async function extractCleanedAndAttachments(rawHtml, pageUrl) {
   });
   return { cleaned, extras };
 }
+
+// 리다이렉트 체인 한정 cookie jar (#158).
+// Set-Cookie 의 name=value 만 취하고 속성(Path/Domain/Expires)은 무시한다 —
+// 체인 밖으로 쿠키를 유지하지 않으므로 만료·스코프 관리가 불필요하다.
+export function applySetCookies(jar, host, setCookieHeaders) {
+  if (!Array.isArray(setCookieHeaders) || setCookieHeaders.length === 0) return jar;
+  const next = { ...jar, [host]: { ...(jar[host] || {}) } };
+  for (const line of setCookieHeaders) {
+    if (typeof line !== 'string') continue;
+    const pair = line.split(';', 1)[0];
+    const eq = pair.indexOf('=');
+    if (eq <= 0) continue;
+    const name = pair.slice(0, eq).trim();
+    if (!name) continue;
+    next[host][name] = pair.slice(eq + 1).trim();
+  }
+  return next;
+}
+
+export function cookieHeaderFor(jar, host) {
+  const cookies = jar && jar[host];
+  if (!cookies) return null;
+  const entries = Object.entries(cookies);
+  if (entries.length === 0) return null;
+  return entries.map(([k, v]) => `${k}=${v}`).join('; ');
+}

@@ -1,0 +1,1 @@
+{ "steps": [ { "apply": { "host": "a.go.kr", "setCookie": ["k=v; Path=/"] } }, { "header": { "host": "b.go.kr" } } ] }
