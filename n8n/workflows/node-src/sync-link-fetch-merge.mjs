@@ -11,6 +11,22 @@ const TARGETS = [
 ];
 
 const code = await readFile(SRC, 'utf8');
+
+// 드리프트 가드 (#160): 노드에 인라인된 EXTRA_CA_PEM 이 certs/extra-ca.pem 과 동일한지 확인한다.
+// 두 사본이 갈라지면 task runner(인라인)와 main 프로세스(번들)가 서로 다른 CA 를 신뢰하게 된다.
+{
+  const normalize = (pem) => (pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [])
+    .map(b => b.replace(/\s+/g, ''));
+  const bundle = normalize(await readFile(new URL('../../certs/extra-ca.pem', import.meta.url), 'utf8'));
+  const inlineMatch = code.match(/EXTRA_CA_PEM\s*=\s*`([\s\S]*?)`/);
+  const inline = inlineMatch ? normalize(inlineMatch[1]) : [];
+  const same = bundle.length === inline.length && bundle.every(c => inline.includes(c));
+  if (!same) {
+    console.error('CERT DRIFT: link-fetch-merge.js 의 EXTRA_CA_PEM 이 n8n/certs/extra-ca.pem 과 다릅니다. 두 곳을 동일하게 맞추세요 (#160).');
+    process.exit(1);
+  }
+}
+
 for (const [rel, nodeName] of TARGETS) {
   const path = new URL(rel, import.meta.url);
   const wf = JSON.parse(await readFile(path, 'utf8'));
