@@ -20,6 +20,7 @@ import com.youthfit.qna.application.port.dto.SemanticLookupMatch;
 import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.domain.model.QnaFailedReason;
+import com.youthfit.qna.domain.model.QnaFallbackAnswer;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.qna.infrastructure.config.QueryRewriteProperties;
 import com.youthfit.rag.application.dto.command.SearchChunksCommand;
@@ -374,7 +375,7 @@ public class QnaService {
      * fallback 답변일 때 sources 를 비워 출처 모순을 방지한다.
      */
     private static boolean isFallbackAnswer(String answer) {
-        return answer != null && answer.contains("명시되어 있지 않");
+        return QnaFallbackAnswer.isFallback(answer);
     }
 
     private String truncateExcerpt(String content) {
