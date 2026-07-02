@@ -337,7 +337,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const p = $input.first().json;\nconst e = {\n  sourceUrl: (p.rawData._refUrls && p.rawData._refUrls[0]) || null,\n  fetchedAt: new Date().toISOString().replace('Z', ''),\n  extractor: 'regex',\n  confidence: null,\n  status: p._enrichmentStatus === undefined ? 'FETCH_FAILED' : (p._enrichmentStatus ?? 'OK'),\n  sections: null,\n  extraAttachments: p._extraAttachments || [],\n  cleanedText: p._cleanedText || null\n};\nreturn [{ json: { ...p, rawData: { ...p.rawData, enrichment: e } } }];"
+        "jsCode": "const p = $input.first().json;\nconst e = {\n  sourceUrl: (p.rawData._refUrls && p.rawData._refUrls[0]) || null,\n  fetchedAt: new Date().toISOString().replace('Z', ''),\n  extractor: 'regex',\n  confidence: null,\n  status: p._enrichmentStatus === undefined ? 'FETCH_FAILED' : (p._enrichmentStatus ?? 'OK'),\n  sections: null,\n  extraAttachments: p._extraAttachments || [],\n  cleanedText: p._cleanedText || null,\n  fetchDiagnostics: p._fetchDiagnostics || [],\n};\nreturn [{ json: { ...p, rawData: { ...p.rawData, enrichment: e } } }];"
       },
       "id": "enrichment-meta",
       "name": "enrichment 메타 합성",
