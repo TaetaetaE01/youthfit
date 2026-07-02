@@ -23,6 +23,7 @@
 
 **포함**
 - "참고사이트 fetch + 머지" Code 노드 수정 (youth-seoul-city / district / external 3종 동일 코드)
+- 온통청년 `youth-center-seoul.json`의 "링크 fetch + 머지" 노드 — 같은 알고리즘의 4번째 사본(동기화 책임 주석으로 명시돼 있음)이며 #157 크래시 리스크가 동일해 함께 갱신
 - fixtures 미러 `n8n/workflows/__fixtures__/enrichment-merge/enrich.mjs` 동기화 + verify 케이스 추가
 - 백엔드 `PolicyEnrichment` record에 `fetchDiagnostics` 필드 추가 (jsonb 하위 호환)
 - n8n 컨테이너 TLS 인증서 번들 주입 (`NODE_EXTRA_CA_CERTS`) + OPS.md 절차 기록

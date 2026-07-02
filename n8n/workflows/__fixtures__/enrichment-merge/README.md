@@ -33,4 +33,9 @@ docker compose exec -T n8n sh -c 'cd /tmp/em-fix && node verify.mjs'
 
 ## 동기화 책임
 
-**⚠ `enrich.mjs` 와 `youth-center-seoul.json` 의 `링크 fetch + 머지` 노드 jsCode 는 항상 동일 로직이어야 한다.** 한쪽을 수정하면 다른쪽도 같은 변경을 반영해야 한다. 노드 jsCode 가 변경됐는데 픽스처 검증이 깨지면, 의도된 변경이라면 픽스처를 갱신하고, 아니면 노드 jsCode 를 되돌려라.
+fetch 노드 알고리즘의 단일 원본은 `n8n/workflows/node-src/link-fetch-merge.js` 다.
+- 워크플로우 4개(youth-seoul-city/district/external 의 "참고사이트 fetch + 머지",
+  youth-center-seoul 의 "링크 fetch + 머지")의 jsCode 는
+  `node node-src/sync-link-fetch-merge.mjs` 로 재생성한다. JSON 손편집 금지.
+- 이 디렉토리의 `enrich.mjs` 는 순수 함수 미러다. 원본의 순수 함수를 수정하면
+  같은 변경을 여기에도 반영하고 `node verify.mjs` 로 검증한다.

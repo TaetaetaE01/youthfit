@@ -102,4 +102,26 @@ class PolicyEnrichmentTest {
         );
         assertThat(enrichment.cleanedText()).isEqualTo(text);
     }
+
+    @Test
+    void fetchDiagnostics가_없는_기존_jsonb도_역직렬화된다() throws Exception {
+        String legacy = """
+                {"sourceUrl":"https://a.go.kr","fetchedAt":"2026-07-02T00:00:00Z","extractor":"regex",
+                 "confidence":null,"status":"TOO_SHORT","sections":null,"extraAttachments":[],"cleanedText":null}
+                """;
+        PolicyEnrichment e = jacksonWithJavaTime().readValue(legacy, PolicyEnrichment.class);
+        assertThat(e.fetchDiagnostics()).isNull();
+    }
+
+    @Test
+    void fetchDiagnostics가_있으면_역직렬화된다() throws Exception {
+        String withDiag = """
+                {"sourceUrl":null,"fetchedAt":"2026-07-02T00:00:00Z","extractor":"regex",
+                 "confidence":null,"status":"NO_LINK","sections":null,"extraAttachments":[],"cleanedText":null,
+                 "fetchDiagnostics":[{"url":"https://youth.seoul.go.kr","outcome":"SELF_PORTAL"}]}
+                """;
+        PolicyEnrichment e = jacksonWithJavaTime().readValue(withDiag, PolicyEnrichment.class);
+        assertThat(e.fetchDiagnostics()).hasSize(1);
+        assertThat(e.fetchDiagnostics().get(0).outcome()).isEqualTo("SELF_PORTAL");
+    }
 }

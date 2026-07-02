@@ -190,3 +190,32 @@ psql "$YOUTHFIT_DB_URL" -f backend/src/main/resources/sql/2026-05-21-policy-refe
 - 같은 정책에 이미 진행 중인(`PENDING`/`RUNNING`) 잡이 있으면 새 요청은 `409`(`EnrichmentJobConflictException`)로 거절된다 — DB unique index + service guard 의 이중 방어.
 - n8n webhook 호출 실패 시 잡은 즉시 `FAILED`(error=`n8n_unreachable: ...`)로 저장된다.
 - 멀티 인스턴스 도입 시 `EnrichmentJobTimeoutScheduler` 에 ShedLock 추가가 필요하다 (현재 단일 인스턴스 가정).
+
+## n8n 크롤 대상 TLS 중간 인증서 보강 (2026-07-02)
+
+일부 공공기관 사이트(예: fill4young.kinfa.or.kr)는 중간 인증서를 보내지 않아
+Node.js 기본 검증이 `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 로 실패한다 (브라우저는 통과).
+검증 완화 대신 누락 중간 인증서를 `n8n/certs/extra-ca.pem` 번들에 추가하고
+`NODE_EXTRA_CA_CERTS` 로 주입한다 (docker-compose n8n 서비스: env `NODE_EXTRA_CA_CERTS=/certs/extra-ca.pem` + volume `./n8n/certs:/certs:ro`).
+
+추가 절차: `openssl s_client -showcerts` 로 체인 확인 → leaf 의
+Authority Information Access(CA Issuers) URI 에서 중간 인증서 다운로드 →
+`openssl verify -untrusted` 로 이어짐 확인 → extra-ca.pem 에 PEM append →
+`docker compose up -d n8n` 재기동. fetchDiagnostics 의 TLS_ERROR 분포로 대상 발견.
+
+```bash
+# 1) 서버가 보내는 체인 확인 (1 이면 leaf 만 → 중간 인증서 누락)
+openssl s_client -connect <host>:443 -servername <host> -showcerts </dev/null 2>/dev/null | grep -c 'BEGIN CERT'
+# 2) leaf 저장 후 CA Issuers URI 확인
+openssl s_client -connect <host>:443 -servername <host> </dev/null 2>/dev/null | sed -n '/BEGIN CERT/,/END CERT/p' > /tmp/leaf.pem
+openssl x509 -in /tmp/leaf.pem -noout -text | grep -A3 'Authority Information Access'
+# 3) 중간 인증서 다운로드 (보통 DER) → PEM 변환 후 번들에 append
+curl -so /tmp/intermediate.crt '<CA Issuers URI>'
+openssl x509 -inform der -in /tmp/intermediate.crt >> n8n/certs/extra-ca.pem
+# 4) 루트까지 이어지는지 검증 (OK 여야 함) → n8n 재기동
+openssl verify -untrusted n8n/certs/extra-ca.pem /tmp/leaf.pem
+docker compose up -d n8n
+```
+
+현재 번들 내용 (2026-07-02):
+- `GlobalSign RSA OV SSL CA 2018` (issuer: GlobalSign Root CA - R3) — `*.kinfa.or.kr` leaf 용. 만료 2028-11-21.

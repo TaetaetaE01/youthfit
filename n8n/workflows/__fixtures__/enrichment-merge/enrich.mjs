@@ -1,5 +1,5 @@
-// 동기화 책임: 이 파일과 youth-center-seoul.json 의 "링크 fetch + 머지" 노드 jsCode 는
-// 동일 알고리즘이어야 한다. README.md 참고.
+// 동기화 책임: 단일 원본은 n8n/workflows/node-src/link-fetch-merge.js 다.
+// 이 파일은 그 순수 함수들의 미러이며 verify.mjs 로 검증한다. README.md 참고.
 
 const MAX_URLS = 3;
 const MAX_CLEANED_LEN = 16000;
@@ -32,6 +32,84 @@ export async function cheerioAvailable() {
 
 function normalizeUrlKey(u) {
   return u.toLowerCase().replace(/\/+$/, '');
+}
+
+// URL 정규화: 스킴 없는 도메인(`www.kofpi.or.kr`)에 https 를 부여한다 (#157).
+// URL 로 볼 수 없는 문자열은 null — 호출부가 INVALID_URL 로 기록한다.
+export function normalizeCandidateUrl(raw) {
+  if (typeof raw !== 'string') return null;
+  const u = raw.trim();
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.startsWith('//')) return 'https:' + u;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+([/:?#]|$)/i.test(u)) return 'https://' + u;
+  return null;
+}
+
+// 자기 포털(youth.seoul.go.kr)은 fetch 하지 않는다.
+// 메인은 인덱스 shell, content.do 는 WebGate JS 챌린지, view.do 는 타 정책 교차 오염원.
+export function isSelfPortalUrl(url) {
+  const m = String(url).match(/^https?:\/\/([^/:?#]+)/i);
+  if (!m) return false;
+  return /(^|\.)youth\.seoul\.go\.kr$/i.test(m[1]);
+}
+
+// SSRF 가드: 내부 대역(사설/루프백/링크로컬/메타데이터/docker 서비스명)으로의 요청을 차단한다.
+// n8n 은 docker 네트워크 안에서 돌고 prod 는 EC2(IMDS)라, 크롤 URL·리다이렉트가
+// 내부 리소스로 향하면 안 된다. 리터럴 IP·알려진 내부 호스트명·단일 라벨 호스트를 막는다.
+// (공개 호스트명이 내부 IP 로 resolve 되는 DNS rebinding 은 이 순수 가드 범위 밖 —
+//  완전 방어는 dns.lookup 후 연결 IP 고정이 필요하며 별도 과제다.)
+export function isInternalHost(url) {
+  const m = String(url).match(/^https?:\/\/([^/:?#]+)/i);
+  if (!m) return false;
+  let host = m[1].toLowerCase();
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+  if (host === 'metadata.google.internal') return true;
+  if (host === '::1' || host === '::') return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(host)) return true;
+  if (/^fe[89ab][0-9a-f]:/.test(host)) return true;
+  const mapped = host.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  const v4 = mapped ? mapped[1] : host;
+  const oct = v4.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (oct) {
+    const a = +oct[1], b = +oct[2];
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    return false;
+  }
+  if (/^(0x[0-9a-f]+|\d+)$/.test(host)) return true;
+  if (!host.includes('.')) return true;
+  return false;
+}
+
+// selectUrls 가 모은 후보를 정규화·필터링해 fetch 대상과 진단을 분리한다.
+export function prepareUrls(candidates) {
+  const urls = [];
+  const diagnostics = [];
+  const seen = new Set();
+  for (const raw of Array.isArray(candidates) ? candidates : []) {
+    const normalized = normalizeCandidateUrl(raw);
+    if (!normalized) {
+      diagnostics.push({ url: String(raw).slice(0, 500), outcome: 'INVALID_URL' });
+      continue;
+    }
+    const key = normalizeUrlKey(normalized);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (isSelfPortalUrl(normalized)) {
+      diagnostics.push({ url: normalized, outcome: 'SELF_PORTAL' });
+      continue;
+    }
+    if (isInternalHost(normalized)) {
+      diagnostics.push({ url: normalized, outcome: 'INVALID_URL' });
+      continue;
+    }
+    urls.push(normalized);
+  }
+  return { urls, diagnostics };
 }
 
 export function selectUrls(policy) {
@@ -194,4 +272,30 @@ export async function extractCleanedAndAttachments(rawHtml, pageUrl) {
     extras.push({ name, url });
   });
   return { cleaned, extras };
+}
+
+// 리다이렉트 체인 한정 cookie jar (#158).
+// Set-Cookie 의 name=value 만 취하고 속성(Path/Domain/Expires)은 무시한다 —
+// 체인 밖으로 쿠키를 유지하지 않으므로 만료·스코프 관리가 불필요하다.
+export function applySetCookies(jar, host, setCookieHeaders) {
+  if (!Array.isArray(setCookieHeaders) || setCookieHeaders.length === 0) return jar;
+  const next = { ...jar, [host]: { ...(jar[host] || {}) } };
+  for (const line of setCookieHeaders) {
+    if (typeof line !== 'string') continue;
+    const pair = line.split(';', 1)[0];
+    const eq = pair.indexOf('=');
+    if (eq <= 0) continue;
+    const name = pair.slice(0, eq).trim();
+    if (!name) continue;
+    next[host][name] = pair.slice(eq + 1).trim();
+  }
+  return next;
+}
+
+export function cookieHeaderFor(jar, host) {
+  const cookies = jar && jar[host];
+  if (!cookies) return null;
+  const entries = Object.entries(cookies);
+  if (entries.length === 0) return null;
+  return entries.map(([k, v]) => `${k}=${v}`).join('; ');
 }

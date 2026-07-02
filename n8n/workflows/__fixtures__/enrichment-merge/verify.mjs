@@ -1,4 +1,4 @@
-import { selectUrls, mergeFetchResults, cheerioAvailable, extractCleanedAndAttachments } from './enrich.mjs';
+import { selectUrls, mergeFetchResults, cheerioAvailable, extractCleanedAndAttachments, prepareUrls, applySetCookies, cookieHeaderFor } from './enrich.mjs';
 import { readFile, readdir } from 'node:fs/promises';
 import { deepStrictEqual } from 'node:assert/strict';
 
@@ -71,6 +71,52 @@ if (htmlInputs.length > 0) {
         console.log(`  actual:   ${JSON.stringify(actual)}`);
       }
     }
+  }
+}
+
+// prepareUrls 케이스 (Task 1)
+const PREPARE_DIR = new URL('./cases-prepare-urls/', import.meta.url);
+let prepEntries = [];
+try { prepEntries = await readdir(PREPARE_DIR); } catch (_) {}
+for (const inputFile of prepEntries.filter(e => e.endsWith('.input.json')).sort()) {
+  total++;
+  const name = inputFile.replace('.input.json', '');
+  const input = JSON.parse(await readFile(new URL(inputFile, PREPARE_DIR), 'utf8'));
+  const expected = JSON.parse(await readFile(new URL(`${name}.expected.json`, PREPARE_DIR), 'utf8'));
+  const actual = prepareUrls(input.candidates);
+  if (deepEqual(actual, expected)) {
+    console.log(`PASS  ${name} (prepare-urls)`);
+  } else {
+    failed++;
+    console.log(`FAIL  ${name} (prepare-urls)`);
+    console.log(`  expected: ${JSON.stringify(expected)}`);
+    console.log(`  actual:   ${JSON.stringify(actual)}`);
+  }
+}
+
+// cookie jar 케이스 (Task 2)
+const COOKIES_DIR = new URL('./cases-cookies/', import.meta.url);
+let cookieEntries = [];
+try { cookieEntries = await readdir(COOKIES_DIR); } catch (_) {}
+for (const inputFile of cookieEntries.filter(e => e.endsWith('.input.json')).sort()) {
+  total++;
+  const name = inputFile.replace('.input.json', '');
+  const input = JSON.parse(await readFile(new URL(inputFile, COOKIES_DIR), 'utf8'));
+  const expected = JSON.parse(await readFile(new URL(`${name}.expected.json`, COOKIES_DIR), 'utf8'));
+  let jar = {};
+  const headers = [];
+  for (const step of input.steps) {
+    if (step.apply) jar = applySetCookies(jar, step.apply.host, step.apply.setCookie);
+    if (step.header) headers.push(cookieHeaderFor(jar, step.header.host));
+  }
+  const actual = { headers };
+  if (deepEqual(actual, expected)) {
+    console.log(`PASS  ${name} (cookies)`);
+  } else {
+    failed++;
+    console.log(`FAIL  ${name} (cookies)`);
+    console.log(`  expected: ${JSON.stringify(expected)}`);
+    console.log(`  actual:   ${JSON.stringify(actual)}`);
   }
 }
 

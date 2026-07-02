@@ -50,10 +50,12 @@ services:
       - NODE_FUNCTION_ALLOW_EXTERNAL=cheerio
       - NODE_FUNCTION_ALLOW_BUILTIN=crypto,https,http
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - NODE_EXTRA_CA_CERTS=/certs/extra-ca.pem
     ports:
       - "5678:5678"
     volumes:
       - n8n-data:/home/node/.n8n
+      - ./n8n/certs:/certs:ro
     depends_on:
       postgres:
         condition: service_healthy
