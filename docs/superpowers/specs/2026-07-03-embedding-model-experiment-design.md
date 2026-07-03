@@ -27,13 +27,24 @@ NEGATIVE 오탐률 0.737 (QnA threshold 0.78 기준). 우회책 두 가지(하�
 비용: 3-large 는 3-small 의 6.5배(0.13/1M tokens)지만 절대액 미미 —
 재인덱싱 1,178청크 + 질문 73건 재임베딩에 수백 원 수준.
 
-## 3. 코드 변경 (eval 모듈만, prod 무변경)
+## 3. 코드 변경 (eval 모듈 + ingestion 소폭)
+
+### 3.0 `AttachmentReindexService.reindexWithoutEvents(policyId)` 추가 (ingestion)
+
+첨부 청크가 전체의 44%(로컬 521/1178)라 재인덱싱은 body 만이 아니라 기존
+`AttachmentReindexService.reindex` 의 content 조립(본문+선별 첨부+enrichment)을
+그대로 타야 한다. 그러나 기존 `reindex` 는 `PolicyAttachmentReindexedEvent` 를
+발행해 가이드·룰 LLM 재생성 리스너를 깨운다 — 임베딩 실험에 부적절한 부수효과.
+내부 로직을 공유하되 **이벤트를 발행하지 않는 변형**을 추가한다 (동작 변경 없는
+추출 리팩토링 + 오버로드). 첨부 LLM 게이트는 이미 판정된 첨부를 캐시 재사용하므로
+추가 LLM 호출 없음.
 
 ### 3.1 `--eval.mode=reindex` 신설
 
 청크 보유 전 정책을 순회하며 `PolicyDocumentRepository.deleteByPolicyId(id)` →
-`RagIndexingService.indexPolicyDocument(...)` 를 호출한다. **삭제 후 인덱싱이므로
-source_hash 게이트(내용 기반 해시라 모델 교체를 감지 못함)를 자연 우회한다.**
+`AttachmentReindexService.reindexWithoutEvents(id)` 를 호출한다 (정책당 하나의
+트랜잭션). **삭제 후 인덱싱이므로 source_hash 게이트(내용 기반 해시라 모델 교체를
+감지 못함)를 자연 우회한다.**
 
 - generate 모드와 동일한 비용 방어: 기본 dry-run(대상 정책 수·예상 임베딩 청크 수 출력),
   `--eval.confirm=true` 일 때만 실행
