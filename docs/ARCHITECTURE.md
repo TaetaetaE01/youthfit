@@ -66,7 +66,7 @@ com.youthfit/
 ├── ingestion/      # n8n 외부 수집 파이프라인 수신
 ├── metrics/        # LLM 비용 추적 및 사용량 집계
 ├── region/         # 지역 정보 조회 및 매핑
-├── eval/           # RAG retrieval 평가 도구 (dev 전용, @Profile("eval") — prod 미기동). 평가셋 generate/run 러너. #162
+├── eval/           # RAG retrieval 평가 도구 (dev 전용, @Profile("eval") — prod 미기동). 평가셋 generate/run/reindex 러너. #162 #167
 └── common/         # 공통 설정, 예외, 유틸
 ```
 

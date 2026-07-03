@@ -12,6 +12,7 @@ import com.youthfit.rag.application.dto.command.IndexPolicyDocumentCommand;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.application.service.RagIndexingService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -119,6 +120,38 @@ class AttachmentReindexServiceTest {
         sut.reindex(1L);
 
         verify(eventPublisher, never()).publishEvent(any(PolicyAttachmentReindexedEvent.class));
+    }
+
+    @Test
+    @DisplayName("reindexWithoutEvents 는 인덱싱 결과가 updated 여도 이벤트를 발행하지 않는다")
+    void reindexWithoutEvents_neverPublishesEvent() {
+        Policy policy = mock(Policy.class);
+        when(policy.getId()).thenReturn(1L);
+        when(policy.getBody()).thenReturn("본문");
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of());
+        IndexingResult updated = new IndexingResult(1L, 5, true);
+        when(ragIndexingService.indexPolicyDocument(any())).thenReturn(updated);
+
+        IndexingResult result = sut.reindexWithoutEvents(1L);
+
+        assertThat(result.updated()).isTrue();
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("기존 reindex 는 updated 시 이벤트를 발행한다 (동작 불변 확인)")
+    void reindex_stillPublishesEvent() {
+        Policy policy = mock(Policy.class);
+        when(policy.getId()).thenReturn(1L);
+        when(policy.getBody()).thenReturn("본문");
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(attachmentRepository.findExtractedByPolicyId(1L)).thenReturn(List.of());
+        when(ragIndexingService.indexPolicyDocument(any())).thenReturn(new IndexingResult(1L, 5, true));
+
+        sut.reindex(1L);
+
+        verify(eventPublisher).publishEvent(any(PolicyAttachmentReindexedEvent.class));
     }
 
     @Test

@@ -49,14 +49,28 @@ public class AttachmentReindexService {
     private int maxContentKb;
 
     public void reindex(Long policyId) {
+        doReindex(policyId, true);
+    }
+
+    /**
+     * 이벤트 미발행 재인덱싱 — 임베딩 모델 실험(#167)용.
+     * PolicyAttachmentReindexedEvent 를 발행하지 않아 가이드·룰 LLM 재생성 리스너를 깨우지 않는다.
+     *
+     * @return 인덱싱 결과. costGuard 차단·정책 미존재 시 null.
+     */
+    public IndexingResult reindexWithoutEvents(Long policyId) {
+        return doReindex(policyId, false);
+    }
+
+    private IndexingResult doReindex(Long policyId, boolean publishEvents) {
         if (!costGuard.allows(policyId)) {
             costGuard.logSkip("attachment-reindex", policyId);
-            return;
+            return null;
         }
         Optional<Policy> policyOpt = policyRepository.findById(policyId);
         if (policyOpt.isEmpty()) {
             log.warn("policy not found for reindex: {}", policyId);
-            return;
+            return null;
         }
         Policy policy = policyOpt.get();
         Long resolvedId = policy.getId();
@@ -67,12 +81,14 @@ public class AttachmentReindexService {
 
         IndexPolicyDocumentCommand cmd = new IndexPolicyDocumentCommand(resolvedId, merged, policy.getEnrichment());
         IndexingResult result = ragIndexingService.indexPolicyDocument(cmd);
-        log.info("reindex policyId={} chunks={} updated={}", resolvedId, result.chunkCount(), result.updated());
+        log.info("reindex policyId={} chunks={} updated={} publishEvents={}",
+                resolvedId, result.chunkCount(), result.updated(), publishEvents);
 
-        if (result.updated()) {
+        if (publishEvents && result.updated()) {
             eventPublisher.publishEvent(new PolicyAttachmentReindexedEvent(resolvedId));
             log.info("attachment reindex event published: policyId={}", resolvedId);
         }
+        return result;
     }
 
     /**
