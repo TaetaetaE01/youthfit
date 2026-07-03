@@ -334,7 +334,7 @@ EligibilityRule
 
 - **분할 기준**: 문단/문장, 최대 500 자
 - **메타 보존**: 청크별 `chunkIndex`, `source` (`BODY` / `ATTACHMENT` / `ENRICHMENT_BODY`), `attachmentId`, `pageStart`/`pageEnd`
-- **임베딩**: OpenAI `text-embedding-3-small` (1536 차원), `pgvector` 의 `vector(1536)` 컬럼에 저장
+- **임베딩**: OpenAI `text-embedding-3-large` (dimensions=1536 축소, #167), `pgvector` 의 `vector(1536)` 컬럼에 저장
 
 ### 3-4. 인덱싱 결과
 

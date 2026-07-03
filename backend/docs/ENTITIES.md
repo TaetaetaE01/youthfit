@@ -183,7 +183,7 @@ LLM으로 생성된 정책 해설 콘텐츠. 정책당 1개. 페어드 레이아
 | chunk_index | INT | 청크 순서 |
 | content | TEXT | 청크 본문 |
 | source_hash | VARCHAR(64) | 원본 해시(변경 시 재임베딩) |
-| embedding | vector(1536) | OpenAI `text-embedding-3-small` 차원 |
+| embedding | vector(1536) | OpenAI `text-embedding-3-large` 차원 (dimensions=1536 축소, #167) |
 | attachment_id | BIGINT NULL | 첨부 청크인 경우 `PolicyAttachment.id`, 정책 본문 청크는 NULL |
 | page_start | INT NULL | 청크가 걸친 PDF 시작 페이지 (1-based). HWP/본문/페이지 메타 없는 경우 NULL |
 | page_end | INT NULL | 청크가 걸친 PDF 끝 페이지. 단일 페이지 청크면 `page_start == page_end` |
