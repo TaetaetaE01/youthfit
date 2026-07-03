@@ -45,10 +45,11 @@ public class EvalReindexService {
     public boolean reindexPolicy(Long policyId) {
         policyDocumentRepository.deleteByPolicyId(policyId);
         IndexingResult result = attachmentReindexService.reindexWithoutEvents(policyId);
-        if (result == null) {
-            // 삭제만 커밋되면 청크 유실 — 예외로 롤백 유도 (EvalRunner 가 per-policy catch)
+        if (result == null || !result.updated() || result.chunkCount() == 0) {
+            // 삭제만 커밋되면 청크 유실 — 스킵·빈 결과 모두 예외로 롤백 유도 (EvalRunner 가 per-policy catch)
             throw new IllegalStateException(
-                    "재인덱싱 스킵(costGuard 차단 또는 정책 미존재) — 청크 삭제 롤백: policyId=" + policyId);
+                    "재인덱싱 무효(스킵 또는 청크 0건) — 청크 삭제 롤백: policyId=" + policyId
+                            + ", result=" + result);
         }
         return true;
     }

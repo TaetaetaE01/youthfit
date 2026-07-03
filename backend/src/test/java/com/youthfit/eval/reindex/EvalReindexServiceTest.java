@@ -62,6 +62,17 @@ class EvalReindexServiceTest {
     }
 
     @Test
+    @DisplayName("reindexWithoutEvents 결과가 청크 0건이면 예외를 던져 롤백을 유도한다")
+    void reindexPolicy_throwsOnEmptyResultToTriggerRollback() {
+        given(attachmentReindexService.reindexWithoutEvents(1L))
+                .willReturn(new IndexingResult(1L, 0, true));
+
+        assertThatThrownBy(() -> service.reindexPolicy(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("1");
+    }
+
+    @Test
     @DisplayName("findTargets: policyIds 미지정이면 청크 보유 전 정책")
     void findTargets_allPoliciesWithChunks() {
         Policy withChunks = mock(Policy.class);
