@@ -19,6 +19,7 @@ import org.mockito.quality.Strictness;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
@@ -51,11 +52,13 @@ class EvalReindexServiceTest {
     }
 
     @Test
-    @DisplayName("reindexWithoutEvents 가 null(스킵)이면 false")
-    void reindexPolicy_returnsFalseOnSkip() {
+    @DisplayName("reindexWithoutEvents 가 null(스킵)이면 예외를 던져 롤백을 유도한다")
+    void reindexPolicy_throwsOnSkipToTriggerRollback() {
         given(attachmentReindexService.reindexWithoutEvents(1L)).willReturn(null);
 
-        assertThat(service.reindexPolicy(1L)).isFalse();
+        assertThatThrownBy(() -> service.reindexPolicy(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("1");
     }
 
     @Test

@@ -6,8 +6,6 @@ import com.youthfit.policy.domain.repository.PolicyRepository;
 import com.youthfit.rag.application.dto.result.IndexingResult;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +21,6 @@ import java.util.List;
 @Profile("eval")
 @RequiredArgsConstructor
 public class EvalReindexService {
-
-    private static final Logger log = LoggerFactory.getLogger(EvalReindexService.class);
 
     private final PolicyRepository policyRepository;
     private final PolicyDocumentRepository policyDocumentRepository;
@@ -50,8 +46,9 @@ public class EvalReindexService {
         policyDocumentRepository.deleteByPolicyId(policyId);
         IndexingResult result = attachmentReindexService.reindexWithoutEvents(policyId);
         if (result == null) {
-            log.warn("재인덱싱 스킵(costGuard 또는 정책 미존재): policyId={}", policyId);
-            return false;
+            // 삭제만 커밋되면 청크 유실 — 예외로 롤백 유도 (EvalRunner 가 per-policy catch)
+            throw new IllegalStateException(
+                    "재인덱싱 스킵(costGuard 차단 또는 정책 미존재) — 청크 삭제 롤백: policyId=" + policyId);
         }
         return true;
     }
