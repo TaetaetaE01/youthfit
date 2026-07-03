@@ -49,6 +49,35 @@ class EvalDatasetLoaderTest {
     }
 
     @Test
+    @DisplayName("케이스에 알 수 없는 필드가 있어도 관용적으로 로드한다")
+    void toleratesUnknownFields() throws Exception {
+        Path file = tempDir.resolve("evalset-unknown-field.json");
+        Files.writeString(file, """
+                {
+                  "version": 1,
+                  "embeddingModel": "text-embedding-3-small",
+                  "cases": [
+                    {
+                      "id": "p1-q1",
+                      "policyId": 1,
+                      "policyTitle": "청년 월세 지원",
+                      "question": "재학생도 신청 가능한가요?",
+                      "questionType": "KEYWORD",
+                      "expectedSnippets": ["대학 재학생은 신청 대상에서 제외"],
+                      "notes": null,
+                      "futureField": "x"
+                    }
+                  ]
+                }
+                """);
+
+        EvalDataset dataset = new EvalDatasetLoader().load(file);
+
+        assertThat(dataset.cases()).hasSize(1);
+        assertThat(dataset.cases().get(0).id()).isEqualTo("p1-q1");
+    }
+
+    @Test
     @DisplayName("파일이 없으면 명확한 예외")
     void failsOnMissingFile() {
         assertThatThrownBy(() -> new EvalDatasetLoader().load(tempDir.resolve("없는파일.json")))

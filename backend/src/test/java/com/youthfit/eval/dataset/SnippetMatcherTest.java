@@ -18,6 +18,15 @@ class SnippetMatcherTest {
     }
 
     @Test
+    @DisplayName("비분리 공백·전각 공백이 섞여도 스니펫 포함으로 판정한다")
+    void matchesAcrossUnicodeWhitespaceDifferences() {
+        String chunk = "대학 재학생은 신청 대상에서　제외됩니다.";
+        String snippet = "대학 재학생은 신청 대상에서 제외됩니다.";
+
+        assertThat(SnippetMatcher.containsSnippet(chunk, snippet)).isTrue();
+    }
+
+    @Test
     @DisplayName("내용이 다르면 불일치")
     void rejectsDifferentContent() {
         assertThat(SnippetMatcher.containsSnippet("전세 보증금 지원", "월세 지원")).isFalse();
