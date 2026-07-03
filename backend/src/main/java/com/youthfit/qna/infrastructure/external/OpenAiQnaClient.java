@@ -7,6 +7,7 @@ import com.youthfit.metrics.application.event.LlmCallRecorded;
 import com.youthfit.metrics.domain.model.LlmModule;
 import com.youthfit.qna.application.dto.command.PolicyMetadata;
 import com.youthfit.qna.application.port.QnaLlmProvider;
+import com.youthfit.qna.domain.model.QnaFallbackAnswer;
 import io.github.resilience4j.retry.annotation.Retry;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -44,7 +45,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             - 본문 컨텍스트에 답이 있으면 본문을 우선 사용하세요.
             - 본문에 답이 없으면 정책 메타데이터로 보강하세요.
             - 메타데이터와 본문 어느 쪽에도 없는 내용을 지어내지 마세요.
-            - 메타데이터와 본문 모두에 답이 없으면 "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다."라고 답변하세요.
+            - 메타데이터와 본문 모두에 답이 없으면 "%s"라고 답변하세요.
             - 쉬운 한국어로 답변하세요.
             - 답변은 간결하고 핵심적으로 작성하세요.
 
@@ -54,7 +55,7 @@ public class OpenAiQnaClient implements QnaLlmProvider {
             - 본문이 2개 이상의 명확한 섹션으로 나뉠 때만 `###` 헤더를 쓰세요.
               헤더 앞에 이모지를 1개까지 쓸 수 있으나, 정확히 맞는 경우에만.
             - 짧은 답이면 평문 한두 줄로도 충분합니다 — 형식을 위한 형식은 피하세요.
-            """;
+            """.formatted(QnaFallbackAnswer.MESSAGE);
 
     private static final String FOLLOW_UP_SYSTEM_PROMPT = """
             당신은 청년 정책 후속 질문 제안 도우미입니다.

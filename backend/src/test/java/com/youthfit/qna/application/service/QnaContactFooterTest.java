@@ -1,5 +1,6 @@
 package com.youthfit.qna.application.service;
 
+import com.youthfit.qna.domain.model.QnaFallbackAnswer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QnaContactFooterTest {
 
     private static final String ANSWER = "신청 자격은 만 19~34세입니다.";
-    private static final String FALLBACK_ANSWER = "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.";
+    private static final String FALLBACK_ANSWER = QnaFallbackAnswer.MESSAGE;
 
     @Nested
     @DisplayName("organization 과 contact 가 모두 있을 때")

@@ -17,6 +17,7 @@ import com.youthfit.qna.application.port.SemanticQnaCache;
 import com.youthfit.qna.application.port.dto.SemanticLookupResult;
 import com.youthfit.qna.domain.model.LookupResultType;
 import com.youthfit.qna.domain.model.QnaFailedReason;
+import com.youthfit.qna.domain.model.QnaFallbackAnswer;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import com.youthfit.qna.infrastructure.config.QueryRewriteProperties;
 import com.youthfit.rag.application.dto.result.PolicyDocumentChunkResult;
@@ -285,7 +286,7 @@ class QnaServiceTest {
             cacheMissDefaults();
             given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.6)));
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
-                    .willReturn("해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.");
+                    .willReturn(QnaFallbackAnswer.MESSAGE);
             given(objectMapper.writeValueAsString(any())).willReturn("[]");
 
             AskQuestionCommand command = new AskQuestionCommand(10L, "오늘 점심 뭐 먹지?", 1L);
@@ -515,7 +516,7 @@ class QnaServiceTest {
         void followUps_skipped_for_fallback() throws Exception {
             cacheMissDefaults();
             given(ragSearchService.searchRelevantChunks(any(), any())).willReturn(List.of(chunk(0.2)));
-            String fallback = "해당 정책 원문에 관련 내용이 명시되어 있지 않습니다. 공식 문의처에서 확인하시는 것을 권장합니다.";
+            String fallback = QnaFallbackAnswer.MESSAGE;
             given(qnaLlmProvider.generateAnswer(anyString(), any(PolicyMetadata.class), anyString(), anyString(), any()))
                     .willAnswer(inv -> {
                         Consumer<String> consumer = inv.getArgument(4);
