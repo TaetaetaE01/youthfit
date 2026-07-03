@@ -5,6 +5,7 @@ import com.youthfit.rag.domain.model.PolicyDocument;
 import com.youthfit.rag.domain.model.PolicyDocumentSource;
 import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,15 @@ class PolicyDocumentRepositoryTrigramTest {
         TestTransaction.flagForCommit();
         TestTransaction.end();
         TestTransaction.start();
+    }
+
+    @AfterEach
+    void tearDown() {
+        // @BeforeEach 에서 커밋한 시딩 데이터는 @DataJpaTest 기본 롤백으로 정리되지 않으므로,
+        // 여기서도 동일한 TestTransaction 패턴으로 명시적으로 삭제·커밋해 테스트 간 격리를 보장한다.
+        jpaRepository.deleteByPolicyId(policyId);
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
     }
 
     @Test

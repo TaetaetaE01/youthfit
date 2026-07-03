@@ -5,8 +5,6 @@ import com.youthfit.rag.domain.model.SimilarChunk;
 import com.youthfit.rag.domain.repository.PolicyDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -62,13 +60,7 @@ public class PolicyDocumentRepositoryImpl implements PolicyDocumentRepository {
         return jpaRepository.findDistinctSourceHashByPolicyId(policyId).stream().findFirst();
     }
 
-    /**
-     * pg_trgm 미설치 등으로 이 쿼리가 실패해도 호출 측(RagSearchService hybrid 경로)의
-     * 바깥 readOnly 트랜잭션을 aborted 상태로 오염시키지 않도록 REQUIRES_NEW 로 격리한다
-     * (#173). 트레이드오프: 호출마다 커넥션을 잠깐 2개(바깥 tx + 이 tx) 점유한다.
-     */
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public List<SimilarChunk> findTopByTrigram(Long policyId, String query, double threshold, int limit) {
         double maxDistance = 1.0 - threshold;
         return jpaRepository.findTopByTrigram(policyId, query, limit).stream()
