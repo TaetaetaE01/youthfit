@@ -1,0 +1,18 @@
+# eval 프로파일 — RAG retrieval 평가 러너 전용 (#162)
+# 웹서버를 띄우지 않아 로컬 compose backend(8080)와 포트 충돌 없음.
+spring:
+  main:
+    web-application-type: none
+
+youthfit:
+  eval:
+    dataset-path: eval/retrieval-evalset.json          # cwd = backend/
+    candidate-path: eval/retrieval-evalset.candidate.json
+    cache-dir: eval/cache
+    report-dir: eval/reports
+    runner-enabled: true                               # 통합 테스트에서 false 로 끔
+    generate:
+      model: gpt-4o-mini
+      max-tokens: 1200
+      api-key: ${OPENAI_API_KEY:}
+      max-per-source: 10
