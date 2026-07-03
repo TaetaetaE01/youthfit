@@ -13,7 +13,7 @@
 |---|---|
 | `policy_document` 임베딩 | 구모델 벡터와 신모델 쿼리 벡터의 거리 비교는 무의미 — 전량 재인덱싱 필수 |
 | `qna_question_cache` | 캐시된 질문 벡터가 구모델 기준 — 섞이면 의미 캐시 거리 계산 오염 |
-| `youthfit.qna.relevance-distance-threshold` | distance 분포 스케일이 모델마다 다름 (3-small 정답 평균 0.455 vs 3-large 0.351) — 재보정 없이는 근거없음 필터가 무력화되거나 과차단 |
+| `youthfit.qna.relevance-distance-threshold` | distance 분포 스케일이 모델마다 다름 (relevantDistanceAvg 기준 3-small 0.455 vs 3-large 0.361 — 검증 리포트 20260704-002737) — 재보정 없이는 근거없음 필터가 무력화되거나 과차단 |
 | `youthfit.qna.semantic-distance-threshold` | 위와 동일 — 질문쌍 분포 실측 후 조정 (#166) |
 | 소스 해시 게이트 | 내용 기반 해시라 **모델 교체를 감지하지 못함** — 일반 재인덱싱 경로는 전부 스킵됨. 반드시 delete→reindex 경로 사용 |
 
