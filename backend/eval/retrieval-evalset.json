@@ -1,0 +1,771 @@
+{
+  "version": 1,
+  "embeddingModel": "text-embedding-3-small",
+  "cases": [
+    {
+      "id": "p117-q1",
+      "policyId": 117,
+      "policyTitle": "청년 부동산 중개보수 및 이사비 지원사업",
+      "question": "청년 부동산 중개보수 지원사업의 최대 금액은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "최대 40만원 실비 지원(중개보수, 이사비) ※ 생애 1회"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p117-q2",
+      "policyId": 117,
+      "policyTitle": "청년 부동산 중개보수 및 이사비 지원사업",
+      "question": "서울 청년을 위한 이사비 지원사업은 어떤 내용을 담고 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "주거비 부담이 높은 서울 청년의 주거 안전망 강화 추진"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p117-q3",
+      "policyId": 117,
+      "policyTitle": "청년 부동산 중개보수 및 이사비 지원사업",
+      "question": "이사비 얼마나 지원해줘?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "최대 40만원 실비 지원(중개보수, 이사비) ※ 생애 1회"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p117-neg",
+      "policyId": 117,
+      "policyTitle": "청년 부동산 중개보수 및 이사비 지원사업",
+      "question": "지원금을 받으면 세금 신고를 해야 하나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p116-q1",
+      "policyId": 116,
+      "policyTitle": "2026년 경북 청년창업 지역정착 지원사업 신규참여자 2차 추가모집 공고",
+      "question": "2026년 경북 청년창업 지역정착 지원사업의 최대 지원 금액은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "창업활동비 최대 20백만원(정착활동비 포함), 교육, 컨설팅, 네트워킹 등 지원"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p116-q2",
+      "policyId": 116,
+      "policyTitle": "2026년 경북 청년창업 지역정착 지원사업 신규참여자 2차 추가모집 공고",
+      "question": "경북 청년창업 지원사업에 참여하려면 어떤 조건이 필요한가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "경북 외 거주 39세 이하 예비 청년창업자 경북 지역 내 창업 지원사업"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p116-neg",
+      "policyId": 116,
+      "policyTitle": "2026년 경북 청년창업 지역정착 지원사업 신규참여자 2차 추가모집 공고",
+      "question": "외국인 배우자도 같이 신청 가능한가요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p115-q1",
+      "policyId": 115,
+      "policyTitle": "2026 마음건강상담소 2차 참여자 모집(7/2, 10:00 선착순 접수 예정)",
+      "question": "2026 마음건강상담소의 참여자는 몇 회기 상담을 받을 수 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "· 1:1 전문 심리상담 제공 (기본 6회기, 최대 8회기)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p115-q2",
+      "policyId": 115,
+      "policyTitle": "2026 마음건강상담소 2차 참여자 모집(7/2, 10:00 선착순 접수 예정)",
+      "question": "마음건강상담소에서 심리검사도 지원하나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "· 필요 시 심리검사 지원"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p115-neg",
+      "policyId": 115,
+      "policyTitle": "2026 마음건강상담소 2차 참여자 모집(7/2, 10:00 선착순 접수 예정)",
+      "question": "탈락하면 재심사를 요청할 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p114-q1",
+      "policyId": 114,
+      "policyTitle": "2026년 여름 청년 행정체험사업",
+      "question": "2026년 여름 청년 행정체험사업의 보수는 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "보수 - 시급 10,320원, 주휴수당 지급, 고용/산재보험 가입"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p114-q2",
+      "policyId": 114,
+      "policyTitle": "2026년 여름 청년 행정체험사업",
+      "question": "달서구에서 진행되는 청년 행정체험사업의 근무시간은 어떻게 되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "○ 근무시간 - 1일 6시간(09:00~18:00), 주 5일 근무"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p114-q3",
+      "policyId": 114,
+      "policyTitle": "2026년 여름 청년 행정체험사업",
+      "question": "청년 행정체험사업, 뭐하는 건데?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "미취업 청년들의 사회적응력 증진 및 진로탐색, 취업역량 향상을 위하여 다양한 구정체험 기회를 제공"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p114-neg",
+      "policyId": 114,
+      "policyTitle": "2026년 여름 청년 행정체험사업",
+      "question": "신청하면 며칠 만에 지급되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p113-q1",
+      "policyId": 113,
+      "policyTitle": "2026년 구직청년 자격증 취득지원 사업(7월 1일 10시 접수 예정)",
+      "question": "구직청년 자격증 취득지원 사업은 어떤 비용을 지원하나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "구직활동에 필요한 어학(능력)·자격증 시험 응시료 지원"
+      ],
+      "notes": "검수: 원문에 금액이 없어 질문을 지원 항목 중심으로 수정"
+    },
+    {
+      "id": "p113-q2",
+      "policyId": 113,
+      "policyTitle": "2026년 구직청년 자격증 취득지원 사업(7월 1일 10시 접수 예정)",
+      "question": "어떤 기관이 한국사 및 어학능력시험을 주관하나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "국사편찬위원회 주관 한국사 시험 및 어학능력시험 20종"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p113-neg",
+      "policyId": 113,
+      "policyTitle": "2026년 구직청년 자격증 취득지원 사업(7월 1일 10시 접수 예정)",
+      "question": "대리인이 대신 신청해도 되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p112-q1",
+      "policyId": 112,
+      "policyTitle": "(농식품부) 농식품 바우처",
+      "question": "농식품 바우처는 어떤 법에 근거하고 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "『농업·농촌 및 식품산업 기본법』 제 23조의 2(취약계층 등에 대한 식품지원)에 근거하여"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p112-q2",
+      "policyId": 112,
+      "policyTitle": "(농식품부) 농식품 바우처",
+      "question": "농식품 바우처로 어떤 품목을 지원받을 수 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "지원품목: 국산 채소류, 과일류, 육류, 신선알류, 흰 우유, 잡곡류, 두부류, 임산물 (이외 품목 구매 불가)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p112-q3",
+      "policyId": 112,
+      "policyTitle": "(농식품부) 농식품 바우처",
+      "question": "농식품 바우처는 어떻게 지원되나요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "지원방식: 전자바우처(카드방식)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p112-neg",
+      "policyId": 112,
+      "policyTitle": "(농식품부) 농식품 바우처",
+      "question": "작년에 받았으면 올해 또 받을 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p111-q1",
+      "policyId": 111,
+      "policyTitle": "청년미래적금",
+      "question": "청년미래적금의 정부기여금은 얼마나 되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "정부기여금(납입금액에 비례해 일반형 6%, 우대형 12%의 정부기여금 지원)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p111-q2",
+      "policyId": 111,
+      "policyTitle": "청년미래적금",
+      "question": "청년미래적금은 언제부터 신청할 수 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "신청기간 : 2026년 6월 22일 ~ 2026년 7월 3일"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p111-q3",
+      "policyId": 111,
+      "policyTitle": "청년미래적금",
+      "question": "청년미래적금 언제 출시돼?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "2026년 6월 22일 출시"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p111-neg",
+      "policyId": 111,
+      "policyTitle": "청년미래적금",
+      "question": "대리인이 대신 신청해도 되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": "검수: 세금 신고 질문은 적금 비과세 언급과 충돌 위험이 있어 교체"
+    },
+    {
+      "id": "p109-q1",
+      "policyId": 109,
+      "policyTitle": "청년주택드림청약통장",
+      "question": "청년주택드림청약통장 이자율은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "이자율: 최대 4.5%"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p109-q2",
+      "policyId": 109,
+      "policyTitle": "청년주택드림청약통장",
+      "question": "청년주택드림청약통장 소득기준은 어떻게 되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "소득기준: 연 5,000만원(직전년도 신고소득이 있는 자 기준), 무주택자"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p109-q3",
+      "policyId": 109,
+      "policyTitle": "청년주택드림청약통장",
+      "question": "청년주택드림청약통장 납입한도 얼마까지 가능한가요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "납입한도: 월 100만원"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p109-neg",
+      "policyId": 109,
+      "policyTitle": "청년주택드림청약통장",
+      "question": "탈락하면 재심사를 요청할 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p108-q1",
+      "policyId": 108,
+      "policyTitle": "사회연대경제 청년일경험",
+      "question": "사회연대경제 청년일경험의 참여수당은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "월 최대 234만원 지급(세전, 주 40시간 기준), 4대 보험 가입"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p108-q2",
+      "policyId": 108,
+      "policyTitle": "사회연대경제 청년일경험",
+      "question": "이 프로그램에서 청년은 어떤 경험을 쌓을 수 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "청년이 사회연대경제 조직에서 5개월간 실제 업무를 경험하며 진로를 탐색하고 경력을 쌓을 수 있도록 지원하는 사업"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p108-q3",
+      "policyId": 108,
+      "policyTitle": "사회연대경제 청년일경험",
+      "question": "이 프로그램에 참여하면 뭘 받을 수 있어요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "일경험 수료 후 수료증 및 이력확인서 발급 가능"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p108-neg",
+      "policyId": 108,
+      "policyTitle": "사회연대경제 청년일경험",
+      "question": "신청하면 며칠 만에 지급되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p22-q1",
+      "policyId": 22,
+      "policyTitle": "우수학생 국가장학금 지원",
+      "question": "우수학생 국가장학금 지원의 지원대상은 어떤 학생들인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "(대통령과학장학금) 국내 및 해외 4년제 대학의 자연과학 및 공학계열 학과(부)에 입학예정 또는 확정인 신입생이거나 3학년 재학중인 자"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p22-q2",
+      "policyId": 22,
+      "policyTitle": "우수학생 국가장학금 지원",
+      "question": "우수학생 국가장학금 지원의 선정기준은 무엇인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "대통령과학장학금의 선정기준은 다음과 같습니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p22-q3",
+      "policyId": 22,
+      "policyTitle": "우수학생 국가장학금 지원",
+      "question": "이 장학금 지원받으려면 어떻게 해야 해?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "이공계 우수 학생을 조기 발굴, 학비를 지원하여 이공계 진학 유도 및 미래의 핵심인재로 육성을 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p22-neg",
+      "policyId": 22,
+      "policyTitle": "우수학생 국가장학금 지원",
+      "question": "외국인 배우자도 같이 신청 가능한가요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": "검수: 재수혜 질문은 장학금 계속지원 조건과 충돌 위험이 있어 교체"
+    },
+    {
+      "id": "p18-q1",
+      "policyId": 18,
+      "policyTitle": "인문100년장학금",
+      "question": "인문100년장학금의 지원대상은 무엇인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "국내 4년제 대학의 인문사회계열 학과(부) 재학생 중, 선발지원 기준을 충족하는우수 학생(1학년, 3학년)을 대상으로 합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p18-q2",
+      "policyId": 18,
+      "policyTitle": "인문100년장학금",
+      "question": "인문100년장학금의 지원금액은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "I 유형 : 등록금(전액), 생활비 학기당 250만 원 / II 유형 : 등록금(전액)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p18-q3",
+      "policyId": 18,
+      "policyTitle": "인문100년장학금",
+      "question": "이 장학금은 어떤 학생들에게 주는 거야?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "인문사회계열 우수학생에게 학자금을 지원하여 인문학 소양을 갖춘 인재를 양성할 수 있도록 장학금을 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p18-neg",
+      "policyId": 18,
+      "policyTitle": "인문100년장학금",
+      "question": "신청하면 며칠 만에 지급되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p14-q1",
+      "policyId": 14,
+      "policyTitle": "서민금융 활성화 지원(햇살론youth 보증사업)",
+      "question": "서민금융 활성화 지원의 지원대상은 어떤 조건인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "만 19세 이상 ~ 34세 이하이면서 연소득 3,500만원 이하인 대학생, 청년에게 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p14-q2",
+      "policyId": 14,
+      "policyTitle": "서민금융 활성화 지원(햇살론youth 보증사업)",
+      "question": "햇살론youth 보증사업에서 1인당 최대 지원금액은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "1인당 최대 1,200만원 한도 내 보증을 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p14-q3",
+      "policyId": 14,
+      "policyTitle": "서민금융 활성화 지원(햇살론youth 보증사업)",
+      "question": "이 지원사업은 누구를 위한 거야?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "금융취약계층인 대학생, 청년의 금융애로를 해소하여 학업 및 취업에 전념, 향후 제도권 금융으로 안착할 수 있도록 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p14-neg",
+      "policyId": 14,
+      "policyTitle": "서민금융 활성화 지원(햇살론youth 보증사업)",
+      "question": "외국인 배우자도 같이 신청 가능한가요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p7-q1",
+      "policyId": 7,
+      "policyTitle": "청년내일저축계좌",
+      "question": "청년내일저축계좌의 지원대상은 어떤 조건을 충족해야 하나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "가입연령 : 신청 당시 만 15세~ 39세 ※ 신청 월의 전월에 만 15세가 된 자 ~ 신청 월에 만 40세가 되는 자"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p7-q2",
+      "policyId": 7,
+      "policyTitle": "청년내일저축계좌",
+      "question": "청년내일저축계좌에서 정부지원금은 어떻게 매칭되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "본인저축액 10만원 이상(매월 전월 23일~현월 22일 입금마감일 이전) 대비 정부지원금을 정액 매칭합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p7-q3",
+      "policyId": 7,
+      "policyTitle": "청년내일저축계좌",
+      "question": "청년내일저축계좌 언제 신청해?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "(2026년 모집기간: '26.5.4.(월) ~ '26.5.20.(수))"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p7-neg",
+      "policyId": 7,
+      "policyTitle": "청년내일저축계좌",
+      "question": "탈락하면 재심사를 요청할 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p122-q1",
+      "policyId": 122,
+      "policyTitle": "산림산업 창업지원_산림청년포럼",
+      "question": "산림청년포럼의 지원규모는 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "지원규모: 30명"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p122-q2",
+      "policyId": 122,
+      "policyTitle": "산림산업 창업지원_산림청년포럼",
+      "question": "산림청년포럼에서 참석자에게 지원되는 수당은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "참석자 참석수당 지원: 100천원(원거리수당 별도)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p122-q3",
+      "policyId": 122,
+      "policyTitle": "산림산업 창업지원_산림청년포럼",
+      "question": "산림청년포럼은 어떤 지원을 해주나요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "산림청 청년 취창업 지원사업 우수사례 공유 및 청년 창업 애로사항 컨설팅"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p122-neg",
+      "policyId": 122,
+      "policyTitle": "산림산업 창업지원_산림청년포럼",
+      "question": "외국인 배우자도 같이 신청 가능한가요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p80-q1",
+      "policyId": 80,
+      "policyTitle": "(광양시) 청년 일자리 만들기 확대",
+      "question": "광양시 청년 일자리 만들기 확대의 지원내용은 무엇인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "-스마트 구인·구직 플랫폼 운영\n-희망일자리센터 상담·취업알선"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p80-q2",
+      "policyId": 80,
+      "policyTitle": "(광양시) 청년 일자리 만들기 확대",
+      "question": "청년 일자리 만들기 확대의 지원대상은 어떻게 되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "- 결혼상태: 제한없음\n- 소득조건: 무관"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p80-q3",
+      "policyId": 80,
+      "policyTitle": "(광양시) 청년 일자리 만들기 확대",
+      "question": "이 정책으로 청년 일자리를 어떻게 만들 수 있어?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "청년 일자리 확대를 위한 다양한 지원 사업 및 플랫폼 제공."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p80-neg",
+      "policyId": 80,
+      "policyTitle": "(광양시) 청년 일자리 만들기 확대",
+      "question": "외국인 배우자도 같이 신청 가능한가요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p79-q1",
+      "policyId": 79,
+      "policyTitle": "(광양시)광양만권 소재부품 지식산업센터 운영",
+      "question": "광양만권 소재부품 지식산업센터의 지원대상은 어떤 조건이 있나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "- 결혼상태: 제한없음\n- 소득조건: 무관\n- 취업상태: 제한없음\n- 학력: 제한없음\n- 전공: 제한없음\n- 특화요건: 제한없음"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p79-q2",
+      "policyId": 79,
+      "policyTitle": "(광양시)광양만권 소재부품 지식산업센터 운영",
+      "question": "광양시의 기업 지원 서비스는 어떤 내용이 포함되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "-센터 시설 관리 및 입주기업 지원\n-입주기업 모집·관리\n-기업 간담회 및 실증공간 운영"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p79-q3",
+      "policyId": 79,
+      "policyTitle": "(광양시)광양만권 소재부품 지식산업센터 운영",
+      "question": "이 센터는 어떻게 운영되나요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "제공방식: 계약(위탁운영)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p79-neg",
+      "policyId": 79,
+      "policyTitle": "(광양시)광양만권 소재부품 지식산업센터 운영",
+      "question": "탈락하면 재심사를 요청할 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p78-q1",
+      "policyId": 78,
+      "policyTitle": "(광양시)귀농귀촌 보금자리 조성 지원",
+      "question": "귀농귀촌 보금자리 조성 지원의 지원내용은 무엇인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "-농어촌민박 월세 지원(8개월)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p78-q2",
+      "policyId": 78,
+      "policyTitle": "(광양시)귀농귀촌 보금자리 조성 지원",
+      "question": "광양시의 귀농귀촌 보금자리 조성 지원을 받을 수 있는 대상은 누구인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "귀농인 및 귀촌인"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p78-q3",
+      "policyId": 78,
+      "policyTitle": "(광양시)귀농귀촌 보금자리 조성 지원",
+      "question": "귀농귀촌 보금자리 지원, 어떻게 돼?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "귀농귀촌 희망자에게 농어촌민박 보금자리와 체험비를 지원해 농촌 정착을 돕는 사업입니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p78-neg",
+      "policyId": 78,
+      "policyTitle": "(광양시)귀농귀촌 보금자리 조성 지원",
+      "question": "신청하면 며칠 만에 지급되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p77-q1",
+      "policyId": 77,
+      "policyTitle": "(국토부) 26년 청년월세 지원사업",
+      "question": "26년 청년월세 지원사업의 최대 지원금액은 얼마인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "월세로 거주하는 청년을 대상으로 실제 납부하는 임대료를 최대 480만원(월 최대 20만원)까지 최대 24개월(회) 동안 매월 분할하여 지원합니다."
+      ],
+      "notes": null
+    },
+    {
+      "id": "p77-q2",
+      "policyId": 77,
+      "policyTitle": "(국토부) 26년 청년월세 지원사업",
+      "question": "26년 청년월세 지원사업의 지원대상은 어떻게 되나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "- 연령: 제한없음\n- 결혼상태: 제한없음\n- 소득조건: 기타 하단참고\n- 취업상태: 제한없음\n- 학력: 제한없음\n- 전공: 제한없음\n- 특화요건: 제한없음\n- 참여 제한 대상: ○ 주택 소유자(분양권, 입주권 포함)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p77-q3",
+      "policyId": 77,
+      "policyTitle": "(국토부) 26년 청년월세 지원사업",
+      "question": "이 청년월세 지원사업 언제부터 신청할 수 있어?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "신청은 '26년 3월 30일 09:00부터 '26년 5월 29일 16:00까지 가능하며"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p77-neg",
+      "policyId": 77,
+      "policyTitle": "(국토부) 26년 청년월세 지원사업",
+      "question": "대리인이 대신 신청해도 되나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    },
+    {
+      "id": "p76-q1",
+      "policyId": 76,
+      "policyTitle": "(광양시) 청년복합공간 운영",
+      "question": "청년복합공간 운영의 지원대상은 무엇인가요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "연령: 제한없음\n- 결혼상태: 제한없음\n- 소득조건: 무관\n- 취업상태: 제한없음\n- 학력: 제한없음\n- 전공: 제한없음\n- 특화요건: 제한없음"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p76-q2",
+      "policyId": 76,
+      "policyTitle": "(광양시) 청년복합공간 운영",
+      "question": "예담창고에서 어떤 교육을 제공하나요?",
+      "questionType": "KEYWORD",
+      "expectedSnippets": [
+        "-교육공간 운영(창업교육·커뮤니티)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p76-q3",
+      "policyId": 76,
+      "policyTitle": "(광양시) 청년복합공간 운영",
+      "question": "청년복합공간에서 주거 지원도 하나요?",
+      "questionType": "COLLOQUIAL",
+      "expectedSnippets": [
+        "참여 청년 주거 지원"
+      ],
+      "notes": null
+    },
+    {
+      "id": "p76-neg",
+      "policyId": 76,
+      "policyTitle": "(광양시) 청년복합공간 운영",
+      "question": "작년에 받았으면 올해 또 받을 수 있나요?",
+      "questionType": "NEGATIVE",
+      "expectedSnippets": [],
+      "notes": null
+    }
+  ]
+}
