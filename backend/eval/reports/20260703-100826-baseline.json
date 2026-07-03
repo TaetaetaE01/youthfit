@@ -1,0 +1,643 @@
+{
+  "label" : "baseline",
+  "executedAt" : "20260703-100826",
+  "datasetPath" : "eval/retrieval-evalset.json",
+  "datasetVersion" : 1,
+  "scenarios" : [ {
+    "scenario" : "baseline",
+    "effectiveConfig" : {
+      "hybridEnabled" : false,
+      "topNPerSearch" : 20,
+      "rrfK" : 60,
+      "trigramThreshold" : 0.1,
+      "keywordBoostEnabled" : true,
+      "maxKeywords" : 5
+    },
+    "metrics" : {
+      "scenario" : "baseline",
+      "totalCases" : 73,
+      "okCases" : 73,
+      "overall" : {
+        "evaluated" : 54,
+        "recallAtK" : {
+          "1" : 0.7962962962962963,
+          "3" : 0.9074074074074074,
+          "5" : 0.9259259259259259,
+          "10" : 0.9629629629629629
+        },
+        "mrrAt10" : 0.8533950617283951
+      },
+      "byType" : {
+        "KEYWORD" : {
+          "evaluated" : 38,
+          "recallAtK" : {
+            "1" : 0.7894736842105263,
+            "3" : 0.9210526315789473,
+            "5" : 0.9210526315789473,
+            "10" : 0.9736842105263158
+          },
+          "mrrAt10" : 0.8552631578947368
+        },
+        "COLLOQUIAL" : {
+          "evaluated" : 16,
+          "recallAtK" : {
+            "1" : 0.8125,
+            "3" : 0.875,
+            "5" : 0.9375,
+            "10" : 0.9375
+          },
+          "mrrAt10" : 0.8489583333333334
+        }
+      },
+      "relevantDistanceAvg" : 0.457679994897347,
+      "irrelevantDistanceAvg" : 0.47867457262524227,
+      "negativeFalsePositiveRate" : 0.7368421052631579,
+      "avgTookMs" : 12.41095890410959
+    },
+    "cases" : [ {
+      "caseId" : "p117-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년 부동산 중개보수 지원사업의 최대 금액은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3870413518445167,
+      "tookMs" : 50
+    }, {
+      "caseId" : "p117-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "서울 청년을 위한 이사비 지원사업은 어떤 내용을 담고 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3958426879242026,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p117-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이사비 얼마나 지원해줘?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5645380237052035,
+      "tookMs" : 9
+    }, {
+      "caseId" : "p117-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "지원금을 받으면 세금 신고를 해야 하나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6555081136581862,
+      "tookMs" : 8
+    }, {
+      "caseId" : "p116-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "2026년 경북 청년창업 지역정착 지원사업의 최대 지원 금액은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.2909174806545186,
+      "tookMs" : 8
+    }, {
+      "caseId" : "p116-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "경북 청년창업 지원사업에 참여하려면 어떤 조건이 필요한가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.2694496198058266,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p116-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "외국인 배우자도 같이 신청 가능한가요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.699528482592497,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p115-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "2026 마음건강상담소의 참여자는 몇 회기 상담을 받을 수 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5264723279612016,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p115-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "마음건강상담소에서 심리검사도 지원하나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3878018993241117,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p115-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "탈락하면 재심사를 요청할 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6580694775933169,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p114-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "2026년 여름 청년 행정체험사업의 보수는 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5175562884717508,
+      "tookMs" : 9
+    }, {
+      "caseId" : "p114-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "달서구에서 진행되는 청년 행정체험사업의 근무시간은 어떻게 되나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3776536378656921,
+      "tookMs" : 21
+    }, {
+      "caseId" : "p114-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "청년 행정체험사업, 뭐하는 건데?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5373093101901015,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p114-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "신청하면 며칠 만에 지급되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6641475264552841,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p113-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "구직청년 자격증 취득지원 사업은 어떤 비용을 지원하나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.45987406302181105,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p113-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "어떤 기관이 한국사 및 어학능력시험을 주관하나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3643049652900883,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p113-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "대리인이 대신 신청해도 되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6071902559530526,
+      "tookMs" : 8
+    }, {
+      "caseId" : "p112-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "농식품 바우처는 어떤 법에 근거하고 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5978926321701354,
+      "tookMs" : 9
+    }, {
+      "caseId" : "p112-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "농식품 바우처로 어떤 품목을 지원받을 수 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5022040387977795,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p112-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "농식품 바우처는 어떻게 지원되나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5466685744027432,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p112-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "작년에 받았으면 올해 또 받을 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.8824035382886772,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p111-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년미래적금의 정부기여금은 얼마나 되나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4930440995937241,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p111-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년미래적금은 언제부터 신청할 수 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4448927563459153,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p111-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "청년미래적금 언제 출시돼?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5622803832108303,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p111-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "대리인이 대신 신청해도 되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6455839909807811,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p109-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년주택드림청약통장 이자율은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4558392330263341,
+      "tookMs" : 3
+    }, {
+      "caseId" : "p109-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년주택드림청약통장 소득기준은 어떻게 되나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4306444383328263,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p109-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "청년주택드림청약통장 납입한도 얼마까지 가능한가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.45079362166907627,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p109-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "탈락하면 재심사를 요청할 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.8287646991573545,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p108-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "사회연대경제 청년일경험의 참여수당은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3400018290618315,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p108-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "이 프로그램에서 청년은 어떤 경험을 쌓을 수 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4664979612220382,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p108-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 프로그램에 참여하면 뭘 받을 수 있어요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.6343041216278416,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p108-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "신청하면 며칠 만에 지급되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6794394713199623,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p22-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "우수학생 국가장학금 지원의 지원대상은 어떤 학생들인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4568504871924711,
+      "tookMs" : 8
+    }, {
+      "caseId" : "p22-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "우수학생 국가장학금 지원의 선정기준은 무엇인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4106815271239089,
+      "tookMs" : 9
+    }, {
+      "caseId" : "p22-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 장학금 지원받으려면 어떻게 해야 해?",
+      "firstRelevantRank" : 3,
+      "top1Distance" : 0.44313941981708876,
+      "tookMs" : 8
+    }, {
+      "caseId" : "p22-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "외국인 배우자도 같이 신청 가능한가요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.7176398472127352,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p18-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "인문100년장학금의 지원대상은 무엇인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4419964716519509,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p18-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "인문100년장학금의 지원금액은 얼마인가요?",
+      "firstRelevantRank" : 2,
+      "top1Distance" : 0.5364733036898393,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p18-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 장학금은 어떤 학생들에게 주는 거야?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4787795906365798,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p18-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "신청하면 며칠 만에 지급되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.8179011531620596,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p14-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "서민금융 활성화 지원의 지원대상은 어떤 조건인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4532997058179298,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p14-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "햇살론youth 보증사업에서 1인당 최대 지원금액은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.3870353686236859,
+      "tookMs" : 10
+    }, {
+      "caseId" : "p14-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 지원사업은 누구를 위한 거야?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.63202307894739,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p14-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "외국인 배우자도 같이 신청 가능한가요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6631295717094512,
+      "tookMs" : 2
+    }, {
+      "caseId" : "p7-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년내일저축계좌의 지원대상은 어떤 조건을 충족해야 하나요?",
+      "firstRelevantRank" : 6,
+      "top1Distance" : 0.4490778257897263,
+      "tookMs" : 106
+    }, {
+      "caseId" : "p7-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년내일저축계좌에서 정부지원금은 어떻게 매칭되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.46013402137262915,
+      "tookMs" : 81
+    }, {
+      "caseId" : "p7-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "청년내일저축계좌 언제 신청해?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.2427267326095535,
+      "tookMs" : 101
+    }, {
+      "caseId" : "p7-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "탈락하면 재심사를 요청할 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6004382427429547,
+      "tookMs" : 77
+    }, {
+      "caseId" : "p122-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "산림청년포럼의 지원규모는 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.48412112772642935,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p122-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "산림청년포럼에서 참석자에게 지원되는 수당은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.48731080344981903,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p122-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "산림청년포럼은 어떤 지원을 해주나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5181195458717887,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p122-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "외국인 배우자도 같이 신청 가능한가요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.7177518226343718,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p80-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "광양시 청년 일자리 만들기 확대의 지원내용은 무엇인가요?",
+      "firstRelevantRank" : 6,
+      "top1Distance" : 0.3147884123688257,
+      "tookMs" : 21
+    }, {
+      "caseId" : "p80-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년 일자리 만들기 확대의 지원대상은 어떻게 되나요?",
+      "firstRelevantRank" : 3,
+      "top1Distance" : 0.3997053418939382,
+      "tookMs" : 16
+    }, {
+      "caseId" : "p80-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 정책으로 청년 일자리를 어떻게 만들 수 있어?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5087369499133881,
+      "tookMs" : 14
+    }, {
+      "caseId" : "p80-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "외국인 배우자도 같이 신청 가능한가요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.5451951980192231,
+      "tookMs" : 10
+    }, {
+      "caseId" : "p79-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "광양만권 소재부품 지식산업센터의 지원대상은 어떤 조건이 있나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5209612752136347,
+      "tookMs" : 10
+    }, {
+      "caseId" : "p79-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "광양시의 기업 지원 서비스는 어떤 내용이 포함되나요?",
+      "firstRelevantRank" : 2,
+      "top1Distance" : 0.39985456121265217,
+      "tookMs" : 16
+    }, {
+      "caseId" : "p79-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 센터는 어떻게 운영되나요?",
+      "firstRelevantRank" : 4,
+      "top1Distance" : 0.5479876820652381,
+      "tookMs" : 18
+    }, {
+      "caseId" : "p79-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "탈락하면 재심사를 요청할 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.7925215243104422,
+      "tookMs" : 5
+    }, {
+      "caseId" : "p78-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "귀농귀촌 보금자리 조성 지원의 지원내용은 무엇인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.38372605424496153,
+      "tookMs" : 12
+    }, {
+      "caseId" : "p78-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "광양시의 귀농귀촌 보금자리 조성 지원을 받을 수 있는 대상은 누구인가요?",
+      "firstRelevantRank" : 2,
+      "top1Distance" : 0.34858410526680617,
+      "tookMs" : 11
+    }, {
+      "caseId" : "p78-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "귀농귀촌 보금자리 지원, 어떻게 돼?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.2672986247898405,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p78-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "신청하면 며칠 만에 지급되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.6246469274495192,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p77-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "26년 청년월세 지원사업의 최대 지원금액은 얼마인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.30059622548854914,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p77-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "26년 청년월세 지원사업의 지원대상은 어떻게 되나요?",
+      "firstRelevantRank" : 3,
+      "top1Distance" : 0.3412594363299263,
+      "tookMs" : 7
+    }, {
+      "caseId" : "p77-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "이 청년월세 지원사업 언제부터 신청할 수 있어?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.33484018371880614,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p77-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "대리인이 대신 신청해도 되나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.682248407053624,
+      "tookMs" : 6
+    }, {
+      "caseId" : "p76-q1",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "청년복합공간 운영의 지원대상은 무엇인가요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.4494331136378875,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p76-q2",
+      "status" : "OK",
+      "questionType" : "KEYWORD",
+      "effectiveQuestion" : "예담창고에서 어떤 교육을 제공하나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.46823851666648386,
+      "tookMs" : 9
+    }, {
+      "caseId" : "p76-q3",
+      "status" : "OK",
+      "questionType" : "COLLOQUIAL",
+      "effectiveQuestion" : "청년복합공간에서 주거 지원도 하나요?",
+      "firstRelevantRank" : 1,
+      "top1Distance" : 0.5178964579243166,
+      "tookMs" : 4
+    }, {
+      "caseId" : "p76-neg",
+      "status" : "OK",
+      "questionType" : "NEGATIVE",
+      "effectiveQuestion" : "작년에 받았으면 올해 또 받을 수 있나요?",
+      "firstRelevantRank" : null,
+      "top1Distance" : 0.7818733315503108,
+      "tookMs" : 2
+    } ]
+  } ]
+}
