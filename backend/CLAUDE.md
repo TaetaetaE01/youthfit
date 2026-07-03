@@ -26,6 +26,7 @@ cd backend
 ## 백엔드 모듈 목록
 - `admin` 어드민 도구 / `auth` 카카오 로그인+JWT
 - `common` 공통 / `eligibility` 적합도 판정
+- `eval` RAG retrieval 평가 러너 (dev 전용, eval 프로파일)
 - `guide` AI 가이드 / `ingestion` 외부 수집 수신
 - `metrics` LLM 비용·사용량 / `policy` 정책 도메인
 - `qna` Q&A 스트리밍 / `rag` 임베딩·청크

@@ -27,6 +27,7 @@ youthfit/
 - `auth` 카카오 OAuth + JWT
 - `common` 공통 유틸·횡단 관심사
 - `eligibility` 규칙 기반 적합도 판정
+- `eval` RAG retrieval 평가 러너 (dev 전용, eval 프로파일)
 - `guide` 구조화된 AI 가이드 콘텐츠 생성
 - `ingestion` n8n·외부 수집 파이프라인 수신
 - `metrics` LLM API 호출 비용 추적·사용량 집계
