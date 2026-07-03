@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "embeddingModel": "text-embedding-3-small",
+  "embeddingModel": "text-embedding-3-large",
   "cases": [
     {
       "id": "p117-q1",

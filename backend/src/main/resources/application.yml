@@ -67,7 +67,11 @@ rag:
 openai:
   embedding:
     api-key: ${OPENAI_API_KEY:}
-    model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    # 3-large 채택 근거(#167, 2026-07-03 평가셋 실측): 3-small 대비 recall@1 +7.4pp,
+    # 정답-비정답 distance 갭 4.3배, 재보정 threshold 에서 근거없음 100% 차단. 단가 6.5배지만 절대액 미미(정책당 ~1원).
+    # dimensions 는 1536 유지 — 변경 시 policy_document·qna_question_cache 의 vector(1536) 마이그레이션 필요.
+    # 모델 변경 시 docs/runbooks/2026-07-04-embedding-model-change-runbook.md 절차(재인덱싱·캐시 무효화·threshold 재보정) 필수.
+    model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-large}
     dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
   chat:
     api-key: ${OPENAI_API_KEY:}
@@ -113,13 +117,17 @@ youthfit:
     policy-allowlist: ${POLICY_ALLOWLIST:}
   qna:
     cache-ttl-hours: ${QNA_CACHE_TTL_HOURS:24}
-    # 한국어 임베딩 cosine distance. 실측 분포는 0.7~0.75. 더 엄격: 0.72~0.75, 더 관대: 0.80~0.85. RagSearchService 로그로 운영값 조정.
-    relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.78}
+    # text-embedding-3-large 기준 cosine distance (#167 재보정, 2026-07-03 평가셋 threshold 스캔).
+    # 0.48 에서 positive top-1 통과 94.4% / NEGATIVE(근거없음) 차단 100%. 3-large 는 분포가
+    # 3-small 보다 전반적으로 낮아(정답 평균 0.351, 비정답 0.413) 구값 0.78 은 필터 역할을 못 함.
+    # 모델을 바꾸면 이 값도 반드시 재보정 — 런북 참조.
+    relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.48}
     # 의미 캐시 히트 컷오프 (cosine distance). 한국어 단문은 표면 어휘 다양성에 임베딩이 매우 민감해
      # 의미 동일 질문도 0.4~0.55 분포가 흔함. 정책 prefix 시도(PR #60)는 의미 다른 단문까지 0.14~0.20 으로
      # 잡아당겨 false positive 가 발생해 되돌림. false positive 가 답변 정확도에 미치는 영향이 큰 만큼,
-     # threshold 는 의미 동일 미세 변형(예: 부호/공백 차이)만 잡힐 정도로 보수적으로 운영. 근본 해결은
-     # query rewriting(LLM 정규화) 도입 후 재검토.
+     # threshold 는 의미 동일 미세 변형(예: 부호/공백 차이)만 잡힐 정도로 보수적으로 운영.
+     # 주의: 위 분포 실측은 3-small 기준 — 3-large 전환(#167)으로 질문쌍 distance 도 전반 하향됐을
+     # 것으로 예상되므로 질의량이 붙으면 #166 에서 재실측·조정한다.
     semantic-distance-threshold: ${QNA_SEMANTIC_DISTANCE_THRESHOLD:0.20}
     cache:
       estimated-savings-per-hit-usd: ${QNA_CACHE_ESTIMATED_SAVINGS_PER_HIT_USD:0.0015}
