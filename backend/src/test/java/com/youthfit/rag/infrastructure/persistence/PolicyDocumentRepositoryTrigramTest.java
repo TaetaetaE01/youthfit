@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -66,6 +67,14 @@ class PolicyDocumentRepositoryTrigramTest {
                 document(2, "청년내일저축계좌 2026년부터 차상위 초과자 신규모집 중단"),
                 document(3, "이 청크는 전혀 무관한 내용입니다 lorem ipsum")
         ));
+
+        // #173: findTopByTrigram 이 REQUIRES_NEW(별도 커넥션의 트랜잭션)로 조회하므로,
+        // @DataJpaTest 기본 롤백 트랜잭션 안에서 아직 커밋되지 않은 위 시딩 데이터는 그
+        // 별도 트랜잭션에서 보이지 않는다. 커밋 후 새 test-managed 트랜잭션을 다시 열어
+        // (테스트 종료 시에는 여전히 롤백되도록) 시딩 데이터를 실제로 커밋해 노출시킨다.
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
     }
 
     @Test

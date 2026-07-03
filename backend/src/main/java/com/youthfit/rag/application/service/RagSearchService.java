@@ -105,6 +105,9 @@ public class RagSearchService {
 
         List<SimilarChunk> tri;
         try {
+            // #173: findTopByTrigram 은 REQUIRES_NEW 로 격리돼 있어 여기서 실패해도
+            // 본 메서드의 (readOnly) 바깥 트랜잭션을 aborted 상태로 오염시키지 않는다.
+            // 그래서 이 catch 폴백이 실제로 유효하게 동작한다.
             tri = policyDocumentRepository.findTopByTrigram(
                     command.policyId(), command.query(), threshold, topN);
         } catch (RuntimeException e) {
@@ -166,6 +169,9 @@ public class RagSearchService {
 
         List<SimilarChunk> tri;
         try {
+            // #173: findTopByTrigram 은 REQUIRES_NEW 로 격리돼 있어 여기서 실패해도
+            // 본 메서드의 (readOnly) 바깥 트랜잭션을 aborted 상태로 오염시키지 않는다.
+            // 그래서 이 catch 폴백이 실제로 유효하게 동작한다.
             tri = policyDocumentRepository.findTopByTrigram(
                     command.policyId(), command.query(), threshold, topN);
         } catch (RuntimeException e) {
