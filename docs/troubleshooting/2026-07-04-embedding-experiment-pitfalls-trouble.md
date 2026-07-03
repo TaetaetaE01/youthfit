@@ -145,8 +145,8 @@
   - 배포 시점 재인덱싱 런북 작성
 - 이슈 #177: `llm_cost_bucket_module_check` DB check 제약에 `LlmModule.ATTACHMENT_GATE`
   가 누락돼 있다(enum 에는 존재). 이 상태로는 첨부 게이트 비용 집계가 유실된다.
-  로컬은 `ALTER` 로 임시 조치했고, 근본 수정은 미결. init SQL:
-  `backend/src/main/resources/sql/2026-05-05-llm-cost-bucket.sql`.
+  로컬은 `ALTER` 로 임시 조치. → **근본 수정 완료**:
+  `backend/src/main/resources/sql/2026-07-04-llm-cost-bucket-module-check-attachment-gate.sql` (#177).
 - 기존 1,178청크 baseline 리포트들(`20260703-100826` 등)은 이번에 밝혀진 구
   코퍼스 기준이므로, 이후 다른 실험과 비교할 때 코퍼스 청크 수를 먼저 확인해야
   한다.
