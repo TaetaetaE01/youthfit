@@ -4,6 +4,7 @@ import com.youthfit.eval.config.EvalProperties;
 import com.youthfit.eval.dataset.EvalDataset;
 import com.youthfit.eval.dataset.EvalDatasetLoader;
 import com.youthfit.eval.generate.EvalCaseGenerateService;
+import com.youthfit.eval.reindex.EvalReindexService;
 import com.youthfit.eval.report.CaseResultRow;
 import com.youthfit.eval.report.EvalReportWriter;
 import com.youthfit.eval.report.EvalRunReport;
@@ -15,6 +16,7 @@ import com.youthfit.eval.run.EvalScenario;
 import com.youthfit.eval.run.QueryEmbeddingFileCache;
 import com.youthfit.eval.run.RetrievalEvaluator;
 import com.youthfit.eval.run.ScenarioMetrics;
+import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -37,6 +39,7 @@ import java.util.List;
  *
  * generate: SPRING_PROFILES_ACTIVE=eval ./gradlew bootRun --args='--eval.mode=generate --eval.confirm=true'
  * run:      SPRING_PROFILES_ACTIVE=eval ./gradlew bootRun --args='--eval.mode=run --eval.scenarios=baseline,hybrid-on'
+ * reindex:  SPRING_PROFILES_ACTIVE=eval ./gradlew bootRun --args='--eval.mode=reindex --eval.confirm=true'
  */
 @Component
 @Profile("eval")
@@ -50,6 +53,7 @@ public class EvalRunner implements ApplicationRunner {
     private final RetrievalEvaluator retrievalEvaluator;
     private final EvalProperties evalProperties;
     private final QnaProperties qnaProperties;
+    private final EvalReindexService evalReindexService;
     private ConfigurableApplicationContext context;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -89,6 +93,7 @@ public class EvalRunner implements ApplicationRunner {
                         maxPerSource == null ? null : Integer.parseInt(maxPerSource));
             }
             case "run" -> runEvaluation(args);
+            case "reindex" -> runReindex(args);
             default -> throw new IllegalArgumentException("알 수 없는 --eval.mode: " + mode);
         }
     }
@@ -137,6 +142,40 @@ public class EvalRunner implements ApplicationRunner {
         Path written = writer.write(report, Path.of(evalProperties.reportDir()));
         writer.printSummary(report);
         log.info("리포트 저장: {}", written.toAbsolutePath());
+    }
+
+    private void runReindex(ApplicationArguments args) {
+        boolean confirm = Boolean.parseBoolean(firstOption(args, "eval.confirm"));
+        String idsArg = firstOption(args, "eval.policy-ids");
+        List<Long> policyIds = idsArg == null ? null
+                : java.util.Arrays.stream(idsArg.split(",")).map(String::trim).map(Long::parseLong).toList();
+
+        List<Policy> targets = evalReindexService.findTargets(policyIds);
+        log.info("reindex 대상: 정책 {}건 (현재 임베딩 모델로 delete→재인덱싱, 첨부 LLM 게이트는 판정 캐시 재사용)",
+                targets.size());
+        if (!confirm) {
+            targets.forEach(p -> log.info("  - id={}, title={}", p.getId(), p.getTitle()));
+            log.info("dry-run 종료. 실제 재인덱싱하려면 --eval.confirm=true 를 추가하세요.");
+            return;
+        }
+
+        long start = System.currentTimeMillis();
+        List<Long> failed = new java.util.ArrayList<>();
+        int done = 0;
+        for (Policy policy : targets) {
+            try {
+                if (evalReindexService.reindexPolicy(policy.getId())) {
+                    done++;
+                } else {
+                    failed.add(policy.getId());
+                }
+            } catch (Exception e) {
+                log.warn("재인덱싱 실패, 계속 진행: policyId={}, error={}", policy.getId(), e.toString());
+                failed.add(policy.getId());
+            }
+        }
+        log.info("reindex 완료: 성공 {}건 / 실패 {}건 {}, 소요 {}ms",
+                done, failed.size(), failed.isEmpty() ? "" : failed, System.currentTimeMillis() - start);
     }
 
     private String firstOption(ApplicationArguments args, String name) {
