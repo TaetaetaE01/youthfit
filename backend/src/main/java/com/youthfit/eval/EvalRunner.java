@@ -18,6 +18,7 @@ import com.youthfit.eval.run.RetrievalEvaluator;
 import com.youthfit.eval.run.ScenarioMetrics;
 import com.youthfit.policy.domain.model.Policy;
 import com.youthfit.qna.infrastructure.config.QnaProperties;
+import com.youthfit.rag.infrastructure.external.OpenAiEmbeddingProperties;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,8 @@ public class EvalRunner implements ApplicationRunner {
     private final EvalProperties evalProperties;
     private final QnaProperties qnaProperties;
     private final EvalReindexService evalReindexService;
+    // eval→rag infra 의도적 참조: 실제 호출 모델을 캐시 라벨의 단일 소스로 사용 (#167)
+    private final OpenAiEmbeddingProperties embeddingProperties;
     private ConfigurableApplicationContext context;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -108,8 +111,9 @@ public class EvalRunner implements ApplicationRunner {
         }
 
         EvalDataset dataset = new EvalDatasetLoader().load(Path.of(evalProperties.datasetPath()));
+        String cacheLabel = resolveCacheLabel(embeddingProperties.getModel(), dataset.embeddingModel());
         QueryEmbeddingFileCache cache = new QueryEmbeddingFileCache(
-                Path.of(evalProperties.cacheDir()), dataset.embeddingModel());
+                Path.of(evalProperties.cacheDir()), cacheLabel);
         EvalMetricsCalculator calculator = new EvalMetricsCalculator();
         double negativeThreshold = qnaProperties.relevanceDistanceThreshold();
 
@@ -176,6 +180,16 @@ public class EvalRunner implements ApplicationRunner {
         }
         log.info("reindex 완료: 성공 {}건 / 실패 {}건 {}, 소요 {}ms",
                 done, failed.size(), failed.isEmpty() ? "" : failed, System.currentTimeMillis() - start);
+    }
+
+    /** 캐시 라벨은 실제 호출 모델. evalset 라벨과 다르면 경고(평가셋 제작 기준 모델 추적용). */
+    static String resolveCacheLabel(String actualModel, String datasetModel) {
+        if (datasetModel != null && !datasetModel.equals(actualModel)) {
+            LoggerFactory.getLogger(EvalRunner.class).warn(
+                    "evalset embeddingModel({}) 과 실제 호출 모델({}) 불일치 — 캐시는 실제 모델 기준으로 분리됩니다.",
+                    datasetModel, actualModel);
+        }
+        return actualModel;
     }
 
     private String firstOption(ApplicationArguments args, String name) {
