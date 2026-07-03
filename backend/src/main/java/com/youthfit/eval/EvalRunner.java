@@ -86,7 +86,7 @@ public class EvalRunner implements ApplicationRunner {
     void dispatch(ApplicationArguments args) {
         String mode = firstOption(args, "eval.mode");
         if (mode == null) {
-            throw new IllegalArgumentException("--eval.mode=generate|run 을 지정하세요.");
+            throw new IllegalArgumentException("--eval.mode=generate|run|reindex 을 지정하세요.");
         }
         switch (mode) {
             case "generate" -> {
@@ -97,7 +97,8 @@ public class EvalRunner implements ApplicationRunner {
             }
             case "run" -> runEvaluation(args);
             case "reindex" -> runReindex(args);
-            default -> throw new IllegalArgumentException("알 수 없는 --eval.mode: " + mode);
+            default -> throw new IllegalArgumentException(
+                    "알 수 없는 --eval.mode: " + mode + ". --eval.mode=generate|run|reindex 을 지정하세요.");
         }
     }
 
@@ -168,11 +169,8 @@ public class EvalRunner implements ApplicationRunner {
         int done = 0;
         for (Policy policy : targets) {
             try {
-                if (evalReindexService.reindexPolicy(policy.getId())) {
-                    done++;
-                } else {
-                    failed.add(policy.getId());
-                }
+                evalReindexService.reindexPolicy(policy.getId());
+                done++;
             } catch (Exception e) {
                 log.warn("재인덱싱 실패, 계속 진행: policyId={}, error={}", policy.getId(), e.toString());
                 failed.add(policy.getId());

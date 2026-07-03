@@ -19,6 +19,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -83,6 +84,21 @@ class EvalRunnerTest {
         runner.dispatch(new DefaultApplicationArguments("--eval.mode=reindex", "--eval.confirm=true"));
 
         verify(evalReindexService).reindexPolicy(1L);
+    }
+
+    @Test
+    @DisplayName("--eval.mode=reindex 중 reindexPolicy 실패는 전체를 중단시키지 않고 계속 진행한다")
+    void dispatchesReindexConfirmed_continuesOnFailure() throws Exception {
+        Policy p = org.mockito.Mockito.mock(Policy.class);
+        given(p.getId()).willReturn(1L);
+        given(p.getTitle()).willReturn("정책");
+        List<Policy> targets = List.of(p);
+        given(evalReindexService.findTargets(null)).willReturn(targets);
+        given(evalReindexService.reindexPolicy(1L)).willThrow(new IllegalStateException("스킵"));
+
+        assertThatCode(() -> runner.dispatch(
+                new DefaultApplicationArguments("--eval.mode=reindex", "--eval.confirm=true")))
+                .doesNotThrowAnyException();
     }
 
     @Test
