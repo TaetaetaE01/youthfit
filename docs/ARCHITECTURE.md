@@ -204,7 +204,7 @@ UPCOMING  →  OPEN  →  CLOSED
 | Application Port | `EmbeddingProvider` | 임베딩 생성 추상화 |
 | Domain | `PolicyDocument` | 청크 인덱스, 콘텐츠, 소스 해시, 임베딩 벡터 |
 | Domain Service | `DocumentChunker` | 문단/문장 단위 분할 (최대 500자), SHA-256 해시 |
-| Infrastructure | `OpenAiEmbeddingClient` | OpenAI Embedding API (text-embedding-3-small, 1536차원) |
+| Infrastructure | `OpenAiEmbeddingClient` | OpenAI Embedding API (text-embedding-3-large, dimensions=1536 축소) |
 
 **벡터 저장**: `policy_document.embedding` 컬럼 — pgvector `vector(1536)`, 코사인 유사도 검색
 
@@ -313,7 +313,7 @@ users ──1:N── bookmark ──N:1── policy
 
 | 용도 | 모델 | 사용처 |
 |------|------|--------|
-| 임베딩 | text-embedding-3-small (1536차원) | `RagIndexingService` |
+| 임베딩 | text-embedding-3-large (dimensions=1536 축소, #167) | `RagIndexingService` |
 | 가이드 생성 | gpt-4o-mini (max 2048 tokens) | `GuideGenerationService` |
 | Q&A 스트리밍 | gpt-4o-mini (max 1024 tokens) | `QnaService` |
 
@@ -527,7 +527,7 @@ RecommendationScheduler (주 1회 월요일 09:00)
 | `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET` | 카카오 OAuth | (없음) |
 | `KAKAO_REDIRECT_URI` | 카카오 콜백 URI | http://localhost:5173/auth/kakao/callback |
 | `OPENAI_API_KEY` | OpenAI API 키 | (없음) |
-| `OPENAI_EMBEDDING_MODEL` | 임베딩 모델 | text-embedding-3-small |
+| `OPENAI_EMBEDDING_MODEL` | 임베딩 모델 | text-embedding-3-large |
 | `OPENAI_CHAT_MODEL` | 가이드 생성 모델 | gpt-4o-mini |
 | `OPENAI_QNA_MODEL` | Q&A 모델 | gpt-4o-mini |
 | `INTERNAL_API_KEY` | 내부 API 인증 키 | (없음) |

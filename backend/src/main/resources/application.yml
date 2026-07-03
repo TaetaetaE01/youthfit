@@ -118,8 +118,9 @@ youthfit:
   qna:
     cache-ttl-hours: ${QNA_CACHE_TTL_HOURS:24}
     # text-embedding-3-large 기준 cosine distance (#167 재보정, 2026-07-03 평가셋 threshold 스캔).
-    # 0.48 에서 positive top-1 통과 94.4% / NEGATIVE(근거없음) 차단 100%. 3-large 는 분포가
-    # 3-small 보다 전반적으로 낮아(정답 평균 0.351, 비정답 0.413) 구값 0.78 은 필터 역할을 못 함.
+    # 0.48 에서 positive top-1 통과 94.4% / NEGATIVE(근거없음) 차단 100%
+    # (리포트 20260704-002737-3large-default-verify.json: relevantDistanceAvg 0.361 /
+    #  irrelevantDistanceAvg 0.413 — 3-small 대비 분포가 전반 하향돼 구값 0.78 은 필터 역할을 못 함).
     # 모델을 바꾸면 이 값도 반드시 재보정 — 런북 참조.
     relevance-distance-threshold: ${QNA_RELEVANCE_DISTANCE_THRESHOLD:0.48}
     # 의미 캐시 히트 컷오프 (cosine distance). 한국어 단문은 표면 어휘 다양성에 임베딩이 매우 민감해
