@@ -3,6 +3,7 @@ package com.youthfit.eval.generate;
 import com.youthfit.eval.config.EvalProperties;
 import com.youthfit.eval.dataset.EvalCase;
 import com.youthfit.eval.dataset.EvalDataset;
+import com.youthfit.eval.dataset.EvalDatasetLoader;
 import com.youthfit.eval.dataset.EvalQuestionType;
 import com.youthfit.eval.dataset.SnippetMatcher;
 import com.youthfit.policy.domain.model.Policy;
@@ -35,6 +36,8 @@ public class EvalCaseGenerateService {
 
     private static final Logger log = LoggerFactory.getLogger(EvalCaseGenerateService.class);
     private static final int CHUNKS_PER_POLICY = 3;
+    private static final int DEFAULT_DATASET_VERSION = 1;
+    private static final String DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 
     private final PolicyRepository policyRepository;
     private final PolicyDocumentRepository policyDocumentRepository;
@@ -52,7 +55,8 @@ public class EvalCaseGenerateService {
                 : properties.generate().maxPerSource();
 
         // 증분 생성: 기존 candidate 에 이미 있는 정책은 스킵 (재실행 시 중복 호출 방지)
-        List<EvalCase> existingCases = loadExistingCandidateCases();
+        EvalDataset existingCandidate = loadExistingCandidate();
+        List<EvalCase> existingCases = existingCandidate.cases();
         java.util.Set<Long> coveredPolicyIds = existingCases.stream()
                 .map(EvalCase::policyId)
                 .collect(java.util.stream.Collectors.toSet());
@@ -113,15 +117,17 @@ public class EvalCaseGenerateService {
 
         List<EvalCase> merged = new ArrayList<>(existingCases);
         merged.addAll(cases);
-        return writeCandidate(new EvalDataset(1, "text-embedding-3-small", merged));
+        return writeCandidate(new EvalDataset(
+                existingCandidate.version(), existingCandidate.embeddingModel(), merged));
     }
 
-    private List<EvalCase> loadExistingCandidateCases() {
+    /** 기존 candidate 파일이 있으면 그 version/embeddingModel/cases 를 보존, 없으면 기본값으로 빈 데이터셋을 반환한다. */
+    private EvalDataset loadExistingCandidate() {
         Path path = Path.of(properties.candidatePath());
         if (!Files.exists(path)) {
-            return List.of();
+            return new EvalDataset(DEFAULT_DATASET_VERSION, DEFAULT_EMBEDDING_MODEL, List.of());
         }
-        return new com.youthfit.eval.dataset.EvalDatasetLoader().load(path).cases();
+        return new EvalDatasetLoader().load(path);
     }
 
     private List<Policy> sampleTargets(int maxPerSource) {

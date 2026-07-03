@@ -1,6 +1,7 @@
 package com.youthfit.eval.generate;
 
 import com.youthfit.eval.config.EvalProperties;
+import com.youthfit.eval.dataset.EvalCase;
 import com.youthfit.eval.dataset.EvalDataset;
 import com.youthfit.eval.dataset.EvalDatasetLoader;
 import com.youthfit.eval.dataset.EvalQuestionType;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -122,5 +124,36 @@ class EvalCaseGenerateServiceTest {
                 .toList();
         assertThat(negatives).hasSize(1);
         assertThat(negatives.get(0).expectedSnippets()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("기존 candidate 파일이 있으면 version/embeddingModel 을 보존하고 기존 케이스·정책을 유지·스킵한다")
+    void preservesExistingCandidateHeaderAndSkipsCoveredPolicies() throws Exception {
+        Path candidatePath = tempDir.resolve("candidate.json");
+        Files.writeString(candidatePath, """
+                {
+                  "version": 2,
+                  "embeddingModel": "custom-model",
+                  "cases": [
+                    {
+                      "id": "p1-q1",
+                      "policyId": 1,
+                      "policyTitle": "청년 월세 지원",
+                      "question": "기존 질문",
+                      "questionType": "KEYWORD",
+                      "expectedSnippets": ["월 20만원을 지원"],
+                      "notes": null
+                    }
+                  ]
+                }
+                """);
+
+        Path resultPath = service.generateCandidates(true, null);
+
+        EvalDataset candidate = new EvalDatasetLoader().load(resultPath);
+        assertThat(candidate.version()).isEqualTo(2);
+        assertThat(candidate.embeddingModel()).isEqualTo("custom-model");
+        assertThat(candidate.cases()).extracting(EvalCase::id).containsExactly("p1-q1");
+        verify(evalQuestionLlm, never()).generateQuestions(anyString(), anyList());
     }
 }
