@@ -156,21 +156,37 @@
 
 ## 7. 시행착오 (Trial and Error)
 
-- REQUIRES_NEW 를 도입하자 기존 `PolicyDocumentRepositoryTrigramTest`(`@DataJpaTest`)
-  5건 중 2건이 새로 실패(`Expecting actual not to be empty`). 원인: trigram 조회가
-  별도 커넥션의 새 트랜잭션에서 실행되므로, `@DataJpaTest` 기본 롤백 트랜잭션 안에서
-  아직 커밋되지 않은 `@BeforeEach` 시딩 데이터를 그 별도 트랜잭션이 보지 못함
-  (READ COMMITTED + 다른 커넥션 → uncommitted row 미가시).
-- 1차 시도(폐기): 테스트 클래스에 `@Transactional(propagation = NOT_SUPPORTED)` 를
-  부여해 테스트 트랜잭션 래핑 자체를 껐더니, 이번엔 `jpaRepository.deleteByPolicyId(...)`
-  (커스텀 derived delete 쿼리) 가 `TransactionRequiredException: No EntityManager with
-  actual transaction available` 로 실패(5건 중 4건 실패, 오히려 악화). `@DataJpaTest` +
-  클래스-레벨 `NOT_SUPPORTED` 조합에서 리포지토리 기본 폴백 트랜잭션이 기대대로
-  걸리지 않아 폐기.
-- 채택한 수정: `@BeforeEach` 끝에 Spring TestContext 의 `TestTransaction.flagForCommit();
-  TestTransaction.end(); TestTransaction.start();` 를 추가해 시딩 데이터를 실제로
-  커밋한 뒤 새 test-managed 트랜잭션을 열어 assertion 을 실행. `@AfterEach` 에도
-  같은 패턴으로 `deleteByPolicyId` 후 커밋해 테스트 간 격리를 명시적으로 보장.
+- 최초 구현은 REQUIRES_NEW 를 `PolicyDocumentRepositoryImpl.findTopByTrigram`
+  (infrastructure 레이어) 에 직접 부여했다. 이 **중간 단계**에서 기존
+  `PolicyDocumentRepositoryTrigramTest`(`@DataJpaTest`) 5건 중 2건이 새로
+  실패했다(`Expecting actual not to be empty`). 원인: 이 테스트가 호출하는
+  `repository.findTopByTrigram(...)` 자체가 별도 커넥션의 새 트랜잭션에서 실행되므로,
+  `@DataJpaTest` 기본 롤백 트랜잭션 안에서 아직 커밋되지 않은 `@BeforeEach` 시딩
+  데이터를 그 별도 트랜잭션이 보지 못했다(READ COMMITTED + 다른 커넥션 →
+  uncommitted row 미가시).
+  - 1차 시도(폐기): 테스트 클래스에 `@Transactional(propagation = NOT_SUPPORTED)` 를
+    부여해 테스트 트랜잭션 래핑 자체를 껐더니, 이번엔 `jpaRepository.deleteByPolicyId(...)`
+    (커스텀 derived delete 쿼리) 가 `TransactionRequiredException: No EntityManager
+    with actual transaction available` 로 실패(5건 중 4건 실패, 오히려 악화).
+    `@DataJpaTest` + 클래스-레벨 `NOT_SUPPORTED` 조합에서 리포지토리 기본 폴백
+    트랜잭션이 기대대로 걸리지 않아 폐기.
+  - 2차 시도: `@BeforeEach` 끝에 Spring TestContext 의 `TestTransaction.flagForCommit();
+    TestTransaction.end(); TestTransaction.start();` 를 추가해 시딩 데이터를 실제로
+    커밋한 뒤 새 test-managed 트랜잭션을 열어 assertion 을 실행하고, `@AfterEach` 에도
+    같은 패턴으로 `deleteByPolicyId` 후 커밋해 테스트 간 격리를 보장하도록 만들었다.
+    이 시점에는 그린이었다.
+- 이후 self-review 에서 "트랜잭션 경계는 Application Service 에만 둔다" 컨벤션 위반이
+  지적돼(§4 참고), REQUIRES_NEW 를 `PolicyDocumentRepositoryImpl` 에서 제거하고
+  application 레이어의 `TrigramSearchExecutor` 로 옮겼다. **이 최종 구조에서는
+  `PolicyDocumentRepositoryTrigramTest` 가 executor 를 거치지 않고
+  `PolicyDocumentRepositoryImpl` 을 여전히 `@DataJpaTest` 의 같은 커넥션·같은
+  트랜잭션 안에서 직접 호출**하므로, 2차 시도에서 도입한 `TestTransaction` 커밋 댄스와
+  `@AfterEach` 정리는 더 이상 필요하지 않다 — 원래 코드로 원복했다. REQUIRES_NEW
+  격리로 인한 트랜잭션 분리 검증은 이제 `RagSearchTrigramFallbackIntegrationTest`
+  (`TrigramSearchExecutor` 를 실제로 경유하는 통합 테스트) 가 전담한다.
+- 교훈: 트랜잭션 경계를 두는 레이어가 바뀌면, 그 경계를 우회해 하위 구현을 직접
+  호출하는 테스트의 격리 요구사항도 함께 재검토해야 한다 — 중간 단계에서만 필요했던
+  테스트 워크어라운드를 최종 구조까지 끌고 가지 않도록 주의.
 
 ## 8. 참고 (References)
 
