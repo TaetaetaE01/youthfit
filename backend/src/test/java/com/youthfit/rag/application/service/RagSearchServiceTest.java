@@ -60,6 +60,9 @@ class RagSearchServiceTest {
     @Mock
     private EffectiveConfigFactory effectiveConfigFactory;
 
+    @Mock
+    private TrigramSearchExecutor trigramSearchExecutor;
+
     @Nested
     @DisplayName("searchRelevantChunks - 관련 청크 검색")
     class SearchRelevantChunks {
@@ -268,7 +271,7 @@ class RagSearchServiceTest {
                     ragSearchService.searchRelevantChunks(command, embedding);
 
             assertThat(result).hasSize(1);
-            verify(policyDocumentRepository, never()).findTopByTrigram(any(), any(), anyDouble(), anyInt());
+            verify(trigramSearchExecutor, never()).searchTopByTrigram(any(), any(), anyDouble(), anyInt());
             verify(reciprocalRankFusion, never()).merge(any(), any(), anyInt(), anyInt());
         }
 
@@ -287,7 +290,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> triChunks = List.of(new SimilarChunk(20L, 1L, 1, "t", null, null, null, 0.7));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(embedding), any(), eq(20)))
                     .willReturn(vecChunks);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("희망저축계좌"), eq(0.1), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("희망저축계좌"), eq(0.1), eq(20)))
                     .willReturn(triChunks);
 
             SimilarChunk merged = new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2);
@@ -315,7 +318,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> vecChunks = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(embedding), any(), eq(20)))
                     .willReturn(vecChunks);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
                     .willThrow(new RuntimeException("trigram down"));
             given(reciprocalRankFusion.merge(eq(vecChunks), eq(List.of()), eq(60), eq(10)))
                     .willReturn(vecChunks);
@@ -346,7 +349,7 @@ class RagSearchServiceTest {
             }
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(embedding), any(), eq(20)))
                     .willReturn(vec20);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("쿼리"), eq(0.1), eq(20)))
                     .willReturn(List.of());
 
             // RRF mock 이 단독-call 케이스에서 DEFAULT_TOP_K=10 로 컷한 결과 반환
@@ -376,7 +379,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
                     .willReturn(vec);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
                     .willReturn(List.of());
             given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
                     .willReturn(vec);
@@ -405,7 +408,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
                     .willReturn(vec);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
                     .willReturn(List.of());
             given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(30), eq(10)))
                     .willReturn(vec);
@@ -439,7 +442,7 @@ class RagSearchServiceTest {
             assertThat(trace.effective().hybridEnabled()).isFalse();
             assertThat(trace.trigramTopN()).isEmpty();
             assertThat(trace.merged()).hasSize(1);
-            verify(policyDocumentRepository, never()).findTopByTrigram(any(), any(), anyDouble(), anyInt());
+            verify(trigramSearchExecutor, never()).searchTopByTrigram(any(), any(), anyDouble(), anyInt());
             verify(reciprocalRankFusion, never()).merge(any(), any(), anyInt(), anyInt());
         }
 
@@ -457,7 +460,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), eq(List.of()), eq(20)))
                     .willReturn(vec);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거 지원"), eq(0.10), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("주거 지원"), eq(0.10), eq(20)))
                     .willReturn(List.of());
             given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
                     .willReturn(vec);
@@ -480,7 +483,7 @@ class RagSearchServiceTest {
             List<SimilarChunk> vec = List.of(new SimilarChunk(10L, 1L, 0, "v", null, null, null, 0.2));
             given(policyDocumentRepository.findSimilarByEmbedding(eq(1L), eq(emb), any(), eq(20)))
                     .willReturn(vec);
-            given(policyDocumentRepository.findTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
+            given(trigramSearchExecutor.searchTopByTrigram(eq(1L), eq("주거"), eq(0.10), eq(20)))
                     .willThrow(new RuntimeException("trigram down"));
             given(reciprocalRankFusion.merge(eq(vec), eq(List.of()), eq(60), eq(10)))
                     .willReturn(vec);

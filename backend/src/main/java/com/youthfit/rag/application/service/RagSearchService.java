@@ -37,6 +37,7 @@ public class RagSearchService {
     private final HybridSearchProperties hybridSearchProperties;
     private final ReciprocalRankFusion reciprocalRankFusion;
     private final EffectiveConfigFactory effectiveConfigFactory;
+    private final TrigramSearchExecutor trigramSearchExecutor;
 
     @Transactional(readOnly = true)
     public List<PolicyDocumentChunkResult> searchRelevantChunks(SearchChunksCommand command) {
@@ -105,7 +106,10 @@ public class RagSearchService {
 
         List<SimilarChunk> tri;
         try {
-            tri = policyDocumentRepository.findTopByTrigram(
+            // #173: trigramSearchExecutor.searchTopByTrigram 은 REQUIRES_NEW 로 격리돼
+            // 있어 여기서 실패해도 본 메서드의 (readOnly) 바깥 트랜잭션을 aborted 상태로
+            // 오염시키지 않는다. 그래서 이 catch 폴백이 실제로 유효하게 동작한다.
+            tri = trigramSearchExecutor.searchTopByTrigram(
                     command.policyId(), command.query(), threshold, topN);
         } catch (RuntimeException e) {
             log.warn("trigram 쿼리 실패, vector 결과로 폴백: policyId={}, error={}",
@@ -166,7 +170,10 @@ public class RagSearchService {
 
         List<SimilarChunk> tri;
         try {
-            tri = policyDocumentRepository.findTopByTrigram(
+            // #173: trigramSearchExecutor.searchTopByTrigram 은 REQUIRES_NEW 로 격리돼
+            // 있어 여기서 실패해도 본 메서드의 (readOnly) 바깥 트랜잭션을 aborted 상태로
+            // 오염시키지 않는다. 그래서 이 catch 폴백이 실제로 유효하게 동작한다.
+            tri = trigramSearchExecutor.searchTopByTrigram(
                     command.policyId(), command.query(), threshold, topN);
         } catch (RuntimeException e) {
             log.warn("trigram 쿼리 실패, vector 결과로 폴백: policyId={}, error={}",
